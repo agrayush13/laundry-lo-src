@@ -1,0 +1,139 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.listing {
+    padding: 2.5rem 0 5rem;
+
+    &Title {
+        margin: 0 0 0.625rem;
+        font-size: t.$font-size-listing-title;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+    }
+
+    &Pin {
+        color: t.$color-primary;
+    }
+
+    &Count {
+        margin: 0 0 2rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &Toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.75rem;
+    }
+
+    &Filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+    }
+
+    // A caption for the chips, deliberately not styled as a control.
+    &FiltersLabel {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4375rem;
+        padding-right: 0.25rem;
+        color: t.$color-text-subtle;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &Chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4375rem;
+        padding: 0.5rem 0.9375rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &Clear {
+        padding: 0.5rem 0.75rem;
+        border: 0;
+        background: none;
+        color: t.$color-primary;
+        font: inherit;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    &Chip {
+        @include m.selectable;
+    }
+
+    &Chip {
+        cursor: pointer;
+        transition:
+            border-color t.$transition-fast,
+            background-color t.$transition-fast;
+
+        &:hover {
+            border-color: t.$color-primary;
+        }
+
+        &[aria-pressed='true'] {
+            border-color: t.$color-primary;
+            background: t.$color-primary-soft;
+            color: t.$color-primary;
+        }
+    }
+
+    &Sort select {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+        font-size: t.$font-size-lg;
+        cursor: pointer;
+    }
+
+    &Layout {
+        display: grid;
+        grid-template-columns: 1fr 21rem;
+        align-items: start;
+        gap: 1.5rem;
+    }
+
+    &Results {
+        display: grid;
+        gap: 1.25rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &Empty {
+        padding: 3rem 0;
+        color: t.$color-text-muted;
+        text-align: center;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        &Layout {
+            grid-template-columns: 1fr;
+        }
+
+        .mapView {
+            position: static;
+            order: -1;
+        }
+    }
+}

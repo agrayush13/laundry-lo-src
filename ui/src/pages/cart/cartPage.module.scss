@@ -1,0 +1,151 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.cart {
+    padding: 2.5rem 1.5rem 5rem;
+
+    &Inner {
+        max-width: 40rem;
+        margin: 0 auto;
+    }
+
+    &Empty {
+        max-width: 30rem;
+        margin: 0 auto;
+        padding-top: 5rem;
+        text-align: center;
+    }
+
+    &Title {
+        margin: 0 0 0.375rem;
+        font-size: t.$font-size-display-sm;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Subtitle {
+        margin: 0 0 1.75rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &Empty {
+        margin: 0 0 1.75rem;
+        color: t.$color-text-muted;
+    }
+
+    &Lines {
+        display: grid;
+        gap: 0.875rem;
+        margin: 0 0 1.75rem;
+        padding: 0;
+        list-style: none;
+    }
+
+    &Summary {
+        padding: 1.5rem;
+    }
+
+    &SummaryTitle {
+        margin: 0 0 1.25rem;
+        font-size: t.$font-size-h5;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &AddServices {
+        display: block;
+        margin-top: 0.875rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+        text-align: center;
+
+        &:hover {
+            color: t.$color-primary;
+        }
+    }
+
+    &Place {
+        width: 100%;
+        padding: 1rem;
+    }
+
+    &Clear {
+        display: block;
+        width: 100%;
+        margin-top: 0.875rem;
+        padding: 0.5rem;
+        border: 0;
+        background: none;
+        color: t.$color-text-muted;
+        font: inherit;
+        font-size: t.$font-size-xl;
+        cursor: pointer;
+
+        &:hover {
+            color: t.$color-text;
+        }
+    }
+}
+
+.cartLine {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+
+    &Icon {
+        @include m.icon-chip(2.5rem);
+    }
+
+    &Service {
+        margin-top: 0.125rem;
+        font-size: t.$font-size-sm;
+        color: t.$color-text-muted;
+    }
+
+    &Body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &Name {
+        margin: 0 0 0.1875rem;
+        font-size: t.$font-size-xl;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Price {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    &Amount {
+        flex-shrink: 0;
+        min-width: 3.5rem;
+        margin: 0;
+        text-align: right;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Remove {
+        flex-shrink: 0;
+        padding: 0.375rem;
+        border: 0;
+        background: none;
+        color: t.$color-text-muted;
+        cursor: pointer;
+
+        &:hover {
+            color: t.$color-danger;
+        }
+    }
+
+    @media (max-width: t.$breakpoint-sm) {
+        flex-wrap: wrap;
+
+        &Body {
+            flex: 1 1 60%;
+        }
+    }
+}

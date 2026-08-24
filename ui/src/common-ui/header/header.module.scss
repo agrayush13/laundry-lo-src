@@ -1,0 +1,171 @@
+@use '../../styles/tokens' as t;
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: t.$z-header;
+    background: t.$color-scrim;
+    backdrop-filter: blur(t.$blur-chrome);
+    border-bottom: 1px solid t.$color-border;
+
+    &Inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        max-width: t.$content-width;
+        margin: 0 auto;
+        padding: 0.875rem 1.5rem;
+    }
+
+    &Brand {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    &Nav {
+        display: flex;
+        gap: 2.25rem;
+    }
+
+    &Link {
+        color: t.$color-text-muted;
+        font-weight: t.$font-weight-semibold;
+        text-decoration: none;
+        transition: color t.$transition-fast;
+
+        &:hover {
+            color: t.$color-text;
+        }
+    }
+
+    &Actions {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    &Signin,
+    &Bookings,
+    &Account {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: t.$color-text;
+        font-weight: t.$font-weight-semibold;
+        text-decoration: none;
+    }
+
+    &Bookings {
+        padding-right: 1.25rem;
+        border-right: 1px solid t.$color-border;
+        color: t.$color-text-muted;
+
+        &:hover {
+            color: t.$color-text;
+        }
+    }
+
+    &Avatar {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+        font-size: t.$font-size-sm;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Cart {
+        position: relative;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: t.$radius-sm;
+        color: t.$color-text-muted;
+
+        &:hover {
+            background: t.$color-surface-muted;
+            color: t.$color-text;
+        }
+    }
+
+    &CartCount {
+        position: absolute;
+        top: -0.125rem;
+        right: -0.125rem;
+        display: grid;
+        place-items: center;
+        min-width: 1.125rem;
+        height: 1.125rem;
+        padding: 0 0.25rem;
+        border-radius: t.$radius-pill;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+        font-size: t.$font-size-xs;
+        font-weight: t.$font-weight-bold;
+    }
+
+    // The call to action must stay on one line; it wraps and looks oversized
+    // on narrow screens otherwise.
+    &Cta {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    &Signout {
+        display: grid;
+        place-items: center;
+        padding: 0.375rem;
+        border: 0;
+        border-radius: t.$radius-sm;
+        background: none;
+        color: t.$color-text-muted;
+        cursor: pointer;
+
+        &:hover {
+            background: t.$color-surface-muted;
+            color: t.$color-text;
+        }
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        &Nav {
+            display: none;
+        }
+
+        &Inner {
+            gap: 1rem;
+        }
+    }
+
+    // Below this the account controls collapse to icons so they all survive.
+    @media (max-width: t.$breakpoint-sm) {
+        &Inner {
+            gap: 0.5rem;
+            padding: 0.75rem 0.875rem;
+        }
+
+        &Cta {
+            padding: 0.5rem 0.875rem;
+            font-size: t.$font-size-lg;
+        }
+
+        &Actions {
+            gap: 0.75rem;
+        }
+
+        &Label {
+            display: none;
+        }
+
+        &Bookings {
+            padding-right: 0.75rem;
+        }
+    }
+}

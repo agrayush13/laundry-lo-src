@@ -1,0 +1,69 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.addAddress {
+    padding: 2.5rem 1.5rem 5rem;
+
+    &Inner {
+        max-width: 42rem;
+        margin: 0 auto;
+    }
+
+    &Title {
+        margin: 0 0 0.375rem;
+        font-size: t.$font-size-h2;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Subtitle {
+        margin: 0 0 1.75rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &Card {
+        padding: 1.75rem;
+    }
+
+    &Field {
+        @include m.form-field;
+
+        margin-bottom: 0.75rem;
+    }
+
+    &Suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0 0 1.5rem;
+        padding: 0;
+        list-style: none;
+
+        button {
+            @include m.selectable;
+
+            padding: 0.375rem 0.875rem;
+            font-size: t.$font-size-md;
+            font-weight: t.$font-weight-semibold;
+        }
+    }
+
+    &Actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1.75rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid t.$color-border;
+    }
+
+    &Cancel {
+        border: 1px solid t.$color-border;
+        background: t.$color-surface;
+        color: t.$color-text;
+
+        &:hover {
+            border-color: t.$color-primary;
+        }
+    }
+}

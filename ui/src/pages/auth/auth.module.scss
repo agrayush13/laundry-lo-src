@@ -1,0 +1,182 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.auth {
+    max-width: 25rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+
+    &Card {
+        padding: 2.5rem 2rem;
+        text-align: center;
+    }
+
+    &Logo {
+        height: 3rem;
+        margin: 0 auto 1.25rem;
+    }
+
+    &Title {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-h1;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Subtitle {
+        margin: 0 0 1.75rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &Oauth {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.625rem;
+        width: 100%;
+        padding: 0.8125rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+        font-weight: t.$font-weight-semibold;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+
+    &Divider {
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        margin: 1.25rem 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+
+        &::before,
+        &::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: t.$color-border;
+        }
+    }
+
+    &Methods {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem;
+        padding: 0.25rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface-muted;
+    }
+
+    &Method {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem;
+        border: 1px solid transparent;
+        border-radius: calc(#{t.$radius-sm} - 2px);
+        background: none;
+        color: t.$color-text-muted;
+        font: inherit;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+        cursor: pointer;
+
+        &[aria-selected='true'] {
+            border-color: t.$color-border;
+            background: t.$color-surface;
+            color: t.$color-text;
+            box-shadow: t.$shadow-sm;
+        }
+    }
+
+    &Form {
+        margin-top: 1.5rem;
+        text-align: left;
+    }
+
+    &Field {
+        @include m.form-field;
+
+        position: relative;
+        margin: 0 0 1.125rem;
+
+        input {
+            padding: 0.8125rem 0.875rem;
+        }
+
+        &Password input {
+            padding-right: 2.75rem;
+        }
+    }
+
+    &Reveal {
+        position: absolute;
+        right: 0.375rem;
+        bottom: 0.375rem;
+        display: grid;
+        place-items: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border: 0;
+        border-radius: t.$radius-sm;
+        background: none;
+        color: t.$color-text-muted;
+        cursor: pointer;
+
+        &:hover {
+            color: t.$color-text;
+        }
+    }
+
+    &Forgot {
+        margin: -0.375rem 0 1.25rem;
+        text-align: right;
+
+        a {
+            color: t.$color-primary;
+            font-size: t.$font-size-md;
+            font-weight: t.$font-weight-semibold;
+            text-decoration: none;
+        }
+    }
+
+    &Submit {
+        width: 100%;
+        padding: 0.9375rem;
+    }
+
+    &Sent {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0.875rem 1rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-accent-soft;
+        color: t.$color-accent-ink;
+        font-size: t.$font-size-lg;
+    }
+
+    &Switch {
+        margin: 1.5rem 0 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+
+        a {
+            color: t.$color-primary;
+            font-weight: t.$font-weight-bold;
+            text-decoration: none;
+        }
+    }
+}

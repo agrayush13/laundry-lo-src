@@ -1,0 +1,43 @@
+@use '../../styles/tokens' as t;
+
+.orderTotals {
+    margin: 0;
+
+    div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        font-size: t.$font-size-xl;
+
+        + div {
+            margin-top: 0.75rem;
+        }
+
+        // Grand total sits below a rule and outweighs the other rows.
+        &:last-child {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid t.$color-border;
+            font-size: t.$font-size-h5;
+            font-weight: t.$font-weight-black;
+
+            dt {
+                color: t.$color-text;
+            }
+        }
+    }
+
+    dt {
+        color: t.$color-text-muted;
+    }
+
+    dd {
+        margin: 0;
+    }
+
+    &Free {
+        color: t.$color-accent-ink;
+        font-weight: t.$font-weight-semibold;
+    }
+}

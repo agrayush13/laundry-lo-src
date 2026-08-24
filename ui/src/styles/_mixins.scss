@@ -1,0 +1,189 @@
+// Shared style patterns. Mixins rather than %placeholders so they keep working
+// when the stylesheets move to CSS Modules, where @extend can't cross files.
+
+@use 'tokens' as t;
+
+/// Muted "← Back" affordance at the top of a page. Works for <a> and <button>.
+@mixin back-link($spacing: 1.5rem) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: $spacing;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: t.$color-text-muted;
+    font: inherit;
+    font-size: t.$font-size-xl;
+    font-weight: t.$font-weight-semibold;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+        color: t.$color-primary;
+    }
+}
+
+/// Centred page column with the standard vertical rhythm.
+@mixin page-shell($width: 46rem) {
+    max-width: $width;
+    margin: 0 auto;
+}
+
+/// Green pill showing a partner's star rating.
+@mixin rating-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0.3125rem 0.625rem;
+    border-radius: t.$radius-sm;
+    background: t.$color-accent-soft;
+    color: t.$color-accent-ink;
+    font-size: t.$font-size-md;
+    font-weight: t.$font-weight-bold;
+}
+
+/// Circular tinted slot holding a single icon, used for menu and cart lines.
+@mixin icon-chip($size: 2.5rem) {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: $size;
+    height: $size;
+    border-radius: t.$radius-circle;
+    background: t.$color-primary-soft;
+    color: t.$color-primary;
+}
+
+/// Reset shared by the tag and fact lists.
+@mixin bare-list {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+/// Small capsule chips describing a partner ("Free Pickup", "Premium").
+@mixin tag-chips($gap: 0.5rem) {
+    @include bare-list;
+
+    gap: $gap;
+
+    li {
+        padding: 0.25rem 0.625rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface-muted;
+        font-size: t.$font-size-sm;
+        font-weight: t.$font-weight-semibold;
+    }
+}
+
+/// Row of icon + label facts (turnaround, free pickup, verified partner).
+@mixin meta-row($gap: 0.5rem 1.25rem) {
+    @include bare-list;
+
+    gap: $gap;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-md;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+}
+
+/// Bordered control that highlights when chosen - filter chips, date and slot
+/// buttons, service and address cards. Selection is driven by aria state.
+@mixin selectable($selected: '[aria-pressed="true"]') {
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-sm;
+    background: t.$color-surface;
+    color: t.$color-text;
+    font: inherit;
+    cursor: pointer;
+    transition:
+        border-color t.$transition-fast,
+        background-color t.$transition-fast;
+
+    &:hover:not(:disabled) {
+        border-color: t.$color-primary;
+    }
+
+    &#{$selected} {
+        border-color: t.$color-primary;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+/// Card-shaped option wrapping a visually hidden radio or checkbox.
+@mixin selectable-card {
+    display: block;
+    height: 100%;
+    cursor: pointer;
+    transition:
+        border-color t.$transition-fast,
+        box-shadow t.$transition-fast;
+
+    &:hover {
+        border-color: t.$color-primary;
+    }
+
+    &[data-selected='true'] {
+        border-color: t.$color-primary;
+        box-shadow: 0 0 0 1px t.$color-primary;
+    }
+
+    // Keyboard focus lands on the visually hidden input.
+    &:focus-within {
+        outline: 2px solid t.$color-primary;
+        outline-offset: 2px;
+    }
+}
+
+/// Label above a text input.
+@mixin form-field($fill: t.$color-surface) {
+    margin: 0;
+
+    label {
+        display: block;
+        margin-bottom: 0.4375rem;
+        font-size: t.$font-size-md;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    input {
+        width: 100%;
+        padding: 0.75rem 0.875rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: $fill;
+        color: t.$color-text;
+        font: inherit;
+        font-size: t.$font-size-xl;
+
+        &::placeholder {
+            color: t.$color-text-subtle;
+        }
+
+        &:focus-visible {
+            outline: 2px solid t.$color-primary;
+            outline-offset: 1px;
+        }
+    }
+}
+
+/// Photographic imagery, dimmed a little in dark mode.
+@mixin photo {
+    filter: brightness(t.$photo-brightness);
+    transition: filter t.$transition-base;
+}

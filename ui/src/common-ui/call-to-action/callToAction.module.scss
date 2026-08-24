@@ -1,0 +1,78 @@
+@use '../../styles/tokens' as t;
+
+.cta {
+    position: relative;
+    overflow: hidden;
+    padding: 4rem 2rem;
+    border-radius: t.$radius-lg;
+    background: t.$color-primary;
+    color: t.$color-on-primary;
+    text-align: center;
+
+    // Decorative circles bleeding off the left and right edges.
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        width: 16rem;
+        height: 16rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-decor-light;
+    }
+
+    &::before {
+        top: -6rem;
+        left: -5rem;
+    }
+
+    &::after {
+        bottom: -7rem;
+        right: -4rem;
+    }
+
+    &Title {
+        position: relative;
+        margin: 0 0 1rem;
+        font-size: t.$font-size-banner-title;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+    }
+
+    &Subtitle {
+        position: relative;
+        max-width: 34rem;
+        margin: 0 auto 2.25rem;
+        color: t.$color-scrim;
+        line-height: t.$line-height-base;
+    }
+
+    &Actions {
+        position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 1rem;
+    }
+
+    &Button {
+        padding: 0.875rem 1.75rem;
+
+        &Solid {
+            background: t.$color-surface;
+            color: t.$color-primary;
+
+            &:hover {
+                background: t.$color-on-primary-hover;
+            }
+        }
+
+        &Ghost {
+            background: t.$color-on-primary-veil;
+            color: t.$color-on-primary;
+
+            &:hover {
+                background: t.$color-on-primary-veil-hover;
+            }
+        }
+    }
+}

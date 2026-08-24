@@ -1,0 +1,22 @@
+@use '../../styles/tokens' as t;
+
+.themeToggle {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 0;
+    border-radius: t.$radius-sm;
+    background: none;
+    color: t.$color-text-muted;
+    cursor: pointer;
+    transition:
+        background-color t.$transition-fast,
+        color t.$transition-fast;
+
+    &:hover {
+        background: t.$color-surface-muted;
+        color: t.$color-text;
+    }
+}

@@ -1,0 +1,326 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+    padding: 0.3125rem 0.625rem;
+    border-radius: t.$radius-pill;
+    font-size: t.$font-size-sm;
+    font-weight: t.$font-weight-semibold;
+    white-space: nowrap;
+
+    svg {
+        flex-shrink: 0;
+    }
+
+    &[data-status='processing'] {
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+    }
+
+    &[data-status='out_for_delivery'],
+    &[data-status='delivered'] {
+        background: t.$color-accent-soft;
+        color: t.$color-accent-ink;
+    }
+}
+
+.bookings,
+.order {
+    padding: 2.5rem 1.5rem 5rem;
+
+    &Inner {
+        max-width: 46rem;
+        margin: 0 auto;
+    }
+}
+
+.bookings {
+    &Title {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-page-title;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+    }
+
+    &Count {
+        margin: 0 0 2rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &List {
+        display: grid;
+        gap: 1.25rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+}
+
+.orderCard {
+    display: block;
+    padding: 1.5rem;
+    color: inherit;
+    text-decoration: none;
+    transition:
+        border-color t.$transition-fast,
+        box-shadow t.$transition-fast;
+
+    &:hover {
+        border-color: t.$color-primary;
+        box-shadow: t.$shadow-md;
+    }
+
+    &Head {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    &Partner {
+        margin: 0;
+        font-size: t.$font-size-h5;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Chevron {
+        margin-left: auto;
+        color: t.$color-text-muted;
+    }
+
+    &Id {
+        margin: 0.375rem 0 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+    }
+
+    &Lines {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 1rem 0 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+            padding: 0.3125rem 0.75rem;
+            border-radius: t.$radius-sm;
+            background: t.$color-surface-muted;
+            font-size: t.$font-size-md;
+            font-weight: t.$font-weight-semibold;
+        }
+    }
+
+    &Footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid t.$color-border;
+    }
+
+    &Meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+
+        span {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+    }
+
+    &Total {
+        margin: 0;
+        font-size: t.$font-size-h5;
+        font-weight: t.$font-weight-black;
+    }
+}
+
+.order {
+    &Summary {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        padding: 1.5rem;
+    }
+
+    &Label {
+        margin: 0 0 0.25rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    &Id {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-h2;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Meta {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+    }
+
+    &Partner {
+        color: t.$color-primary;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &Card {
+        margin-bottom: 1.25rem;
+        padding: 1.5rem;
+    }
+
+    &Heading {
+        margin: 0 0 1.5rem;
+        font-size: t.$font-size-h5;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Items {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: t.$font-size-xl;
+
+            + li {
+                margin-top: 0.875rem;
+            }
+
+            span {
+                display: flex;
+                align-items: center;
+                gap: 0.625rem;
+            }
+
+            em {
+                color: t.$color-text-muted;
+                font-size: t.$font-size-md;
+                font-style: normal;
+            }
+        }
+    }
+
+    &Total {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 1.25rem 0 0;
+        padding-top: 1.25rem;
+        border-top: 1px solid t.$color-border;
+        font-size: t.$font-size-body-lg;
+        font-weight: t.$font-weight-black;
+    }
+
+    &Address {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+        font-style: normal;
+    }
+
+    &Support {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    &SupportButton {
+        padding: 0.9375rem;
+        border: 1px solid t.$color-border;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font-size: t.$font-size-xl;
+
+        &:hover:not(:disabled) {
+            border-color: t.$color-primary;
+        }
+    }
+}
+
+.timeline {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    &Entry {
+        position: relative;
+        padding: 0 0 1.75rem 2rem;
+
+        &:last-child {
+            padding-bottom: 0;
+        }
+
+        // Rail joining this dot to the next one.
+        &:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            top: 1.125rem;
+            bottom: 0.25rem;
+            left: 0.4375rem;
+            width: 2px;
+            background: t.$color-border;
+        }
+
+        &[data-state='done']::before,
+        &[data-state='current']::before {
+            background: t.$color-accent;
+        }
+    }
+
+    &Dot {
+        position: absolute;
+        top: 0.1875rem;
+        left: 0;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid t.$color-border;
+        border-radius: t.$radius-circle;
+        background: t.$color-surface;
+    }
+
+    &Entry[data-state='done'] &Dot {
+        border-color: t.$color-accent;
+        background: t.$color-accent;
+    }
+
+    &Entry[data-state='current'] &Dot {
+        border-color: t.$color-primary;
+        background: t.$color-primary;
+    }
+
+    &Label {
+        margin: 0 0 0.25rem;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &Detail {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    &Entry[data-state='pending'] &Label {
+        color: t.$color-text-muted;
+    }
+}

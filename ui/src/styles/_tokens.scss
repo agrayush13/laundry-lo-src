@@ -1,0 +1,154 @@
+// Design tokens - the single source of truth for colour, type and elevation.
+// Nothing outside this file should contain a literal colour, font or shadow.
+// ---
+// Palette is the brand design scheme verbatim. Values marked "derived" are the
+// few steps the scheme does not name, interpolated from its neighbours.
+
+// ---------------------------------------------------------------- colour ---
+// ---
+// Aliases onto the runtime custom properties in `_theme.scss`, so every
+// stylesheet keeps referring to `t.$color-*` while the values follow the
+// active theme. Do not wrap these in Sass colour functions - a var() cannot be
+// manipulated at compile time; add a pre-mixed custom property instead.
+
+// Base / ink
+$color-cream: var(--paper);
+$color-surface: var(--surface);
+$color-ink: var(--ink);
+$color-text: var(--ink);
+$color-text-muted: var(--sub);
+$color-text-subtle: var(--muted);
+$color-border: var(--border);
+$color-on-primary: var(--btn-text);
+$color-on-image: var(--on-image);
+
+// Warm neutrals
+$color-surface-muted: var(--surface-muted);
+$color-surface-deep: var(--machine-body);
+$color-border-strong: var(--border-strong);
+
+// Accent - powder blue
+$color-primary: var(--accent);
+$color-primary-dark: var(--accent-hover);
+$color-drum: var(--drum);
+$color-primary-light: var(--drum);
+$color-glass: var(--glass);
+$color-primary-soft: var(--glass-inner);
+$color-rinse: var(--sec2-bg);
+$color-rinse-text: var(--sec2-text);
+
+// Detergent pastels - fixed across themes
+$color-soap-pink: var(--cloth-pink);
+$color-ribbon-pink: var(--ribbon);
+$color-amber-soft: var(--cloth-amber);
+$color-amber: var(--stain);
+$color-mint: var(--cloth-mint);
+
+// Machine body / drum - illustration surfaces
+$color-machine-body: var(--machine-body);
+$color-drum-interior: var(--interior);
+$color-drum-water: var(--drum-water);
+$color-drum-ring: var(--drum-ring);
+$color-drum-holes: var(--drum-holes);
+$color-glass-inner: var(--glass-inner);
+$color-glass-glint: var(--glass-glint);
+
+// Status
+$color-accent: var(--led);
+$color-accent-soft: var(--cloth-mint);
+$color-accent-ink: var(--led-ink);
+$color-danger: var(--danger);
+
+// Translucent layers
+$color-scrim: var(--scrim);
+$color-scrim-strong: var(--scrim-strong);
+$color-on-primary-muted: var(--on-accent-muted);
+$color-on-primary-veil: var(--on-accent-veil);
+$color-on-primary-veil-hover: var(--on-accent-veil-hover);
+$color-on-primary-hover: var(--on-accent-hover);
+$color-on-primary-edge: var(--on-accent-edge);
+$color-decor-light: var(--decor-light);
+$color-decor-primary: var(--decor-accent);
+$color-shadow-ink: var(--shadow-ink);
+$photo-brightness: var(--photo-brightness);
+
+// ------------------------------------------------------------------ type ---
+
+$font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+$font-sans:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+$font-size-xs: 0.6875rem;
+$font-size-sm: 0.75rem;
+$font-size-md: 0.8125rem;
+$font-size-lg: 0.875rem;
+$font-size-xl: 0.9375rem;
+$font-size-body: 1rem;
+$font-size-body-lg: 1.0625rem;
+$font-size-h5: 1.125rem;
+$font-size-h4: 1.25rem;
+$font-size-h3: 1.375rem;
+$font-size-h2: 1.5rem;
+$font-size-h1: 1.625rem;
+$font-size-display-sm: 1.75rem;
+$font-size-display: 3rem;
+
+// Fluid display sizes for hero and section headings
+$font-size-hero: clamp(2.75rem, 5.5vw, 4.25rem);
+$font-size-page-title: clamp(2.25rem, 5vw, 3rem);
+$font-size-section-title: clamp(2rem, 3.5vw, 2.75rem);
+$font-size-banner-title: clamp(1.875rem, 3.5vw, 2.5rem);
+$font-size-listing-title: clamp(1.75rem, 3.5vw, 2.25rem);
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+$font-weight-black: 800;
+$line-height-tight: 1.08;
+$line-height-snug: 1.5;
+$line-height-base: 1.6;
+$line-height-relaxed: 1.7;
+$tracking-tight: -0.03em;
+$tracking-snug: -0.02em;
+$tracking-wide: 0.06em;
+$tracking-wider: 0.08em;
+$tracking-widest: 0.1em;
+
+// ------------------------------------------------------- shape & surface ---
+
+$radius-sm: 10px;
+$radius-md: 14px;
+$radius-lg: 24px;
+$radius-pill: 999px;
+$radius-circle: 50%;
+$shadow-sm: var(--shadow-sm);
+$shadow-md: var(--shadow-md);
+$shadow-lg: var(--shadow-lg);
+$shadow-text: 0 1px 3px $color-shadow-ink;
+$blur-chrome: 12px;
+$blur-image: 6px;
+$blur-glow: 70px;
+
+// ---------------------------------------------------------------- motion ---
+
+$duration-fast: 0.15s;
+$duration-base: 0.2s;
+$easing: ease;
+$transition-fast: $duration-fast $easing;
+$transition-base: $duration-base $easing;
+
+// ---------------------------------------------------------------- layout ---
+
+$icon-stroke-width: 1.8;
+$logo-height-sm: 1.75rem;
+$logo-height-nav: 2.5rem;
+$logo-height-lg: 4.5rem;
+$logo-height-icon: 2.25rem;
+$z-header: 10;
+$z-cart-bar: 20;
+$content-width: 1200px;
+$breakpoint-md: 900px;
+$breakpoint-sm: 600px;

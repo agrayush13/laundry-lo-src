@@ -1,0 +1,62 @@
+@use '../../styles/tokens' as t;
+
+.mapView {
+    // Sticks beside the results on desktop, leads them on mobile.
+    position: sticky;
+    top: 6rem;
+    display: grid;
+    place-items: center;
+    min-height: 26rem;
+    overflow: hidden;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-md;
+    background: linear-gradient(160deg, t.$color-primary-soft 0%, t.$color-rinse 100%);
+
+    &Pin {
+        position: absolute;
+        display: grid;
+        place-items: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+        font-size: t.$font-size-sm;
+        font-weight: t.$font-weight-bold;
+        box-shadow: t.$shadow-sm;
+    }
+
+    // Sits above the pins so the label stays legible whatever they overlap.
+    &Body {
+        position: relative;
+        padding: 1.25rem 1.5rem;
+        border-radius: t.$radius-md;
+        background: t.$color-scrim;
+        text-align: center;
+    }
+
+    &Icon {
+        color: t.$color-primary;
+    }
+
+    &Title {
+        margin: 0.75rem 0 0.25rem;
+        font-family: t.$font-display;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Subtitle {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        // Must stay positioned: the pins are absolute and would otherwise
+        // escape the map and lay themselves over the page.
+        position: relative;
+        top: auto;
+        order: -1;
+        min-height: 14rem;
+    }
+}

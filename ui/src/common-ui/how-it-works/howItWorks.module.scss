@@ -1,0 +1,79 @@
+@use '../../styles/tokens' as t;
+
+$marker-size: 3.5rem;
+
+.steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+
+    &Item {
+        position: relative;
+        text-align: center;
+
+        // Connector line runs from each marker to the next one.
+        &:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            top: calc(#{$marker-size} / 2);
+            left: calc(50% + #{$marker-size} / 2 + 0.75rem);
+            right: calc(-50% + #{$marker-size} / 2 + 0.75rem);
+            height: 1px;
+            background: t.$color-border;
+        }
+    }
+
+    &Marker {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: $marker-size;
+        height: $marker-size;
+        margin: 0 auto 1.25rem;
+        border-radius: t.$radius-md;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+    }
+
+    &Number {
+        position: absolute;
+        top: -0.5rem;
+        right: -0.75rem;
+        padding: 0.125rem 0.4375rem;
+        border-radius: t.$radius-pill;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+        font-size: t.$font-size-xs;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Title {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-h5;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Description {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+        line-height: t.$line-height-base;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem 1.5rem;
+
+        &Item::before {
+            display: none;
+        }
+    }
+
+    @media (max-width: t.$breakpoint-sm) {
+        grid-template-columns: 1fr;
+    }
+}

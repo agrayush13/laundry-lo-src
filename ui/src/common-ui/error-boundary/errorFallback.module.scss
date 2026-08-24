@@ -1,0 +1,55 @@
+@use '../../styles/tokens' as t;
+
+.error {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+
+    // Fills the space between header and footer so the message sits centred.
+    min-height: 60vh;
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+    text-align: center;
+
+    &Icon {
+        display: grid;
+        place-items: center;
+        width: 4rem;
+        height: 4rem;
+        margin-bottom: 1.75rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-amber-soft;
+        color: t.$color-amber;
+    }
+
+    &Title {
+        margin: 0 0 0.75rem;
+        font-size: t.$font-size-display-sm;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Body {
+        margin: 0 0 2rem;
+        color: t.$color-text-muted;
+        line-height: t.$line-height-base;
+    }
+
+    &Actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.875rem;
+    }
+
+    &Secondary {
+        border: 1px solid t.$color-border;
+        background: t.$color-surface;
+        color: t.$color-text;
+
+        &:hover {
+            border-color: t.$color-primary;
+        }
+    }
+}

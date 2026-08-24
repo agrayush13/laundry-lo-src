@@ -1,0 +1,138 @@
+@use '../../styles/tokens' as t;
+
+.plus {
+    padding: 2.5rem 1.5rem 5rem;
+
+    &Inner {
+        max-width: 46rem;
+        margin: 0 auto;
+        text-align: center;
+    }
+
+    &Crown {
+        display: grid;
+        place-items: center;
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto 1.5rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+    }
+
+    &Title {
+        margin: 0 0 0.75rem;
+        color: t.$color-primary;
+        font-size: t.$font-size-page-title;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+    }
+
+    &Subtitle {
+        max-width: 34rem;
+        margin: 0 auto 2.5rem;
+        color: t.$color-text-muted;
+        line-height: t.$line-height-base;
+    }
+
+    &Price {
+        max-width: 26rem;
+        margin: 0 auto 3rem;
+        padding: 2rem;
+    }
+
+    &Amount {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 0.375rem;
+        margin: 0 0 0.5rem;
+        color: t.$color-primary;
+        font-family: t.$font-display;
+        font-size: t.$font-size-display;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+
+        span {
+            color: t.$color-text-muted;
+            font-family: t.$font-sans;
+            font-size: t.$font-size-body;
+            font-weight: t.$font-weight-semibold;
+        }
+    }
+
+    &Tagline {
+        margin: 0 0 1.75rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &Added {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0;
+        padding: 0.875rem 1.25rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-accent-soft;
+        color: t.$color-accent-ink;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &BenefitsTitle {
+        margin: 0 0 1.25rem;
+        font-size: t.$font-size-h4;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Benefits {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.25rem;
+        margin: 0 0 2rem;
+        padding: 0;
+        list-style: none;
+        text-align: left;
+    }
+
+    &Benefit {
+        padding: 1.5rem;
+    }
+
+    &BenefitIcon {
+        display: grid;
+        place-items: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-bottom: 1.25rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+    }
+
+    &BenefitTitle {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-body;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &BenefitBody {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+        line-height: t.$line-height-base;
+    }
+
+    &Note {
+        margin: 0;
+        color: t.$color-text-subtle;
+        font-size: t.$font-size-md;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        &Benefits {
+            grid-template-columns: 1fr;
+        }
+    }
+}

@@ -1,0 +1,94 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.partner {
+    display: grid;
+    grid-template-columns: 15rem 1fr;
+    overflow: hidden;
+
+    &Media {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    &Image {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        object-fit: cover;
+
+        @include m.photo;
+
+        &[data-closed='true'] {
+            filter: grayscale(1) brightness(0.7);
+        }
+    }
+
+    &Closed {
+        position: absolute;
+        padding: 0.4375rem 0.875rem;
+        border-radius: t.$radius-pill;
+        background: t.$color-surface;
+        font-size: t.$font-size-md;
+        font-weight: t.$font-weight-semibold;
+        box-shadow: t.$shadow-sm;
+    }
+
+    &Body {
+        min-width: 0;
+        padding: 1.5rem;
+    }
+
+    &Footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid t.$color-border;
+    }
+
+    &Price {
+        margin: 0;
+
+        span {
+            display: block;
+            color: t.$color-text-muted;
+            font-size: t.$font-size-sm;
+        }
+
+        strong {
+            font-size: t.$font-size-h4;
+            font-weight: t.$font-weight-black;
+        }
+
+        em {
+            color: t.$color-text-muted;
+            font-size: t.$font-size-md;
+            font-style: normal;
+            font-weight: t.$font-weight-semibold;
+        }
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        grid-template-columns: 1fr;
+
+        &Media {
+            aspect-ratio: 16 / 9;
+        }
+    }
+
+    @media (max-width: t.$breakpoint-sm) {
+        &Body {
+            padding: 1.25rem;
+        }
+
+        &Footer {
+            flex-wrap: wrap;
+        }
+    }
+}

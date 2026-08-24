@@ -1,0 +1,164 @@
+// Runtime theme. Every colour is a custom property so it can flip without a
+// rebuild; `_tokens.scss` aliases these for the rest of the stylesheets.
+// ---
+// Resolution order: an explicit `data-theme` on <html> always wins, otherwise
+// the OS preference decides.
+
+@mixin light-palette {
+    // Base / ink
+    --paper: #f3ece0;
+    --surface: #fbf8f2;
+    --ink: #24201c;
+    --sub: #58514a;
+    --muted: #8a7f70;
+    --border: #d8cdbc;
+
+    // Accent (powder blue)
+    --accent: #3f7ca0;
+    --accent-hover: #2c5b78;
+    --btn-text: #fbf8f2;
+    --sel: #c9dee9;
+
+    // Section 2 (The Rinse)
+    --sec2-bg: #c9dee9;
+    --sec2-text: #3a4a55;
+
+    // Washing machine illustration
+    --machine-body: #e8dbc5;
+    --interior: #39322b;
+    --drum-water: #7fb2ce;
+    --glass: #9fc2d6;
+    --glass-inner: #cfe3ee;
+    --glass-glint: #fbf8f2;
+    --mshadow: #24201c;
+
+    // Derived: steps the scheme does not name
+    --surface-muted: #efe6d6;
+    --border-strong: #c9bda6;
+    --danger: #b4503c;
+
+    // Translucent layers - pre-mixed per theme because a var() colour can't be
+    // passed through Sass's rgb().
+    --scrim: rgb(251, 248, 242, 0.85);
+    --scrim-strong: rgb(251, 248, 242, 0.95);
+    --on-accent-muted: rgb(251, 248, 242, 0.85);
+    --on-accent-veil: rgb(251, 248, 242, 0.16);
+    --on-accent-veil-hover: rgb(251, 248, 242, 0.26);
+    --on-accent-hover: rgb(251, 248, 242, 0.9);
+    --on-accent-edge: rgb(251, 248, 242, 0.8);
+    --decor-light: rgb(251, 248, 242, 0.09);
+    --decor-accent: rgb(63, 124, 160, 0.1);
+    --shadow-ink: rgb(36, 32, 28, 0.4);
+    --shadow-sm: 0 1px 2px rgb(36, 32, 28, 0.05);
+    --shadow-md: 0 8px 24px rgb(36, 32, 28, 0.08);
+    --shadow-lg: 0 24px 48px rgb(36, 32, 28, 0.12);
+
+    // Photographs render at full strength on paper.
+    --photo-brightness: 1;
+}
+
+@mixin dark-palette {
+    // Base / ink
+    --paper: #1c1917;
+    --surface: #241f1b;
+    --ink: #f1e9dc;
+    --sub: #b8ae9f;
+    --muted: #8a7f70;
+    --border: #3a342d;
+
+    // Accent (powder blue)
+    --accent: #7fb2d8;
+    --accent-hover: #a9cde6;
+    --btn-text: #1c1917;
+    --sel: #2e4657;
+
+    // Section 2 (The Rinse)
+    --sec2-bg: #2e4657;
+    --sec2-text: #b8ae9f;
+
+    // Washing machine illustration
+    --machine-body: #3a322a;
+    --interior: #15120f;
+    --drum-water: #6fa3c4;
+    --glass: #3d5568;
+    --glass-inner: #2a3a47;
+    --glass-glint: #7fb2d8;
+    --mshadow: #000000;
+
+    // Derived
+    --surface-muted: #2c2621;
+    --border-strong: #4a4238;
+    --danger: #e08a76;
+
+    // Translucent layers
+    --scrim: rgb(36, 31, 27, 0.85);
+    --scrim-strong: rgb(36, 31, 27, 0.95);
+    --on-accent-muted: rgb(28, 25, 23, 0.85);
+    --on-accent-veil: rgb(28, 25, 23, 0.16);
+    --on-accent-veil-hover: rgb(28, 25, 23, 0.26);
+    --on-accent-hover: rgb(28, 25, 23, 0.9);
+    --on-accent-edge: rgb(28, 25, 23, 0.8);
+    --decor-light: rgb(241, 233, 220, 0.09);
+    --decor-accent: rgb(127, 178, 216, 0.14);
+    --shadow-ink: rgb(0, 0, 0, 0.6);
+    --shadow-sm: 0 1px 2px rgb(0, 0, 0, 0.3);
+    --shadow-md: 0 8px 24px rgb(0, 0, 0, 0.4);
+    --shadow-lg: 0 24px 48px rgb(0, 0, 0, 0.5);
+
+    // Take the glare off photographs against a dark page.
+    --photo-brightness: 0.82;
+}
+
+/// Fixed across both themes - the detergent pastels used during the wash.
+@mixin constant-palette {
+    --drum-ring: #5c6b64;
+    --drum-ring-dark: #4b564f;
+    --drum-holes: #586761;
+    --ribbon: #eea9b6;
+    --stain: #d79b3f;
+    --led: #79c1a0;
+    --cloth-pink: #f0d2d6;
+    --cloth-mint: #c9e1ce;
+    --cloth-blue: #c9dee9;
+    --cloth-amber: #ebc98a;
+
+    // Brand blue in the wordmark, unchanged by theme.
+    --drum: #8fbfea;
+
+    // Text sitting on a photograph reads light in either theme.
+    --on-image: #fbf8f2;
+
+    // Readable green on the mint chip in either theme.
+    --led-ink: #3f7a5f;
+}
+
+:root {
+    @include light-palette;
+    @include constant-palette;
+
+    color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        @include dark-palette;
+
+        color-scheme: dark;
+    }
+}
+
+:root[data-theme='dark'] {
+    @include dark-palette;
+
+    color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+    @include light-palette;
+
+    color-scheme: light;
+}
+
+::selection {
+    background: var(--sel);
+}

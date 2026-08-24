@@ -1,0 +1,136 @@
+@use '../../styles/tokens' as t;
+
+.membership {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, t.$color-cream 0%, t.$color-rinse 100%);
+    text-align: center;
+
+    // Soft out-of-focus blobs behind the content.
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        width: 22rem;
+        height: 22rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-decor-primary;
+        filter: blur(t.$blur-glow);
+        pointer-events: none;
+    }
+
+    &::before {
+        top: 2rem;
+        left: -6rem;
+    }
+
+    &::after {
+        bottom: 2rem;
+        right: -6rem;
+    }
+
+    .container {
+        position: relative;
+    }
+
+    &Accent {
+        color: t.$color-primary;
+    }
+
+    &Card {
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+        border: 1px solid t.$color-on-primary-edge;
+        border-radius: t.$radius-lg;
+        background: linear-gradient(160deg, t.$color-surface 0%, t.$color-cream 100%);
+        box-shadow: t.$shadow-md;
+    }
+
+    &Crown {
+        display: grid;
+        place-items: center;
+        width: 4rem;
+        height: 4rem;
+        margin: 0 auto 1.75rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+    }
+
+    &Heading {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-display-sm;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Tagline {
+        margin: 0 0 2rem;
+        color: t.$color-text-muted;
+    }
+
+    &Price {
+        margin: 0 0 2rem;
+        color: t.$color-primary;
+        font-size: t.$font-size-display;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+
+        span {
+            color: t.$color-text-muted;
+            font-size: t.$font-size-body;
+            font-weight: t.$font-weight-semibold;
+        }
+    }
+
+    &BenefitsLabel {
+        margin-top: 3.5rem;
+    }
+
+    &Benefits {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+        max-width: 60rem;
+        margin: 1.25rem auto 0;
+        padding: 0;
+        list-style: none;
+        text-align: left;
+    }
+
+    &Benefit {
+        padding: 1.5rem;
+    }
+
+    &BenefitIcon {
+        display: grid;
+        place-items: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-bottom: 1.25rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+    }
+
+    &BenefitTitle {
+        margin: 0 0 0.5rem;
+        font-size: t.$font-size-body;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &BenefitDescription {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+        line-height: t.$line-height-base;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        &Benefits {
+            grid-template-columns: 1fr;
+            max-width: 26rem;
+        }
+    }
+}

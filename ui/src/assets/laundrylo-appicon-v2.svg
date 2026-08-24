@@ -1,0 +1,9 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="laundrylo app icon">
+  <rect width="120" height="120" rx="27" fill="#F3ECE0"></rect>
+  <circle cx="58" cy="62" r="34" fill="none" stroke="#24201C" stroke-width="12"></circle>
+  <clipPath id="d2"><circle cx="58" cy="62" r="28"></circle></clipPath>
+  <g clip-path="url(#d2)">
+    <path d="M30 66 C 44 58, 51 58, 58 66 C 67 75, 76 74, 86 65 L 86 92 L 30 92 Z" fill="#8FBFEA"></path>
+  </g>
+  <circle cx="90" cy="28" r="6.5" fill="#8FBFEA"></circle>
+</svg>

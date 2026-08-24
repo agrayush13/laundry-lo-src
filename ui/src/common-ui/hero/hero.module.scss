@@ -1,0 +1,198 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.hero {
+    background: linear-gradient(180deg, t.$color-surface-deep 0%, t.$color-cream 100%);
+
+    &Inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: center;
+        gap: 4rem;
+        max-width: t.$content-width;
+        margin: 0 auto;
+        padding: 5rem 1.5rem 6rem;
+    }
+
+    &Badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0 0 2rem;
+        padding: 0.5rem 1rem;
+        border-radius: t.$radius-pill;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+        font-size: t.$font-size-xl;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &BadgeDot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-accent;
+    }
+
+    &Title {
+        margin: 0 0 1.5rem;
+        font-size: t.$font-size-hero;
+        font-weight: t.$font-weight-black;
+        line-height: t.$line-height-tight;
+        letter-spacing: t.$tracking-tight;
+    }
+
+    &TitleAccent {
+        color: t.$color-primary;
+    }
+
+    &Subtitle {
+        max-width: 32rem;
+        margin: 0 0 2.5rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-h5;
+        line-height: t.$line-height-base;
+    }
+
+    &Search {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2.5rem;
+    }
+
+    &Field {
+        position: relative;
+        flex: 1;
+        min-width: 0;
+
+        input {
+            width: 100%;
+            padding: 1.125rem 1.25rem 1.125rem 3rem;
+            border: 1px solid t.$color-border;
+            border-radius: t.$radius-md;
+            background: t.$color-surface;
+            box-shadow: t.$shadow-sm;
+            font: inherit;
+            color: t.$color-text;
+
+            &::placeholder {
+                color: t.$color-text-muted;
+            }
+
+            &:focus-visible {
+                outline: 2px solid t.$color-primary;
+                outline-offset: 1px;
+            }
+        }
+    }
+
+    &FieldIcon {
+        position: absolute;
+        top: 50%;
+        left: 1rem;
+        transform: translateY(-50%);
+        color: t.$color-text-muted;
+        pointer-events: none;
+    }
+
+    &Stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2.5rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    &Stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: t.$color-text-muted;
+
+        strong {
+            color: t.$color-text;
+            font-size: t.$font-size-h5;
+        }
+    }
+
+    &StatIcon {
+        color: t.$color-primary;
+    }
+
+    &Media {
+        position: relative;
+    }
+
+    &Image {
+        display: block;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        object-fit: cover;
+
+        @include m.photo;
+
+        border-radius: t.$radius-lg;
+        box-shadow: t.$shadow-lg;
+    }
+
+    &Card {
+        position: absolute;
+        left: -2rem;
+        bottom: -1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.875rem;
+        padding: 1rem 1.5rem 1rem 1rem;
+        border-radius: t.$radius-md;
+        background: t.$color-surface;
+        box-shadow: t.$shadow-md;
+
+        strong,
+        em {
+            display: block;
+            font-style: normal;
+        }
+
+        em {
+            color: t.$color-text-muted;
+            font-size: t.$font-size-xl;
+        }
+    }
+
+    &CardIcon {
+        display: grid;
+        place-items: center;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-accent-soft;
+        color: t.$color-accent;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        &Inner {
+            grid-template-columns: 1fr;
+            gap: 3rem;
+            padding: 3rem 1.5rem 4rem;
+        }
+
+        &Media {
+            order: -1;
+        }
+
+        &Card {
+            left: 1rem;
+        }
+    }
+
+    @media (max-width: t.$breakpoint-sm) {
+        &Search {
+            flex-direction: column;
+        }
+
+        &Stats {
+            gap: 1.25rem 2rem;
+        }
+    }
+}

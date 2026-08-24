@@ -1,0 +1,40 @@
+@use '../../styles/tokens' as t;
+
+.logo {
+    display: block;
+    width: auto;
+    color: t.$color-text;
+}
+
+// Drum water and the full stop stay brand blue in both themes.
+.water,
+.dot {
+    fill: t.$color-drum;
+}
+
+.wordmarkText {
+    font-family: t.$font-display;
+    font-size: 104px;
+    font-weight: t.$font-weight-black;
+    letter-spacing: -0.045em;
+}
+
+.sizeSm {
+    height: t.$logo-height-sm;
+}
+
+.sizeMd {
+    height: t.$logo-height-nav;
+}
+
+.sizeLg {
+    height: t.$logo-height-lg;
+}
+
+.icon {
+    border-radius: t.$radius-sm;
+
+    &.sizeMd {
+        height: t.$logo-height-icon;
+    }
+}

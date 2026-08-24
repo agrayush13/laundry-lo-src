@@ -1,0 +1,61 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.services {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    &Item {
+        overflow: hidden;
+        transition:
+            transform t.$transition-base,
+            box-shadow t.$transition-base;
+
+        &:hover {
+            transform: translateY(-4px);
+            box-shadow: t.$shadow-md;
+        }
+    }
+
+    &Image {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        object-fit: cover;
+
+        @include m.photo;
+    }
+
+    &Body {
+        padding: 1.5rem;
+    }
+
+    &Name {
+        margin: 0 0 0.625rem;
+        font-size: t.$font-size-h4;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Description {
+        margin: 0 0 1.25rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+        line-height: t.$line-height-base;
+    }
+
+    &Price {
+        margin: 0;
+        color: t.$color-primary;
+        font-weight: t.$font-weight-bold;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        grid-template-columns: 1fr;
+        max-width: 26rem;
+        margin-inline: auto;
+    }
+}

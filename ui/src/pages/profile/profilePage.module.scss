@@ -1,0 +1,285 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.profile {
+    &Banner {
+        padding: 2rem 1.5rem 2.5rem;
+        background: t.$color-surface-deep;
+    }
+
+    &BannerInner,
+    &Body {
+        max-width: 46rem;
+        margin: 0 auto;
+    }
+
+    &Identity {
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+    }
+
+    &Avatar {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 4.5rem;
+        height: 4.5rem;
+        border-radius: t.$radius-circle;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+        font-size: t.$font-size-h3;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &AvatarEdit {
+        position: absolute;
+        right: -0.125rem;
+        bottom: -0.125rem;
+        display: grid;
+        place-items: center;
+        width: 1.625rem;
+        height: 1.625rem;
+        border: 2px solid t.$color-surface-muted;
+        border-radius: t.$radius-circle;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+    }
+
+    &Name {
+        margin: 0 0 0.25rem;
+        font-size: t.$font-size-h2;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-snug;
+    }
+
+    &Member {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+    }
+
+    &Body {
+        display: grid;
+        gap: 1.25rem;
+        padding: 2rem 1.5rem 4rem;
+    }
+
+    &Card {
+        padding: 1.5rem;
+    }
+
+    &CardHead {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin: 0 0 1.5rem;
+
+        h2 {
+            margin: 0;
+            font-size: t.$font-size-h5;
+            font-weight: t.$font-weight-bold;
+        }
+    }
+
+    &Edit {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4375rem;
+        padding: 0.5rem 0.875rem;
+        border: 0;
+        border-radius: t.$radius-sm;
+        background: none;
+        color: t.$color-primary;
+        font: inherit;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: t.$color-primary-soft;
+        }
+
+        &[data-active='true'] {
+            background: t.$color-accent-soft;
+            color: t.$color-accent-ink;
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    }
+
+    &Details {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+        margin: 0;
+
+        dt {
+            display: flex;
+            align-items: center;
+            gap: 0.4375rem;
+            margin-bottom: 0.375rem;
+            color: t.$color-text-muted;
+            font-size: t.$font-size-md;
+        }
+
+        dd {
+            margin: 0;
+            font-size: t.$font-size-xl;
+        }
+    }
+
+    &Form {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.125rem;
+    }
+
+    &Field {
+        @include m.form-field(t.$color-surface-muted);
+
+        label {
+            display: flex;
+            align-items: center;
+            gap: 0.4375rem;
+            color: t.$color-text-muted;
+            font-weight: t.$font-weight-regular;
+        }
+    }
+
+    &FormActions {
+        grid-column: span 2;
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    &Cancel {
+        border: 1px solid t.$color-border;
+        background: t.$color-surface;
+        color: t.$color-text;
+    }
+
+    &Addresses {
+        display: grid;
+        gap: 0.875rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.125rem;
+            border: 1px solid t.$color-border;
+            border-radius: t.$radius-sm;
+            background: t.$color-surface-muted;
+
+            button {
+                flex-shrink: 0;
+                padding: 0.375rem;
+                border: 0;
+                background: none;
+                color: t.$color-text-muted;
+                cursor: pointer;
+
+                &:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+            }
+        }
+    }
+
+    &AddressLabel {
+        margin: 0 0 0.25rem;
+        color: t.$color-primary;
+        font-size: t.$font-size-sm;
+        font-weight: t.$font-weight-bold;
+        letter-spacing: t.$tracking-wide;
+        text-transform: uppercase;
+    }
+
+    &Address {
+        margin: 0;
+        font-size: t.$font-size-xl;
+    }
+
+    &Empty {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+    }
+
+    &Preferences {
+        display: grid;
+        gap: 1.25rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+
+        li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+    }
+
+    &PreferenceTitle {
+        margin: 0 0 0.1875rem;
+        font-size: t.$font-size-xl;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &PreferenceDescription {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    &Toggle {
+        flex-shrink: 0;
+        width: 2.75rem;
+        height: 1.5rem;
+        padding: 0.1875rem;
+        border: 0;
+        border-radius: t.$radius-pill;
+        background: t.$color-border-strong;
+        cursor: pointer;
+        transition: background-color t.$transition-fast;
+
+        span {
+            display: block;
+            width: 1.125rem;
+            height: 1.125rem;
+            border-radius: t.$radius-circle;
+            background: t.$color-surface;
+            transition: transform t.$transition-fast;
+        }
+
+        &[aria-checked='true'] {
+            background: t.$color-primary;
+
+            span {
+                transform: translateX(1.25rem);
+            }
+        }
+    }
+
+    @media (max-width: t.$breakpoint-sm) {
+        &Details,
+        &Form {
+            grid-template-columns: 1fr;
+        }
+
+        &FormActions {
+            grid-column: span 1;
+        }
+    }
+}

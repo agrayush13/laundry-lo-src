@@ -1,0 +1,44 @@
+@use '../../styles/tokens' as t;
+
+.testimonials {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    &Item {
+        padding: 1.75rem;
+    }
+
+    &Stars {
+        display: flex;
+        gap: 0.125rem;
+        margin: 0 0 1.25rem;
+        color: t.$color-primary;
+    }
+
+    &Quote {
+        margin: 0 0 1.5rem;
+        font-size: t.$font-size-xl;
+        line-height: t.$line-height-relaxed;
+    }
+
+    &Name {
+        margin: 0 0 0.25rem;
+        font-weight: t.$font-weight-bold;
+    }
+
+    &Role {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    @media (max-width: t.$breakpoint-md) {
+        grid-template-columns: 1fr;
+        max-width: 30rem;
+        margin-inline: auto;
+    }
+}

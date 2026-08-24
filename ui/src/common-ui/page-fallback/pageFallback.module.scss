@@ -1,0 +1,29 @@
+@use '../../styles/tokens' as t;
+
+.fallback {
+    display: grid;
+    place-items: center;
+    min-height: 60vh;
+}
+
+.spinner {
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 2px solid t.$color-border;
+    border-top-color: t.$color-primary;
+    border-radius: t.$radius-circle;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// Respect a reduced-motion preference.
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation: none;
+    }
+}

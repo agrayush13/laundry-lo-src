@@ -2,7 +2,7 @@
 
 Laundry pickup & delivery, marketplace-style — think Zomato, but for laundry.
 
-**Live demo → [laundrylo.netlify.app](https://laundrylo.netlify.app)**
+**Live → [laundrylo.com](https://laundrylo.com)**
 
 ## What it is
 

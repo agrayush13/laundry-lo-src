@@ -1,0 +1,46 @@
+@use '../../styles/tokens' as t;
+
+.stepper {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    gap: 0.75rem;
+
+    button {
+        display: grid;
+        place-items: center;
+        width: 2rem;
+        height: 2rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-circle;
+        background: t.$color-surface;
+        color: t.$color-text;
+        cursor: pointer;
+
+        &:hover {
+            border-color: t.$color-primary;
+        }
+
+        // The increment control is the primary action of the pair.
+        &:last-child {
+            border-color: t.$color-primary;
+            background: t.$color-primary;
+            color: t.$color-on-primary;
+        }
+    }
+
+    output {
+        min-width: 1rem;
+        text-align: center;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    &[data-size='sm'] {
+        gap: 0.625rem;
+
+        button {
+            width: 1.875rem;
+            height: 1.875rem;
+        }
+    }
+}
