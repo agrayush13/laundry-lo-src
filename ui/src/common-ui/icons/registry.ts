@@ -38,6 +38,7 @@ import {
     Trash2,
     Truck,
     User,
+    X,
 } from 'lucide-react';
 import GithubIcon from './GithubIcon';
 import GoogleIcon from './GoogleIcon';
@@ -56,6 +57,7 @@ export const ICONS = {
     cart: ShoppingCart,
     chat: MessageSquare,
     check: Check,
+    close: X,
     'check-circle': CircleCheck,
     'chevron-right': ChevronRight,
     alert: CircleAlert,

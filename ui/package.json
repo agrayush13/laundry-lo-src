@@ -56,7 +56,13 @@
         "vitest": "^4.1.10",
         "webpack": "^5.96.1",
         "webpack-cli": "^5.1.4",
-        "webpack-dev-server": "^5.1.0"
+        "webpack-dev-server": "^5.1.0",
+        "workbox-core": "^7.4.1",
+        "workbox-expiration": "^7.4.1",
+        "workbox-precaching": "^7.4.1",
+        "workbox-routing": "^7.4.1",
+        "workbox-strategies": "^7.4.1",
+        "workbox-webpack-plugin": "^7.4.1"
     },
     "sideEffects": [
         "*.scss",
