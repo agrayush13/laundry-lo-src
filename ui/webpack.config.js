@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { InjectManifest } = require('workbox-webpack-plugin');
 
 /**
  * The app uses client-side routing, so a static host must serve index.html for
@@ -61,19 +62,28 @@ class EmitPublicAssets {
                     stage: Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
                 },
                 () => {
-                    for (const name of fs.readdirSync(publicDir)) {
-                        if (name === 'index.html') {
-                            continue;
-                        }
+                    // Recursive so nested folders such as public/icons ship too.
+                    const emitDir = (dir, prefix) => {
+                        for (const name of fs.readdirSync(dir)) {
+                            if (!prefix && name === 'index.html') {
+                                continue;
+                            }
 
-                        const file = path.join(publicDir, name);
-                        if (fs.statSync(file).isFile()) {
-                            compilation.emitAsset(
-                                name,
-                                new sources.RawSource(fs.readFileSync(file))
-                            );
+                            const file = path.join(dir, name);
+                            const assetName = prefix ? `${prefix}/${name}` : name;
+
+                            if (fs.statSync(file).isDirectory()) {
+                                emitDir(file, assetName);
+                            } else {
+                                compilation.emitAsset(
+                                    assetName,
+                                    new sources.RawSource(fs.readFileSync(file))
+                                );
+                            }
                         }
-                    }
+                    };
+
+                    emitDir(publicDir, '');
                 }
             );
         });
@@ -149,6 +159,20 @@ module.exports = (env, argv) => {
                 template: './public/index.html',
                 favicon: './src/assets/laundrylo-appicon-v2.svg',
             }),
+            // Dev has no service worker: a stale cache while editing is worse
+            // than no offline support.
+            ...(isProduction
+                ? [
+                      new InjectManifest({
+                          swSrc: './src/service-worker/sw.ts',
+                          swDest: 'service-worker.js',
+                          // Source maps are emitted outside dist and must never
+                          // be precached; nor should the host rewrite files.
+                          exclude: [/\.map$/, /^_redirects$/, /^netlify\.toml$/],
+                          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+                      }),
+                  ]
+                : []),
         ],
         devServer: {
             static: path.resolve(__dirname, 'public'),

@@ -1,0 +1,48 @@
+@use '../../styles/tokens' as t;
+
+.updatePrompt {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    z-index: t.$z-toast;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: min(30rem, calc(100vw - 2rem));
+    padding: 0.875rem 1rem;
+    transform: translateX(-50%);
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-lg;
+    background: t.$color-surface;
+    color: t.$color-text;
+    box-shadow: t.$shadow-lg;
+
+    &Text {
+        flex: 1;
+        min-width: 0;
+        font-size: t.$font-size-sm;
+    }
+
+    &Action {
+        flex-shrink: 0;
+        padding: 0.4rem 0.85rem;
+        border: none;
+        border-radius: t.$radius-pill;
+        background: t.$color-primary;
+        color: t.$color-on-primary;
+        font-size: t.$font-size-sm;
+        font-weight: t.$font-weight-bold;
+        cursor: pointer;
+    }
+
+    &Dismiss {
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        padding: 0.25rem;
+        border: none;
+        background: none;
+        color: t.$color-text-muted;
+        cursor: pointer;
+    }
+}

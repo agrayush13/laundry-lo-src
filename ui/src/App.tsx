@@ -6,6 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import AppRoutes from './AppRoutes';
 import ErrorBoundary from './common-ui/error-boundary/ErrorBoundary';
 import ErrorFallback from './common-ui/error-boundary/ErrorFallback';
+import UpdatePrompt from './common-ui/update-prompt/UpdatePrompt';
 
 const App: React.FC = () => (
     <ErrorBoundary
@@ -21,6 +22,7 @@ const App: React.FC = () => (
                 <CartProvider>
                     <BrowserRouter>
                         <AppRoutes />
+                        <UpdatePrompt />
                     </BrowserRouter>
                 </CartProvider>
             </AuthProvider>

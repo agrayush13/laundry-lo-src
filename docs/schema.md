@@ -111,12 +111,19 @@ Many-to-many; tags are slugs (`free-pickup`), never display strings.
 
 ### catalog_categories
 
-| Column       | Type    | Notes                         |
-| ------------ | ------- | ----------------------------- |
-| `id`         | text PK |                               |
-| `partner_id` | text FK | catalogs are **per partner**  |
-| `name`       | text    | "Wash & Fold", "Dry Cleaning" |
-| `position`   | integer | display order                 |
+| Column       | Type    | Notes                                         |
+| ------------ | ------- | --------------------------------------------- |
+| `id`         | text PK |                                               |
+| `partner_id` | text FK | catalogs are **per partner**                  |
+| `service`    | text    | canonical slug: `wash-fold`, `dry-clean`, ... |
+| `name`       | text    | "Wash & Fold", "Dry Cleaning"                 |
+| `position`   | integer | display order                                 |
+
+`service` is the platform's vocabulary, `name` is the partner's. They are
+separate so a partner can call a category "Express Dry Clean" without falling out
+of a `services=dry-clean` filter, and so the homepage service cards keep working
+when partners rename things. `Partner.services` in the API is the distinct set of
+`service` values across a partner's categories.
 
 ### catalog_items
 
@@ -290,6 +297,7 @@ partners 1--* partner_hours
 ## 5. Indexes worth having early
 
 - `partners (pincode)` and `partners (pincode, is_open)` - the listing query
+- `catalog_categories (service, partner_id)` - filtering the listing by service
 - `slots (partner_id, starts_at)` - the slot picker
 - `orders (user_id, placed_at desc)` - order history pagination
 - `order_events (order_id, occurred_at)` - timeline
