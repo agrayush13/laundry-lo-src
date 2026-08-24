@@ -135,7 +135,7 @@ adding one does not require re-fetching the profile.
 
 ## 3. Partners
 
-### `GET /partners?pincode=560103&tags=free-pickup,eco-friendly&sort=rating&limit=20`
+### `GET /partners?pincode=560103&services=wash-fold&tags=free-pickup&sort=rating&limit=20`
 
 ```json
 {
@@ -153,6 +153,7 @@ adding one does not require re-fetching the profile.
             },
             "distanceMeters": 800,
             "tags": ["free-pickup", "eco-friendly"],
+            "services": ["wash-fold", "wash-iron", "dry-clean"],
             "turnaroundHours": 24,
             "startingPrice": { "amount": 2000, "currency": "INR", "unit": "piece" },
             "isOpen": true,
@@ -174,6 +175,12 @@ Changes from the original mock, all deliberate and now reflected in the client:
 | `tags: ["Free Pickup"]`            | `tags: ["free-pickup"]` | Slugs are stable; display names are the client's business and are already in config |
 | `address: "12, MG Road, Sector 5"` | structured object       | Needed for map pins and sorting later                                               |
 | `startingPrice: 49`                | money object with unit  | Currency and units become explicit                                                  |
+
+`services` lists the catalogue category slugs the partner actually offers, so the
+listing can be filtered by service without fetching every catalogue. `services=`
+takes one or more slugs and matches partners offering **all** of them, the same
+conjunctive rule as `tags=`. The homepage service cards are the first caller: each
+card links to `/laundries?pin=560103&service=wash-fold`. See decision 8.
 
 `isOpen` is stored server-side and toggleable from the admin panel. See decision 2.
 
@@ -463,6 +470,14 @@ Reviewed 2026-07-25.
    schema change. Follow-up: the footer copy "you only pay once your laundry has
    been weighed" must change.
 
+8. **Listing filters by service.** `Partner` carries a `services` array of
+   catalogue category slugs, and `GET /partners` accepts `services=`. The
+   alternative, deriving it by joining every partner's catalogue at query time,
+   makes the cheapest and most common query on the site pay for the rarest need.
+   The array is derived from `catalog_categories.service` server-side, so it
+   cannot drift from what the partner actually sells. Consequence: the seed data
+   in `ui/src/data/partners.ts` gains the same field ahead of the API.
+
 ### Deferred (revisit later)
 
 7. **Reviews.** `rating`/`reviewCount` stay read-only for now; write endpoints
@@ -483,3 +498,5 @@ Not a small amount, and worth sizing before committing:
 - Sign-in gains a credentials-error state (does not exist today)
 - Timeline rendering moves from server labels to client-derived labels
 - `data/*.ts` seed files are deleted; `services/*Services.ts` take their place
+- The listing reads its service filter from the query string, so a homepage card
+  and a filter chip are the same state

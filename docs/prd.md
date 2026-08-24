@@ -62,14 +62,20 @@ requires logistics we do not have yet.
 The `unit` enum keeps `piece | bag | kg`. **Launch ships `piece` only**; the other
 two return with no schema change once operations can support them honestly.
 
-Consequence: the footer promise "you only pay once your laundry has been weighed"
-is now false and must be reworded.
+Consequence: the footer promise "you only pay once your laundry has been
+weighed" was false and has been reworded. The homepage hero carried the same
+claim in its micro-line; it now reads "price shown up front", which is what
+per-item pricing actually gives the customer (see
+[homepage.md](./homepage.md) section 6.1).
 
 ## 6. Scope
 
 ### In scope now
 
-- Pincode search and partner listing with filters and sorting
+- The creative homepage, one wash cycle per scroll (see
+  [homepage.md](./homepage.md))
+- Pincode search and partner listing with filters and sorting, filterable by
+  service so the homepage cards can link into a filtered listing
 - Partner detail with a per-partner catalog
 - Cart (guest + signed-in), checkout with address and slot selection
 - Order placement, order history, order tracking timeline
@@ -108,7 +114,8 @@ is now false and must be reworded.
 
 - Route-level code splitting; the homepage ships in the initial bundle
 - Works signed out for everything up to placing an order
-- Light and dark themes, both first-class
+- Light and dark themes, both first-class, on every route except the homepage,
+  which is light only by design (see [homepage.md](./homepage.md) decision 4)
 - Accessible forms: labelled inputs, `aria-invalid`, errors tied to fields
 - Validation explains itself - the confirm button stays enabled and scrolls to
   the first problem rather than silently disabling
@@ -120,3 +127,19 @@ is now false and must be reworded.
 - What are the actual Plus benefits, and how do they apply to per-item pricing?
 - Delivery fee: flat, distance-based, or free above a threshold?
 - Which city and pincodes launch first? (demo data is Bengaluru)
+
+## 10. The homepage
+
+The homepage is a design showcase as much as a front door, and it has its own
+document: [homepage.md](./homepage.md). What matters at product level:
+
+- **The product must be legible in second one.** The pin-code input sits in the
+  first viewport and the cycle is the container, never a gate.
+- **Claims trace to a real surface.** No invented testimonials or customer
+  counts. The three figures in the spin section (52+ partners, 6 pin codes, 24h)
+  are demo figures rather than counts of the seed data, which is why the footer
+  carries "a demo project by ayush, not a real service." plainly and unmissably.
+- **Prices shown there are the prices in the booking flow.** The service cards
+  read from the same catalogue the cart uses, so the two cannot drift.
+- **Plus promises exactly three perks** (free pickup, 10% off, priority slots),
+  the same three the booking summary honours.
