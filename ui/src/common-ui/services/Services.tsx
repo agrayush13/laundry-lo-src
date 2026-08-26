@@ -17,7 +17,7 @@ const Services: React.FC = () => (
             />
 
             <ul className={styles.services}>
-                {SERVICE_TYPES.filter((service) => service.featured).map((service) => (
+                {SERVICE_TYPES.map((service) => (
                     <Card
                         as="li"
                         className={styles.servicesItem}

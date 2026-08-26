@@ -6,8 +6,13 @@ import Icon from '../icons/Icon';
 import styles from './themeToggle.module.scss';
 
 const ThemeToggle: React.FC = () => {
-    const { resolved, toggle } = useTheme();
+    const { resolved, toggle, isLocked } = useTheme();
     const isDark = resolved === 'dark';
+
+    // A page holding the theme would make this button lie, so it is not offered.
+    if (isLocked) {
+        return null;
+    }
 
     return (
         <button

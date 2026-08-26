@@ -1,9 +1,20 @@
-# laundrylo homepage - the cycle
+# laundrylo journey - the cycle
 
 Status: **living document**. Design decisions settled 2026-07-21, build decisions
-settled 2026-08-24. This is the authoritative reference for the creative
-homepage: it supersedes the v1 design doc, the six section briefs and the three
-iteration docs, whose surviving content is merged here.
+settled 2026-08-24, split out of the homepage 2026-08-25. This is the
+authoritative reference for the journey: it supersedes the v1 design doc, the six
+section briefs and the three iteration docs, whose surviving content is merged
+here.
+
+The journey lives at `/journey`. It was built as a replacement homepage and is
+not one: the marketing homepage at `/` stays exactly as it was, and this is the
+same story told a second way, as a thing that happens rather than a page that
+describes it. Both read from the same configuration, so a figure quoted here
+cannot differ from the one quoted there. Section 20 records what that costs and
+which files enforce it.
+
+Where this document says "the homepage", read "the journey": the wording predates
+the split and the mechanics are unchanged.
 
 Pairs with [prd.md](./prd.md) for product rules and
 [architecture.md](./architecture.md) for how the page is put together.
@@ -15,7 +26,23 @@ Pairs with [prd.md](./prd.md) for product rules and
 
 **v2.2 changes:** pricing follows the per-item model (section 7.3), build
 decisions recorded (section 19), open items closed (section 17), micro-line
-reworded, S3 keeps the drum at its centre, S5 fold is trigger-based.
+reworded, S3 keeps the drum at its centre.
+
+**v2.3 changes:** every phase pins and scrubs (decision 16), no scroll snapping
+(17), per-frame transforms bypass GSAP (18), wind is gathered per frame (19), the
+cycle moved to `/journey` and the marketing homepage came back (section 20).
+
+**v2.4 changes:** the pointer wind is cut and the line breathes on its own while
+it is held (decision 20), the spin starts on sight rather than on the hold (21),
+the iron makes three tracked crossings and a crease goes out under the plate that
+passes over it (22), and the header plays the whole cycle instead of linking into
+the middle of it (23).
+
+**v2.5 changes:** the whole page is paced down and a hard scroll is capped at a
+speed a phase can be read at (decision 24); the detergent pour and the iron are
+slowed further than that on their own account, and the detergent now dissolves
+instead of staying in the drum (section 6.3.6). The scroll no longer touches the
+S3 figures at all (section 8.2).
 
 ---
 
@@ -24,8 +51,8 @@ reworded, S3 keeps the drum at its centre, S5 fold is trigger-based.
 laundrylo is a laundry marketplace for Bengaluru, Zomato-shaped: compare local
 laundries, read reviews, book a pickup. The platform owns delivery, partner
 laundries clean. The app (listings, booking flow, My Bookings) lives behind
-"Find laundries"; this creative homepage is the front door and a design
-showcase.
+"Find laundries"; the marketing homepage at `/` is the front door, and this
+journey is the design showcase reached from it.
 
 ## 2. Governing concept: the cycle
 
@@ -84,8 +111,8 @@ progress dial and loader.
    removed after. ScrollTrigger scrub smoothing 0.5 to 1s. Lenis and GSAP
    ScrollTrigger are the spine.
 5. **prefers-reduced-motion:** every section renders complete final content
-   statically; choreography, ambient motion and cursor effects are disabled.
-   100% content parity.
+   statically; choreography and ambient motion are disabled, and controls whose
+   only purpose is to move the page are not offered. 100% content parity.
 6. **Honesty rule.** Claims trace to a real product surface. No invented
    testimonials or customer counts. The three S3 numbers are demo figures and are
    covered by the footer disclaimer, which is why that disclaimer is set plainly
@@ -119,10 +146,20 @@ opacity until touched.
 load and app-route transitions only, never faked for effect. It replaces the
 current `PageFallback`. Reduced motion: static mark.
 
-**5.3 Custom wind cursor (S4 only).** Inside S4's bounds the cursor becomes a
-small wind-swirl mark; it reverts to native over interactive elements and outside
-the section. Touch: one automatic gust when the assembled line first settles, as
-the affordance hint. Reduced motion: no swap.
+**5.3 The tour (header control).** One button, in the cycle's own header, that
+plays the whole thing: it cuts to the top behind a fade and then scrolls the page
+at a constant 0.36 viewports a second, which is playback speed because every
+phase is scrubbed against the scroll. A wheel, a swipe or a scrolling key hands
+the page straight back at the position it had reached. Not offered at all under
+reduced motion.
+
+This replaced a "how it works" link that pointed at S4. The question it answered
+is "how does this work", and the answer is the cycle in order, not the fourth
+sixth of it.
+
+**Superseded: the custom wind cursor (S4 only).** Inside S4's bounds the cursor
+became a wind-swirl mark and moving it pushed a gust. Cut in v2.4; see decision
+20.
 
 **5.4 Pin-code input.** One component, two placements (S1 hero, S6 footer):
 6-digit validation, then navigate to the listing. Serviceability (the friendly
@@ -130,14 +167,16 @@ the affordance hint. Reduced motion: no swap.
 6-digit pin navigates, which is the behaviour shipping today in
 `usePinCodeSearch`.
 
-**5.5 Header.** Logo lockup (`laundrylo-logo.svg`, never typeset) plus a
-"how it works" anchor pointing at S4, where the four steps live printed on the
-garments. No dark-mode toggle, no cart, no sign-in: the homepage header carries
-two items and nothing else. It is not sticky; it scrolls away with the hero.
-Mobile: logo left, anchor collapses to a single text link, no hamburger.
+**5.5 Header.** Logo lockup (`laundrylo-logo.svg`, never typeset) plus the tour
+control (section 5.3). No dark-mode toggle, no cart, no sign-in: the cycle's
+header carries two items and nothing else. It is not sticky; it scrolls away with
+the hero. Mobile: logo left, the control collapses to a single text button, no
+hamburger.
 
-The shared app header and footer are **not rendered on `/`**. Every other route
-keeps the current chrome.
+The shared app header and footer are **not rendered on `/journey`**. Every other
+route keeps the current chrome. The app header's own "Journey" link enters behind
+the same soft cut the cycle uses internally, and warms the route's chunk on the
+same click so the fade covers the fetch rather than a loading state.
 
 ---
 
@@ -211,7 +250,7 @@ word carries the treatment and every other l stays plain.
 Acceptance: at a squint the headline reads "lost to laundry." without
 hesitation; on second look the t is a shirt and the l is a sock.
 
-### 6.3 Scroll choreography (pinned 1.5 to 2 viewports of scroll, scrubbed, reversible)
+### 6.3 Scroll choreography (pinned about 2.5 viewports of scroll, scrubbed, reversible)
 
 1. The door swings open.
 2. Garment glyphs detach first (tee, then sock) and arc into the drum.
@@ -231,7 +270,10 @@ hesitation; on second look the t is a shirt and the l is a sock.
    ribbon** on its own. Liquid is visible ONLY inside the glass, never crossing
    the machine body. Water rises concurrently and a **white foam line**
    (irregular, hairline to 4px, 2 or 3 bubble clusters) rides the surface. The
-   two ribbons marble, visibly mixing, never blending to a muddy third colour.
+   two ribbons marble, visibly mixing, never blending to a muddy third colour,
+   and **each one disperses once it lands**: it holds its colour as it meets the
+   water and then goes. A ribbon that thins and stops is detergent poured into a
+   machine and never dissolved, and it sits in the drum through the spin.
    Optional caption: "eco-friendly detergents at partner laundries."
 7. **The clean headline resolves early.** "Get your weekends back." enters word
    by word during the water beat, in final position, plain type, no stains, and
@@ -393,12 +435,19 @@ grotesque labels. Nothing else. These are demo figures rather than counts of the
 seed data (which holds 6 partners across 3 pin codes); the footer disclaimer
 carries them, and it is set to be unmissable for exactly this reason.
 
-**8.2 Mechanic, scroll is the motor, direction agnostic (absolute velocity):**
-entering, the digits blur-spin as slot strips (fake blur per rule 4.4). Fast
-scroll in either direction means harder blur, heavier droplet shedding and subtle
-radial background streaking. Stopping decelerates and settles; digits snap
-crisply, the money moment. **Numbers stay landed after the first settle**; later
-scrolling re-energizes ambient effects only.
+**8.2 Mechanic.** The digits blur-spin as slot strips (fake blur per rule 4.4)
+from the moment they come into view, a quarter of a viewport before the section
+is held. The reel whips, decelerates and lands on the figure, the money moment.
+
+**Scroll is the motor of everything here except the figures.** It is direction
+agnostic and reads absolute velocity: faster scrolling means a harder-driven
+drum, heavier spray and a fuller pool. **The numbers roll once a visit and are
+then final**, up or down, until the page is reloaded. A figure has one true
+value, so anything that moves it has to end on it, and a quantity driven by
+scroll speed ends wherever the scrolling stopped: parked mid-roll it leaves a
+crisp, confident, wrong number on the screen. The blur belongs to the roll for
+the same reason, and not to the scrolling: a landed number that softens whenever
+the page moves is a number that looks about to change.
 
 **8.3 Droplets shed from the digits.** The spinning strips fling droplets
 tangentially off their own edges: the numbers ARE the laundry being wrung.
@@ -466,7 +515,7 @@ garment silhouette at every sway angle; text clipping past the edge is a defect.
 minimal fabric warp, so text tilting up to 15 degrees stays legible);
 **unprinted garments carry the expressive rippling.**
 
-**9.5 Phase 1, assembly (pinned about 1.5 viewports, scrubbed, reversible).**
+**9.5 Phase 1, assembly (pinned about 1.75 viewports, scrubbed, reversible).**
 S3's pool drains, the rope's anchors draw the line in from the edges, and
 garments eject one at a time from offscreen left: arc with a slight rotation,
 land, the peg snaps with a small squash, **the rope dips, oscillates through 2 or
@@ -477,14 +526,20 @@ dressing interleaved in the same stream, hero garments among the earliest.
 Already-pegged garments begin idle sway immediately. Reverse scroll unpegs them
 and flies them back out.
 
-**9.6 Phase 2, alive (resting state, runs continuously regardless of scroll).**
-An organic non-uniform breeze: neighbours at different phases and amplitudes,
-never synchronized, never visibly looping. **Cursor as wind** (section 5.3):
-pointer movement pushes a gust, garments billow away and settle, propagating to
-neighbours through the rope; a faster pointer means a stronger gust; a slow
-traveling wave runs the catenary. Touch: a horizontal swipe is a gust. Cap: 15 to
-20 degrees of billow, a breeze and not a storm, with printed text readable at all
-times.
+**9.6 Phase 2, alive (while the section is held).** An organic non-uniform
+breeze: neighbours at different phases and amplitudes, never synchronized, never
+visibly looping. The wind is weather rather than input. A soft push wanders along
+the rope on two rates that do not divide into each other, so a wave travels the
+catenary and each garment answers its neighbour a beat late; on top of that every
+garment carries its own slow breath at its own rate. Cap: 15 to 20 degrees of
+billow, a breeze and not a storm, with printed text readable at all times.
+Measured in simulation, the rope wanders about 19 units of a 1200-unit scene and
+the garments peak between 7 and 12.4 degrees, printed ones narrowest.
+
+It blows for exactly as long as the page is held here. Off the hold the clock the
+breeze is read from stops and the pendulums damp onto their last angle, so the
+line stills rather than freezing: the difference between the wind dropping and
+the page being paused.
 
 **Tech (settled):** SVG plus a verlet rope with garment path displacement,
 roughly 80% of a cloth sim, degrading to CSS pendulum sway on low-power devices.
@@ -520,10 +575,28 @@ three honoured perks.
 **10.1 The object is a shirt, not a card.** Headline above: "Folded into every
 order." A rounded rectangle with benefit chips is a failed build.
 
-**10.2 Beat 1, the press.** The shirt arrives unfolded and slightly wrinkled
-(a gently wavy outline). A flat-illustrated iron enters and makes 1 or 2
-horizontal passes, 2 or 3 steam wisps rise (stochastic, never rewound), and
-wrinkles flatten in the iron's wake. Short.
+**10.2 Beat 1, the press.** The shirt arrives unfolded and creased: six wavy
+lines in three pairs. A flat-illustrated iron enters and makes **three
+crossings**, alternating direction, one along each band, turning round off the
+edge of the box where the change of band cannot be seen.
+
+Slowly. The iron carries 1220 units across a 960-unit box, so a crossing has the
+whole width of the screen behind it, and at the rate it first ran that was a
+quarter of a viewport of scrolling: a shove rather than a press. Ironing is a
+deliberate gesture and this is the one section on the page that should look
+unhurried. The hold grew with it, so the folds after it kept their room.
+
+**Each crease goes out under the plate passing over it**, not on a timer of its
+own. The crossing runs at constant speed, so the share of it at which the iron
+meets the near end of a crease and the share at which it leaves the far end are
+arithmetic; the crease is normalised to a path length of one and rubbed out over
+exactly that stretch, from the end the iron reaches first. Creases are painted
+over the cloth, not under it: underneath every panel they were invisible.
+
+**Steam rises off the shirt at the lip of the plate**, on both sides and outside
+the iron's own body, on its own repeating loop rather than on the scrubbed
+timeline. It was drawn above the handle and scrubbed, which made it a wisp glued
+to a lump of metal that shrank back into the nozzle on the way up.
 
 **10.3 Beat 2, the fold (trigger based, about 800ms).** The pressed shirt lies as
 four visible panels: **three carry one benefit each** (free pickup on every
@@ -536,7 +609,8 @@ amber. Creases stay faintly visible.
 
 Trigger based rather than scrubbed: three sequential folds inside a single
 viewport scrub badly, and the fold reads as a mechanism rather than a scroll
-readout. Reversal on scroll up still unfolds; steam does not rewind.
+readout. Reversal on scroll up still unfolds, and irons the creases back in;
+steam does not rewind, because it never sat on the timeline in the first place.
 
 Per rule 4.9, **no content straddles a crease.** The v2.1 design had ₹99/month
 and the CTA split across the vertical crease; in the shirt version they move to
@@ -658,11 +732,11 @@ requests in the hero. Fraunces is self-hosted, preloaded and `font-display: swap
 through S6 are dynamic imports, prefetched one section ahead by an
 IntersectionObserver, each with a 100vh placeholder reserved so nothing jumps and
 `ScrollTrigger.refresh()` after each chunk mounts. GSAP, ScrollTrigger and Lenis
-load after first paint; the static line is the placeholder for physics and wind.
+load after first paint; the static line is the placeholder for the physics.
 
-60fps floor on mid-tier mobile. Degrade order: interactive gust becomes CSS sway,
-droplet count halves, shadows go static. Lighthouse 95 or better across the
-board.
+60fps floor on mid-tier mobile. Degrade order: the rope solves only while its
+section is on screen and the breeze only while it is held, droplet count halves,
+shadows go static. Lighthouse 95 or better across the board.
 
 ---
 
@@ -682,9 +756,8 @@ section keeps its concept, only the staging changes.
    information lives behind hover.
 4. Tap targets are 44px or larger; the pin input and CTA stack vertically, full
    width, in both S1 and S6.
-5. The custom cursor is disabled; the wind cursor is desktop only.
-6. Ambient particle counts halve, shadows become static, and the interactive gust
-   falls back to CSS pendulum sway on low-power devices.
+5. Nothing is gated behind a cursor, because there is no cursor.
+6. Ambient particle counts halve and shadows become static on low-power devices.
 7. Type scales: display 2.75rem to 2rem for section headlines, S3 digits 15 to
    20vw becoming 22 to 26vw (they should still dominate).
 
@@ -710,10 +783,9 @@ stat list on mobile.
 **14.5 S4 mobile.** Rope sag deepens and the **garment count drops to five** (tee,
 sock, shirt, kurta, towel; the handkerchief is cut) rather than shrinking
 garments below recognizability. Printed text sizes up relative to the garment so
-it stays legible. Assembly still scrubs. **Wind:** ambient sway continues, the
-gust is triggered by a horizontal swipe, and one automatic demo gust plays when
-the line first settles so the interaction is discoverable. Shadows persist but
-are static.
+it stays legible. Assembly still scrubs, and the breeze runs while the section
+is held exactly as it does on a desktop: it is weather, not an interaction, so
+there is nothing to make discoverable. Shadows persist but are static.
 
 **14.6 S5 mobile.** The shirt folds in a simpler **two-step** (halves, not
 quarters) if four panels crowd the narrow screen: benefits ride the upper half,
@@ -736,7 +808,8 @@ All information is real DOM text (printed garment steps, digits, benefits,
 disclaimer); illustration never carries information that text does not. Reduced
 motion renders every section complete and static. Keyboard: visible focus rings
 site wide, pins never trap focus, and the CTA is reachable at both ends of the
-page. Touch parity: swipe gust, auto-gust hint, no hover-gated information.
+page. Touch parity: nothing is hover-gated and nothing needs a pointer, because
+no part of the cycle is driven by one.
 Contrast: printed garment text meets 4.5:1 against its garment, and steel blue
 meets 4.5:1 on paper.
 
@@ -744,13 +817,16 @@ meets 4.5:1 on paper.
 
 ## 16. Build order
 
+All eight steps are built. The order they were built in, and what each one
+covers:
+
 1. Scroll spine and section skeletons with plain content. Deploy early, progress
    public.
 2. S1 rest state (final glyphs, machine SVG, Fraunces) plus a rough pin and scrub
    to validate feel.
 3. S1 full choreography (letter stream, starch, pour, early headline).
 4. S4 static composition (rope, garments, prints, shadows).
-5. S4 physics and wind (hardest, likely two sessions).
+5. S4 physics and breeze (hardest, likely two sessions).
 6. S3 (digits, droplets, pool) and S5 (press, fold, tag).
 7. S2 polish, S6 (box construction), dial, loader, transitions.
 8. Mobile pass, performance pass, reduced-motion audit.
@@ -758,6 +834,13 @@ meets 4.5:1 on paper.
 Standing rule: interview-prep reps come first, this project is the reward. The
 app (listings and booking) is a parallel build sharing design tokens, the
 pin-input component and the service filter.
+
+What is verified and what is not: types, lint, stylelint, formatting, 47 tests
+and the production build run on every change. Motion is not covered by any of
+them, because happy-dom has no layout and the spine never boots there. Every
+test therefore sees the same static state that prefers-reduced-motion produces,
+which is worth knowing when reading them: they prove the page says everything it
+has to say, not that it moves well. That part is a browser judgement.
 
 ---
 
@@ -784,17 +867,24 @@ input is clickable throughout.
 settles to a hairline rather than sitting as a band; cards mask-reveal bottom up;
 hover motion is one shot; each card lands on the listing filtered by its service.
 
-**S3:** absolute-velocity drive in both directions, numbers stay landed, the
+**S3:** the figures are already spinning as they come up the screen, they land
+once and are never disturbed again in either direction, absolute-velocity drive
+on the drum and the spray, the
 emission floor is visible at slow scroll, the pool grows then drains into S4 and
 refills on return, the corner dial is hidden while the drum is on screen.
 
 **S4:** rope physics on every landing (a rigid rope is a failed build), prints
 readable and inside the silhouette at max billow, the breeze runs while
-stationary, the cursor swaps in bounds and reverts, shadows track the sway.
+stationary and stills when the hold releases, shadows track the sway.
 
-**S5:** the object is a shirt, press precedes fold, fold order is left, right,
-bottom, the chest reveal reads "laundrylo plus", nothing straddles a crease, the
-tag CTA is inert until assembled.
+**S5:** the object is a shirt, press precedes fold, every crease goes out under
+the iron rather than on a timer, steam leaves the cloth and not the handle, fold
+order is left, right, bottom, the chest reveal reads "laundrylo plus", nothing
+straddles a crease, the tag CTA is inert until assembled.
+
+**The tour:** plays from the top whatever the scroll position, holds a constant
+pace through every phase, and gives way on the first wheel, swipe or scrolling
+key without jumping.
 
 **S6:** full viewport, the stack sits inside the box (the front panel occludes),
 flaps read as separate planes, the sock is recognizable, tag, peg and string are
@@ -848,3 +938,153 @@ Settled 2026-08-24, before implementation.
 12. **The app header's nav is repointed**: services to `/laundries`, how it works
     to the S4 anchor, pricing to `/plus`. The old homepage anchors
     (`#services`, `#how-it-works`, `#pricing`) disappear with the old sections.
+13. **Hinges and pivots live in the timelines, not the stylesheets.** GSAP
+    computes its own transform origin for SVG and overrides `transform-origin`,
+    so anything turning about a point other than its middle declares it as an
+    `svgOrigin` in viewBox coordinates. The door opening from its centre rather
+    than its left edge was this bug, and the fold panels were written against it
+    from the start.
+14. **S3 digits run at 10.5vw rather than the 15 to 20vw in section 8.1.** At the
+    larger size the three figures crowded the drum on the axis between them.
+    Revisit if the composition ever gets more room.
+15. **"plus" on the folded shirt is a synthesised oblique.** Self-hosting a
+    second 120KB font file for one word is not worth it; swap in real Fraunces
+    italic if the fold ever grows more of them.
+16. **Every phase pins and scrubs.** Arriving at a section holds it in place, and
+    the scrolling that follows is what runs its choreography. This is the page's
+    single motion model, in `motion/pinScene.ts`, and the pin lengths there and
+    in each hook are where the pacing of the whole page is set. It replaced a
+    mix of three models: scrubbed pins for the wash and the dry, play-on-enter
+    for the rinse, the fold and the delivery, and scroll velocity for the spin.
+    Only position-based motion reverses correctly, and only a hold makes a phase
+    cost what it is worth.
+17. **No scroll snapping.** There was, briefly. With every phase pinned the
+    scroll is almost always inside a hold rather than between two of them, so
+    snapping to the nearest section start hauls the page backwards through an
+    animation the visitor is in the middle of. The holds are what stop a phase
+    being skipped. The step and lookahead caps in `motion/spine.ts` are what stop
+    a hard flick outrunning them, and the lookahead is the one doing the work:
+    it caps how far ahead of the page the scroll may run, rather than capping how
+    hard the visitor is allowed to push.
+18. **Scene transforms that run every frame are written to the attribute, not
+    set through GSAP.** `svgOrigin` is resolved against the scene's own
+    coordinate system, so `'0 0'` means the corner of the drawing rather than the
+    corner of the element. Every garment on the line was swinging about the
+    corner of the scene, which threw it further the further along the line it
+    hung: measured, the towel at the right end moved about two hundred units for
+    a fifteen degree flutter, which is what "the clothes detach from the rope"
+    was. `rotate` written to the attribute with no centre is the element's own
+    origin, which is the peg. The same applies to the spinning drum.
+19. **Wind was gathered per frame, not per event.** A pointer fires anywhere
+    between sixty and two hundred and forty moves a second depending on the
+    hardware, so a push per event made the same sweep four times stronger on a
+    better mouse. Superseded by decision 20, which removed the pointer wind
+    altogether; the reasoning is kept because it applies to any continuous input,
+    and the frame-scaling it argues for is what the ambient breeze now uses.
+20. **The pointer is not the wind. The line moves by itself.** The cursor became
+    a swirl inside S4 and sweeping it pushed a gust that travelled the rope. It
+    was the best interaction on the page and almost nobody found it: nothing on
+    the screen tells a visitor to sweep a mouse across a drawing, so the one part
+    that asked to be played with read as the one part that was broken. The
+    breeze is ambient now, and because it is no longer competing with a gust the
+    visitor owns, it can be as wide as washing on a line actually moves: 9.5
+    degrees of target sway against the 4.2 it was held to before. It blows only
+    while the section is held, which is both the honest reading (the phase is
+    what is playing) and the cheap one.
+21. **The spin starts on sight, not on the hold.** A section is held when its top
+    reaches the top of the window, and the figures are readable for most of a
+    viewport before that. Started on the hold, three still numbers rode up the
+    screen and broke into a spin the instant the page stopped, which put the
+    whole performance after the thing it was meant to introduce and made the
+    spin look like a reaction to the lock. `onceInView` fires at `top 75%`.
+22. **A crease goes out under the iron, not on a timer.** The press faded every
+    crease together over 1.4 seconds while the iron crossed twice somewhere
+    nearby. It now makes three crossings, one per band of creases, and each
+    crease is rubbed out over exactly the stretch of the crossing during which
+    the plate is over it, computed from the constant crossing speed rather than
+    approximated. Two things were wrong underneath: the iron's two passes only
+    covered the middle of the shirt, and the creases were painted before the
+    panels, so opaque cloth hid three of the five completely and clipped the
+    other two to the chest column. The dash offset is animated as an attribute
+    rather than a style, so a bare number is a user unit and there is nothing to
+    argue about.
+23. **The header plays the cycle rather than linking into it.** "How it works"
+    pointed at S4, which answered the question by dropping the visitor into the
+    middle of the answer with the wash, the rinse and the spin already behind
+    them and no sign they had ever been there. It plays the whole thing instead,
+    from the top, at a constant 0.36 viewports a second: every phase is scrubbed
+    against the scroll, so scroll speed is playback speed and one number paces
+    the film. Expressed in viewports rather than pixels because the holds are.
+    It gives way on the first wheel, swipe or scrolling key, handing back at the
+    position reached: Lenis is stopped and started, which resets its target to
+    where the page actually is, and this runs before Lenis acts on the gesture
+    so the nudge is measured from there rather than from the bottom of the page.
+
+    It moves the page through `scrollTo`, re-aimed whenever the document grows.
+    Both halves of that were learned the hard way. `lenis.targetScroll` is
+    bookkeeping rather than a setpoint, and the animation behind it returns on
+    its first line unless a `scrollTo` started it, so a tour that advanced the
+    target by hand moved a number nobody reads and did nothing at all. And there
+    is no fixed bottom to aim at: the scenes are lazy, and each one that mounts
+    pins its section and inserts a spacer, so a tour aimed once from the top
+    stops about a fifth of the way down.
+24. **The page is paced by its holds, and a hard scroll has a speed limit.**
+    Every hold carries a factor of 1.15 over what it was first built at. There
+    is no separate speed control and there should not be one: a phase is
+    scrubbed against its own hold, so a longer hold is the same choreography
+    played more slowly, and lengthening the hold is the only honest way to slow
+    a phase down. The relative lengths are the deliberate part; the factor is
+    uniform, so pacing the page again is one number in six places. Two phases
+    carry more than the factor on their own account: the wash, for the pour
+    (1.295), and the fold, for the iron (1.433). The page runs about 16.9
+    viewports where it ran 14.65.
+
+    Separately, the lookahead cap in `motion/spine.ts` went from 0.9 of a
+    viewport to 0.55, which is a speed limit in disguise. Lenis closes the gap
+    between where the page is and where the scroll wants it exponentially at a
+    rate its lerp sets, so the fastest the page can move is that rate times the
+    widest the gap may be: 0.9 allowed nearly five and a half viewports a second
+    and 0.55 allows about three and a third. A phase crossed at the old speed is
+    a phase nobody saw. Ordinary scrolling never opens a gap that wide and is
+    untouched by either change.
+
+
+## 20. Living beside the homepage
+
+The journey is a second telling of the same story, so the two pages can disagree,
+and a disagreement between them is not a bug anyone would notice. It would simply
+be the site quoting two different numbers for the same thing, on two pages,
+forever. It had already happened once: the homepage claimed five hundred partner
+laundries while the journey counted fifty two.
+
+So neither page owns the shared facts.
+
+| Fact | Written in | Read by |
+| --- | --- | --- |
+| The four steps | `cycleConfig.ts`, `DRY.steps` | the journey's dry phase, the homepage's How It Works |
+| The three figures | `cycleConfig.ts`, `SPIN.stats` | the journey's spin phase, the homepage hero |
+| The services and their prices | `data/services.ts` | both pages, the listing, the cart |
+| The Plus perks and price | `membershipConfig.ts` | both pages, the Plus page, the cart, the booking summary |
+
+What each surface adds is its own: the homepage attaches an icon and a sentence
+of explanation to each step, and the journey prints the step on a garment. The
+step itself, and the order the steps come in, are written once.
+
+`App.test.tsx` asserts the agreement rather than trusting it, because the failure
+mode here is silent by nature.
+
+**What the split costs.** `cycleConfig.ts` is now in the entry bundle, because
+the homepage reads two values out of it. It is copy and numbers with no imports
+that survive compilation, so the entry did not grow. The journey itself is a lazy
+route and GSAP and Lenis stay in the async `motion` chunk, so no app route pays
+for any of it. Fraunces is no longer preloaded from `index.html`: only the
+journey sets type in it, and a hundred and twenty kilobyte display face fetched on
+every route to serve one page nobody has asked for yet is not a trade worth
+making. The `@font-face` rule costs nothing until a glyph needs it.
+
+**What the journey does not share.** Its own chrome. It suppresses the app header
+and footer (`Layout.tsx` keys off `ROUTES.journey`) and carries a two-item header
+and its own footer, because the app chrome would be a third voice on a page meant
+to read as one. It also locks the theme to light, which is why `ThemeToggle`
+hides itself while a lock is held: a dark wash cycle is a different design, not a
+variant of this one.

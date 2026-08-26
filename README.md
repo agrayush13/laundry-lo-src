@@ -36,7 +36,7 @@ This repo is seeded with demo data for Bengaluru.
 
 - **The homepage is being rebuilt as one wash cycle** - scroll position drives
   wash → rinse → spin → dry → fold → deliver, one viewport per phase. Design and
-  build decisions live in [docs/homepage.md](docs/homepage.md).
+  build decisions live in [docs/journey.md](docs/journey.md).
 - Real backend on Supabase, against [docs/api-contract.md](docs/api-contract.md)
 - Payments, partner admin panel, written reviews
 

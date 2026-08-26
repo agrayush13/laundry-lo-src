@@ -1,0 +1,17 @@
+// Fraunces, self-hosted and variable on all four axes. The Google CSS2 slice
+// ships opsz and wght only, which would silently drop SOFT and WONK, and those
+// two are the whole "losing starch" mechanic in the journey's opening phase.
+// Declared here but deliberately not preloaded. Only the journey sets any type
+// in it, and a hundred and twenty kilobytes of display face fetched on every app
+// route to serve one page nobody has asked for yet is not a trade worth making.
+// A @font-face rule costs nothing until a glyph needs it, so the file is fetched
+// when the journey first paints and never otherwise.
+// The file sits in public/ under a stable name so the url survives the build.
+// (Family names match case-insensitively; lowercase keeps stylelint happy.)
+@font-face {
+    font-family: fraunces;
+    src: url('/fraunces-variable.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}

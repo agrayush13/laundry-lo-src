@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { ROUTES } from '../../config/navigationConfig';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 import ErrorBoundary from '../error-boundary/ErrorBoundary';
 import ErrorFallback from '../error-boundary/ErrorFallback';
@@ -12,9 +13,15 @@ const Layout: React.FC = () => {
 
     useScrollToTop();
 
+    // The journey is one continuous cycle: it carries its own two-item header and
+    // ends in its own footer, so the app chrome would be a third voice on a page
+    // that is meant to read as one. Every other route, the homepage included,
+    // gets the usual chrome.
+    const isCycle = pathname === ROUTES.journey;
+
     return (
         <>
-            <Header />
+            {!isCycle && <Header />}
             <main>
                 <ErrorBoundary
                     resetKey={pathname}
@@ -25,7 +32,7 @@ const Layout: React.FC = () => {
                     </Suspense>
                 </ErrorBoundary>
             </main>
-            <Footer />
+            {!isCycle && <Footer />}
         </>
     );
 };

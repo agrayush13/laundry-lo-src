@@ -3,7 +3,7 @@ import { Money, addMoney, multiplyMoney } from '../models/moneyModels';
 import { MenuItem } from '../data/menu';
 import { TAX_RATE } from '../config/cartConfig';
 import { STORAGE_KEYS } from '../config/commonConfig';
-import { MEMBERSHIP_SECTION } from '../config/homeConfig';
+import { MEMBERSHIP_SECTION } from '../config/membershipConfig';
 
 export interface CartLine {
     item: MenuItem;

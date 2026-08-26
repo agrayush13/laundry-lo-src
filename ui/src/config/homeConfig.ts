@@ -1,6 +1,35 @@
-import { rupees } from '../models/moneyModels';
 import { unsplashImage } from '../utils/imagesUtils';
 import { IconName } from '../common-ui/icons/registry';
+import { DRY, SPIN } from './cycleConfig';
+
+/** Icons for the journey's figures, in the order it spins them. */
+const STAT_ICONS: IconName[] = ['clock', 'shield', 'pin'];
+
+/**
+ * What each of the journey's steps means, in a sentence. The step itself, and
+ * the order the steps come in, belong to the journey.
+ */
+const STEP_DETAIL = [
+    {
+        icon: 'calendar' as IconName,
+        description: "Schedule a convenient time and we'll come to you.",
+    },
+    {
+        icon: 'truck' as IconName,
+        description: 'Our driver picks up your laundry from your doorstep.',
+    },
+    {
+        icon: 'sparkles' as IconName,
+        description: 'Your clothes are cleaned by top-rated local pros.',
+    },
+    {
+        icon: 'box' as IconName,
+        description: 'Clean, folded clothes delivered back within 24 hours.',
+    },
+];
+
+/** The journey prints its steps in lower case; this page sets them as sentences. */
+const sentenceCase = (label: string) => label.charAt(0).toUpperCase() + label.slice(1);
 
 export interface StatItem {
     icon: IconName;
@@ -9,12 +38,6 @@ export interface StatItem {
 }
 
 export interface StepItem {
-    icon: IconName;
-    title: string;
-    description: string;
-}
-
-export interface BenefitItem {
     icon: IconName;
     title: string;
     description: string;
@@ -38,11 +61,17 @@ export const HERO = {
         alt: 'Neatly folded, freshly laundered clothes stacked beside a washing machine',
     },
     floatingCard: { icon: 'clock' as IconName, title: 'Free pickup', detail: 'Within 2 hours' },
-    stats: [
-        { icon: 'star', value: '4.9', label: 'Avg rating' },
-        { icon: 'clock', value: '24h', label: 'Turnaround' },
-        { icon: 'shield', value: '500+', label: 'Partners' },
-    ] as StatItem[],
+    /**
+     * The same three figures the journey spins up, wearing icons. Quoted from
+     * one place because they were quoted from two: this page claimed five
+     * hundred partners while the journey counted fifty two, and the only way a
+     * demo statistic stays honest is by existing once.
+     */
+    stats: SPIN.stats.map((stat, index) => ({
+        icon: STAT_ICONS[index],
+        value: `${stat.value}${stat.suffix ?? ''}`,
+        label: stat.label,
+    })) as StatItem[],
 };
 
 export const SERVICES_SECTION = {
@@ -58,63 +87,17 @@ export const HOW_IT_WORKS_SECTION = {
     title: 'How It Works',
     subtitle:
         'Getting your laundry done has never been easier. Four simple steps to fresh, clean clothes.',
-    steps: [
-        {
-            icon: 'calendar',
-            title: 'Book a pickup',
-            description: "Schedule a convenient time and we'll come to you.",
-        },
-        {
-            icon: 'truck',
-            title: 'We collect',
-            description: 'Our driver picks up your laundry from your doorstep.',
-        },
-        {
-            icon: 'sparkles',
-            title: 'Expert cleaning',
-            description: 'Your clothes are cleaned by top-rated local pros.',
-        },
-        {
-            icon: 'box',
-            title: 'Fresh delivery',
-            description: 'Clean, folded clothes delivered back within 24 hours.',
-        },
-    ] as StepItem[],
-};
-
-export const MEMBERSHIP_SECTION = {
-    id: 'pricing',
-    eyebrow: 'Membership',
-    planName: 'LaundryLo Plus',
-    title: { before: 'Upgrade to ' },
-    subtitle:
-        'One membership that makes every order feel premium. Free pickups, instant ' +
-        'discounts, and priority scheduling.',
-    card: {
-        heading: { before: 'Join ' },
-        tagline: 'Upgrade every order with premium perks',
-        price: rupees(99),
-        period: '/month',
-        cta: 'Get LaundryLo Plus',
-    },
-    benefitsLabel: 'Plus Benefits',
-    benefits: [
-        {
-            icon: 'truck',
-            title: 'Free Pickup',
-            description: 'On every single order, no minimum cart value',
-        },
-        {
-            icon: 'percent',
-            title: '10% Off Everything',
-            description: 'Instant savings across wash, dry clean & more',
-        },
-        {
-            icon: 'clock',
-            title: 'Priority Slots',
-            description: 'Skip the queue with first-in-line scheduling',
-        },
-    ] as BenefitItem[],
+    /**
+     * The four steps the journey prints on the washing, given an icon and a line
+     * of explanation each. The titles are not restated here: a fifth step added
+     * to the line has to appear on this page too, and a wording changed on one
+     * has to change on both.
+     */
+    steps: DRY.steps.map((step, index) => ({
+        icon: STEP_DETAIL[index].icon,
+        title: sentenceCase(step.label),
+        description: STEP_DETAIL[index].description,
+    })) as StepItem[],
 };
 
 export const TESTIMONIALS_SECTION = {

@@ -187,3 +187,19 @@
     filter: brightness(t.$photo-brightness);
     transition: filter t.$transition-base;
 }
+
+/// The cycle's display voice. Fraunces at a high optical size is a fashion face:
+/// hairline thin strokes and extreme contrast. The homepage wants the warm,
+/// sturdy end of the axis, so opsz stays low and the weight carries the size.
+///
+/// Every axis is set here rather than through font-weight, because the wash
+/// animates wght, SOFT and WONK together and a split declaration fights itself.
+@mixin cycle-display($weight: 720, $opsz: 32) {
+    font-family: t.$font-cycle;
+    font-variation-settings:
+        'opsz' $opsz,
+        'wght' $weight,
+        'SOFT' 0,
+        'WONK' 0;
+    letter-spacing: t.$tracking-tight;
+}

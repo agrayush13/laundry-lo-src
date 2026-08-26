@@ -36,6 +36,7 @@ export const LISTING_COPY = {
     countSuffix: 'found • Showing verified partners only',
     filtersLabel: 'Filters',
     clearFilters: 'Clear',
+    clearService: 'Remove service filter',
     sortLabel: 'Sort by',
     sortPrefix: 'Sort:',
     empty: 'No partners match those filters. Try clearing one to see more results.',

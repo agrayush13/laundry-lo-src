@@ -11,6 +11,13 @@ export interface AddressFieldConfig {
 }
 
 export const PIN_CODE_LENGTH = 6;
+
+/**
+ * Where the listing starts when a visitor arrives without a pin code, which the
+ * journey's service cards do. Coverage is not modelled yet, so this is a real
+ * seeded pin rather than a guess at the visitor's own.
+ */
+export const DEFAULT_PIN_CODE = '560103';
 export const SCHEDULE_DAYS = 7;
 
 export const ADDRESS_FIELDS: AddressFieldConfig[] = [

@@ -1,6 +1,7 @@
 import { Money, rupees } from '../models/moneyModels';
 import { unsplashImage } from '../utils/imagesUtils';
 import { PriceUnit } from './menu';
+import { ServiceId } from './services';
 
 /** Slugs, not display names. Labels live in listingConfig so copy can change freely. */
 export type PartnerTag =
@@ -29,6 +30,12 @@ export interface Partner {
     /** A property of this search, not of the partner. Integer metres. */
     distanceMeters: number;
     tags: PartnerTag[];
+    /**
+     * The services this partner actually offers. The API derives it from the
+     * partner's catalogue categories, so it cannot drift from what they sell;
+     * here it is seeded. See docs/api-contract.md decision 8.
+     */
+    services: ServiceId[];
     turnaroundHours: number;
     startingPrice: Money & { unit: PriceUnit };
     isOpen: boolean;
@@ -49,6 +56,7 @@ export const PARTNERS: Partner[] = [
         address: { line1: '12, MG Road', line2: 'Sector 5', city: 'Bengaluru', pincode: '560103' },
         distanceMeters: 800,
         tags: ['free-pickup', 'eco-friendly'],
+        services: ['wash-fold', 'wash-iron', 'dry-cleaning'],
         turnaroundHours: 24,
         startingPrice: startingAt(20),
         isOpen: true,
@@ -70,6 +78,7 @@ export const PARTNERS: Partner[] = [
         },
         distanceMeters: 1200,
         tags: ['budget-friendly'],
+        services: ['wash-fold', 'wash-iron'],
         turnaroundHours: 48,
         startingPrice: startingAt(15),
         isOpen: true,
@@ -91,6 +100,7 @@ export const PARTNERS: Partner[] = [
         },
         distanceMeters: 1500,
         tags: ['premium', 'same-day'],
+        services: ['dry-cleaning', 'premium-care'],
         turnaroundHours: 24,
         startingPrice: startingAt(30),
         isOpen: true,
@@ -107,6 +117,7 @@ export const PARTNERS: Partner[] = [
         address: { line1: '22, Station Road', line2: '', city: 'Bengaluru', pincode: '560102' },
         distanceMeters: 2100,
         tags: ['iron-fold', 'free-pickup'],
+        services: ['wash-iron', 'wash-fold'],
         turnaroundHours: 36,
         startingPrice: startingAt(18),
         isOpen: false,
@@ -128,6 +139,7 @@ export const PARTNERS: Partner[] = [
         },
         distanceMeters: 2800,
         tags: ['eco-friendly', 'premium'],
+        services: ['wash-fold', 'dry-cleaning', 'premium-care'],
         turnaroundHours: 24,
         startingPrice: startingAt(25),
         isOpen: true,
@@ -144,6 +156,7 @@ export const PARTNERS: Partner[] = [
         address: { line1: '101, Industrial Area', line2: '', city: 'Bengaluru', pincode: '560104' },
         distanceMeters: 3200,
         tags: ['budget-friendly', 'bulk-discount'],
+        services: ['wash-fold'],
         turnaroundHours: 48,
         startingPrice: startingAt(12),
         isOpen: true,

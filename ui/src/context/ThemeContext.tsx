@@ -7,8 +7,16 @@ interface ThemeContextValue {
     preference: Theme;
     /** What is actually on screen once the OS preference is resolved. */
     resolved: 'light' | 'dark';
+    /** True while a page holds the theme, which hides the toggle. */
+    isLocked: boolean;
     setPreference: (theme: Theme) => void;
     toggle: () => void;
+    /**
+     * Pins the theme for as long as a page needs it, ignoring the preference
+     * without overwriting it. The journey uses this: a dark wash cycle is not a
+     * variant of that design, so it does not get one.
+     */
+    lockTheme: (theme: Theme | null) => void;
 }
 
 const prefersDark = () =>
@@ -28,6 +36,7 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [preference, setPreferenceState] = useState<Theme>(readStoredPreference);
     const [systemIsDark, setSystemIsDark] = useState(prefersDark);
+    const [lock, setLock] = useState<Theme | null>(null);
 
     // Follow the OS while the user has no explicit preference.
     useEffect(() => {
@@ -38,19 +47,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return () => query.removeEventListener('change', onChange);
     }, []);
 
-    const resolved = preference === 'system' ? (systemIsDark ? 'dark' : 'light') : preference;
+    // A lock wins over the preference while it is held, and releasing it puts
+    // the visitor's own choice straight back.
+    const active = lock ?? preference;
+    const resolved = active === 'system' ? (systemIsDark ? 'dark' : 'light') : active;
 
     // The stylesheet keys off this attribute; `system` leaves it off so the
     // media query decides.
     useEffect(() => {
         const root = document.documentElement;
 
-        if (preference === 'system') {
+        if (active === 'system') {
             root.removeAttribute('data-theme');
         } else {
-            root.setAttribute('data-theme', preference);
+            root.setAttribute('data-theme', active);
         }
-    }, [preference]);
+    }, [active]);
 
     const setPreference = useCallback((theme: Theme) => {
         setPreferenceState(theme);
@@ -69,10 +81,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         () => ({
             preference,
             resolved,
+            isLocked: lock !== null,
             setPreference,
             toggle: () => setPreference(resolved === 'dark' ? 'light' : 'dark'),
+            lockTheme: setLock,
         }),
-        [preference, resolved, setPreference]
+        [lock, preference, resolved, setPreference]
     );
 
     return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

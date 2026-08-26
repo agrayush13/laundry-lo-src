@@ -6,7 +6,7 @@ import Icon from '../../common-ui/icons/Icon';
 import Money from '../../common-ui/money/Money';
 import { ICON_SIZE } from '../../config/brandConfig';
 import { PLUS_COPY } from '../../config/cartConfig';
-import { MEMBERSHIP_SECTION } from '../../config/homeConfig';
+import { MEMBERSHIP_SECTION } from '../../config/membershipConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { useCart } from '../../context/CartContext';
 import styles from './plusPage.module.scss';

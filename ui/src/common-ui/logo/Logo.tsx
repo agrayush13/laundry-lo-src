@@ -1,6 +1,7 @@
 import React, { useId } from 'react';
 import appIcon from '../../assets/laundrylo-appicon-v2.svg';
 import { BRAND } from '../../config/brandConfig';
+import { WORDMARK } from './wordmark';
 import styles from './logo.module.scss';
 
 export type LogoSize = 'sm' | 'md' | 'lg';
@@ -30,50 +31,56 @@ const Logo: React.FC<LogoProps> = ({ variant = 'wordmark', size = 'md', classNam
         );
     }
 
-    // Ink is `currentColor` so the wordmark follows the theme; the drum keeps
-    // its brand blue in both.
+    // Drawn from the lockup's own outlines rather than typeset: the final "o" is
+    // a drum, and no font has that letter.
     return (
         <svg
             className={classes}
-            viewBox="0 0 430 132"
+            viewBox={WORDMARK.viewBox}
             role="img"
             aria-label={BRAND.name}
         >
-            <clipPath id={clipId}>
-                <circle
-                    cx="374"
-                    cy="70"
-                    r="24"
-                />
-            </clipPath>
-            <text
-                x="0"
-                y="100"
-                className={styles.wordmarkText}
+            <g
+                transform={WORDMARK.transform}
                 fill="currentColor"
             >
-                laundryl
-            </text>
-            <circle
-                cx="374"
-                cy="70"
-                r="27.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8.5"
-            />
-            <g clipPath={`url(#${clipId})`}>
-                <path
-                    className={styles.water}
-                    d="M350 72 C 360 66, 367 66, 374 71 C 382 77, 389 77, 398 71 L 398 96 L 350 96 Z"
+                {WORDMARK.letters.map((d) => (
+                    <path
+                        d={d}
+                        key={d.slice(0, 24)}
+                    />
+                ))}
+
+                <circle
+                    cx={WORDMARK.drum.cx}
+                    cy={WORDMARK.drum.cy}
+                    r={WORDMARK.drum.r}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={WORDMARK.drum.stroke}
+                />
+                <clipPath id={clipId}>
+                    <circle
+                        cx={WORDMARK.drum.cx}
+                        cy={WORDMARK.drum.cy}
+                        r={WORDMARK.drum.inner}
+                    />
+                </clipPath>
+                <g clipPath={`url(#${clipId})`}>
+                    <path
+                        className={styles.water}
+                        d={WORDMARK.water}
+                    />
+                </g>
+                <circle
+                    className={styles.dot}
+                    cx={WORDMARK.dot.cx}
+                    cy={WORDMARK.dot.cy}
+                    r={WORDMARK.dot.r}
+                    fill="none"
+                    strokeWidth={WORDMARK.dot.stroke}
                 />
             </g>
-            <circle
-                className={styles.dot}
-                cx="415"
-                cy="98"
-                r="6"
-            />
         </svg>
     );
 };

@@ -8,7 +8,7 @@ import OrderTotals from '../../common-ui/order-totals/OrderTotals';
 import QuantityStepper from '../../common-ui/quantity-stepper/QuantityStepper';
 import { ICON_SIZE } from '../../config/brandConfig';
 import { CART_COPY, PLUS_COPY } from '../../config/cartConfig';
-import { MEMBERSHIP_SECTION } from '../../config/homeConfig';
+import { MEMBERSHIP_SECTION } from '../../config/membershipConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { serviceNameFor } from '../../data/menu';
 import { useCheckout } from '../../hooks/useCheckout';

@@ -1,5 +1,9 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { SERVICE_TYPES } from '../data/services';
+import { DRY, SPIN } from '../config/cycleConfig';
+import { HERO, HOW_IT_WORKS_SECTION } from '../config/homeConfig';
+import { MEMBERSHIP_SECTION } from '../config/membershipConfig';
 import { renderApp } from '../__mocks__/renderWithProviders';
 
 describe('App', () => {
@@ -42,5 +46,69 @@ describe('App', () => {
 
         await userEvent.type(input, '56ab00');
         expect(input).toHaveValue('5600');
+    });
+
+    it('offers the journey from the header', () => {
+        renderApp();
+        expect(screen.getByRole('link', { name: 'Journey' })).toHaveAttribute('href', '/journey');
+    });
+
+    it('carries the app chrome, which the journey does not', () => {
+        renderApp();
+
+        // The shared header and footer. The journey suppresses both, because it
+        // brings its own; every other route, this one included, keeps them.
+        expect(screen.getByRole('contentinfo')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: 'How It Works' })).toHaveAttribute(
+            'href',
+            '/#how-it-works'
+        );
+    });
+});
+
+/**
+ * The homepage and the journey tell the same story twice. Every figure below is
+ * asserted against the one source it comes from, because the two drifting apart
+ * is not a rendering bug anybody would notice: it is simply the site quoting two
+ * different numbers for the same thing, on two pages, forever. This page claimed
+ * five hundred partner laundries while the journey counted fifty two.
+ */
+describe('the homepage and the journey agree', () => {
+    it('quotes the same three figures', () => {
+        renderApp();
+
+        SPIN.stats.forEach((stat) => {
+            expect(screen.getByText(`${stat.value}${stat.suffix ?? ''}`)).toBeInTheDocument();
+        });
+        expect(HERO.stats).toHaveLength(SPIN.stats.length);
+    });
+
+    it('names the same four steps, in the same order', () => {
+        renderApp();
+
+        const titles = HOW_IT_WORKS_SECTION.steps.map((step) => step.title.toLowerCase());
+        expect(titles).toEqual(DRY.steps.map((step) => step.label));
+
+        titles.forEach((title) => {
+            expect(
+                screen.getByRole('heading', { name: new RegExp(title, 'i') })
+            ).toBeInTheDocument();
+        });
+    });
+
+    it('lists every service, not a hand-picked few', () => {
+        renderApp();
+
+        SERVICE_TYPES.forEach((service) => {
+            expect(screen.getByRole('heading', { name: service.name })).toBeInTheDocument();
+        });
+    });
+
+    it('promises the perks the cart actually applies', () => {
+        renderApp();
+
+        MEMBERSHIP_SECTION.benefits.forEach((benefit) => {
+            expect(screen.getByText(benefit.title)).toBeInTheDocument();
+        });
     });
 });

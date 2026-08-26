@@ -9,6 +9,7 @@ export const PRIMARY_NAV: NavLink[] = [
     { label: 'Services', href: '/#services' },
     { label: 'How It Works', href: '/#how-it-works' },
     { label: 'Pricing', href: '/#pricing' },
+    { label: 'Journey', href: '/journey' },
 ];
 
 export const HEADER_ACTIONS = {
@@ -41,6 +42,8 @@ export const EXTERNAL_LINKS: ExternalLink[] = [
 
 export const ROUTES = {
     home: '/',
+    journey: '/journey',
+    terms: '/terms',
     signIn: '/signin',
     signUp: '/signup',
     forgotPassword: '/forgot-password',
@@ -56,4 +59,18 @@ export const ROUTES = {
     orderConfirmed: '/order-confirmed',
     order: (orderId: string) => `/bookings/${orderId}`,
     laundriesForPin: (pinCode: string) => `/laundries?pin=${pinCode}`,
+    laundriesForService: (service: string, pinCode: string) =>
+        `/laundries?pin=${pinCode}&service=${service}`,
 } as const;
+
+/**
+ * The footer of the journey. Every entry resolves to something real: no socials,
+ * no careers page, nothing that would need inventing.
+ */
+export const CYCLE_FOOTER_LINKS: NavLink[] = [
+    { label: 'home', href: ROUTES.home },
+    { label: 'services', href: ROUTES.laundries },
+    { label: 'plus', href: ROUTES.plus },
+    { label: 'terms', href: ROUTES.terms },
+    { label: 'github', href: EXTERNAL_LINKS[0].href },
+];

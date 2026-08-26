@@ -50,6 +50,14 @@ class EmitHostRewrites {
  * preview. The dev server serves public/ directly, so this only matters for
  * production output.
  */
+/**
+ * Root-relative urls in CSS point at public/, which is copied verbatim and never
+ * hashed. Left to itself css-loader would try to resolve them through the module
+ * graph and fail: the preloaded font is referenced by the same absolute URL in
+ * the page head, so its name has to survive the build unchanged.
+ */
+const cssUrls = { url: { filter: (url) => !url.startsWith('/') } };
+
 class EmitPublicAssets {
     apply(compiler) {
         const { Compilation, sources } = compiler.webpack;
@@ -117,7 +125,7 @@ module.exports = (env, argv) => {
                 },
                 {
                     test: /\.css$/,
-                    use: ['style-loader', 'css-loader'],
+                    use: ['style-loader', { loader: 'css-loader', options: cssUrls }],
                 },
                 {
                     test: /\.module\.s[ac]ss$/i,
@@ -136,6 +144,7 @@ module.exports = (env, argv) => {
                                         : '[name]__[local]',
                                     exportLocalsConvention: 'camelCaseOnly',
                                 },
+                                ...cssUrls,
                             },
                         },
                         'sass-loader',
@@ -144,7 +153,11 @@ module.exports = (env, argv) => {
                 {
                     test: /\.s[ac]ss$/i,
                     exclude: /\.module\.s[ac]ss$/i,
-                    use: ['style-loader', 'css-loader', 'sass-loader'],
+                    use: [
+                        'style-loader',
+                        { loader: 'css-loader', options: cssUrls },
+                        'sass-loader',
+                    ],
                 },
                 {
                     test: /\.(png|jpe?g|gif|svg)$/i,
@@ -196,6 +209,16 @@ module.exports = (env, argv) => {
                         test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
                         name: 'icons',
                         priority: 15,
+                    },
+                    // The homepage's motion libraries load after first paint and
+                    // never on an app route. Left in `vendor` they would be
+                    // pulled into the entry, which is exactly what the homepage
+                    // is built to avoid.
+                    motion: {
+                        test: /[\\/]node_modules[\\/](gsap|lenis)[\\/]/,
+                        name: 'motion',
+                        chunks: 'async',
+                        priority: 25,
                     },
                     vendor: {
                         test: /[\\/]node_modules[\\/]/,

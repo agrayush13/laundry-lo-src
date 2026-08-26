@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ICON_SIZE } from '../../config/brandConfig';
-import { MEMBERSHIP_SECTION } from '../../config/homeConfig';
+import { MEMBERSHIP_SECTION } from '../../config/membershipConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import Card from '../card/Card';
 import Icon from '../icons/Icon';
