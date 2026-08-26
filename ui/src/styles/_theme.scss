@@ -130,6 +130,10 @@
 
     // Readable green on the mint chip in either theme.
     --led-ink: #3f7a5f;
+
+    // Steel blue deep enough to print on pale cloth: the interactive accent
+    // only reaches 3.3:1 on the garments, and printed steps have to be read.
+    --print-blue: #234a61;
 }
 
 :root {

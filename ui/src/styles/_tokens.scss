@@ -43,6 +43,8 @@ $color-ribbon-pink: var(--ribbon);
 $color-amber-soft: var(--cloth-amber);
 $color-amber: var(--stain);
 $color-mint: var(--cloth-mint);
+$color-cloth-blue: var(--cloth-blue);
+$color-print-blue: var(--print-blue);
 
 // Machine body / drum - illustration surfaces
 $color-machine-body: var(--machine-body);
@@ -75,6 +77,10 @@ $photo-brightness: var(--photo-brightness);
 // ------------------------------------------------------------------ type ---
 
 $font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+
+// The homepage's display face. Scoped to the cycle: the app keeps the grotesque,
+// so no app route pays for the variable file.
+$font-cycle: fraunces, 'Iowan Old Style', georgia, serif;
 $font-sans:
     'Inter',
     system-ui,

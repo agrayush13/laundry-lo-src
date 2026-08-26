@@ -1,0 +1,26 @@
+@use '../../styles/tokens' as t;
+
+.mark {
+    width: 100%;
+    height: auto;
+}
+
+.markRing {
+    stroke: t.$color-ink;
+}
+
+.markWall {
+    fill: t.$color-machine-body;
+}
+
+.markWater {
+    fill: t.$color-drum;
+}
+
+// Perforations in the drum wall. Faint enough to read as holes in a cream drum
+// rather than as dots on it, and the only thing in here that gives rotation
+// something to show.
+.markHoles {
+    fill: t.$color-ink;
+    opacity: 0.22;
+}

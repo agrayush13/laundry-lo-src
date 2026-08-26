@@ -38,9 +38,11 @@ React 18 + TypeScript, bundled with Webpack 5. Routing is react-router-dom v7,
 styling is SCSS Modules, icons are lucide-react. No state library - React context
 covers what we need.
 
-The homepage adds GSAP with ScrollTrigger and Lenis, and a self-hosted Fraunces
-variable font. All three are scoped to `/`: they load after first paint and never
-enter an app route's payload.
+The journey at `/journey` adds GSAP with ScrollTrigger and Lenis, and a
+self-hosted Fraunces variable font. All three are scoped to that one route: the
+route is lazy, the motion libraries load after first paint into an async chunk,
+and the font is declared but never preloaded, so nothing else in the app pays for
+any of it.
 
 ### Directory layout
 
@@ -52,6 +54,7 @@ ui/src/
   context/       Auth, Cart, Theme providers
   config/        copy, routes, tokens, tunables - no literals in components
   models/        shared TypeScript types
+  motion/        the journey's scroll spine, loaded on demand
   data/          seed data; deleted once services exist
   utils/         pure helpers
   styles/        shared SCSS mixins and tokens
@@ -71,7 +74,7 @@ Naming: components PascalCase, directories kebab-case, styles
   live in `config/`, design tokens in CSS custom properties.
 - **Theming is runtime.** Light and dark are CSS custom property sets; Sass
   variables alias `var(--*)` so a single toggle re-themes everything without a
-  rebuild. The homepage is the one exception: it pins itself to the paper theme
+  rebuild. The journey is the one exception: it pins itself to the paper theme
   and hides the toggle, because a dark wash cycle is not a variant of the design,
   it is a different design.
 
@@ -92,25 +95,28 @@ cache over server-computed totals.
 
 ### Routing and loading
 
-The homepage ships in the initial bundle; every other route is `React.lazy`
-behind a Suspense boundary in `Layout`. Webpack `splitChunks` separates vendor
+The homepage ships in the initial bundle; every other route, the journey
+included, is `React.lazy` behind a Suspense boundary in `Layout`. Webpack `splitChunks` separates vendor
 code. Protected routes (`profile`, `bookings`) sit behind a `ProtectedRoute`
 wrapper.
 
-`Layout` renders the shared header and footer for every route except `/`. The
-homepage carries its own minimal header and its own footer, which is the last
-phase of the cycle rather than a component bolted underneath it.
+`Layout` renders the shared header and footer for every route except
+`/journey`. The journey carries its own minimal header and its own footer, which
+is the last phase of the cycle rather than a component bolted underneath it. The
+homepage keeps the usual chrome and links to the journey from it.
 
 Because it is an SPA on static hosting, deep links need rewrite rules -
 `_redirects` sends everything to `index.html`, without which `/cart` 404s on
 refresh.
 
-### The homepage scroll spine
+### The journey scroll spine
 
-The homepage is six sections, each exactly one viewport, driven by scroll
+The journey is six sections, each exactly one viewport, driven by scroll
 position. Three things make that affordable:
 
-- **Only the hero is eager.** The hero and the spine ship in the initial bundle.
+- **Only the hero is eager.** The hero and the spine ship in the initial bundle,
+  and a `motion` cache group keeps GSAP and Lenis in an async chunk so the entry
+  never carries them.
   Sections 2 to 6 are dynamic imports, prefetched one section ahead by an
   IntersectionObserver. Each unloaded section still reserves 100vh, so the
   scrollbar never lies and nothing jumps as chunks arrive; `ScrollTrigger.refresh()`
@@ -124,12 +130,63 @@ position. Three things make that affordable:
   `prefers-reduced-motion` a matter of not starting the animations rather than a
   separate code path.
 
-Deterministic choreography is scrubbed against scroll position and reverses;
-ambient effects (droplets, bubbles, sway, steam) respond to absolute velocity and
-never rewind. [homepage.md](./homepage.md) is the reference for both.
+Every phase is pinned and scrubbed. `motion/pinScene.ts` is the one place that
+creates a hold: arriving at a section pins it, and the scrolling that follows
+runs its choreography. That is what makes a phase cost what it is worth, and it
+is why a section cannot be skimmed. `pinScene` also reports the trigger's state
+once on creation, which matters because the scenes are lazy: ScrollTrigger fires
+`onToggle` on a crossing, and a crossing that happened before the trigger existed
+never fires, so a scene that waits for it sits frozen until the visitor scrolls
+past and comes back.
 
-Lenis owns the scroll on `/` and is torn down on navigation, so app routes keep
-native scrolling and `useScrollToTop` behaves.
+The same file carries the two other windows a phase can ask for. `whileVisible`
+is the widest: a section is on screen for a viewport before its hold begins and
+one after it releases, and that is the window ambient effects (droplets, bubbles,
+the drum's own rotation) run in, so a physics loop never ticks behind five other
+sections. `onceInView` is the narrowest and fires once, a quarter of a viewport
+into the section, for anything that should greet the visitor: the spin's figures
+start there rather than on the hold, because by the time a section is held its
+contents have been readable for most of a viewport and anything that waits looks
+like a reaction to the lock.
+
+Some ambient motion is narrower than `whileVisible` rather than wider. The dry's
+breeze runs only while its section is held, because the breeze is the phase
+playing rather than scenery around it; off the hold the clock it is read from
+stops and the pendulums damp onto their last angle, so the line stills instead of
+freezing. Deterministic choreography is scrubbed against the hold and reverses
+exactly. [journey.md](./journey.md) is the reference for all of it.
+
+Anything that writes an SVG transform every frame writes it to the attribute
+rather than through GSAP. GSAP resolves `svgOrigin` against the scene's own
+coordinate system, so a scene-relative origin turns an element about the corner
+of the drawing, and the error grows with distance from it.
+
+Lenis owns the scroll on `/journey` and is torn down on navigation, so app
+routes keep native scrolling and `useScrollToTop` behaves. There is no snapping:
+with every phase pinned the scroll is nearly always inside a hold, and a snap to
+the nearest section start would pull the page back through an animation in
+progress. A per-event step cap and a lookahead cap in `motion/spine.ts` keep a
+hard flick from outrunning the holds; the lookahead is a speed limit in disguise,
+because Lenis closes the gap between page and target exponentially and the widest
+that gap may be therefore sets the fastest the page can move.
+
+A hold is what a phase costs in scrolling, and because a phase is scrubbed
+against its own hold, a longer hold is the same choreography played more slowly.
+That is the only speed control the page has, and the only honest one.
+
+Long moves happen behind a fade. `motion/softCut.ts` fades the page out, moves it
+while nobody can see it, and fades it back: scrolled smoothly, a dozen screens is
+every phase scrubbing backwards at a speed nobody can read. It is what "back to
+the start" uses, what an anchor more than two viewports away uses, and what the
+tour uses to reach the top before it plays. `common-ui/soft-link` is the same
+idea across a route boundary, for entering the cycle from the app header; it
+warms the target chunk on the same click, so the fade covers the fetch instead of
+a loading state.
+
+`useCycleTour` plays the cycle for a visitor who would rather watch it: a
+constant scroll from the top, paced in viewports a second because the holds are
+measured in viewports, which makes scroll speed playback speed. Any wheel, swipe
+or scrolling key hands the page back at the position it had reached.
 
 ### Static assets and social previews
 
@@ -168,10 +225,16 @@ once shipped a blank page that every other check passed.
 Automated checks do not catch visual or scroll regressions. Browser verification
 via the Chrome DevTools Protocol is used for anything positional.
 
-That gap is widest on the homepage: happy-dom has no layout, so ScrollTrigger and
-the physics never run under test. Homepage tests assert the static rest state,
-the reduced-motion render and the links, which is exactly the content parity the
-design requires anyway. Motion is verified in a browser.
+That gap is widest on the journey: happy-dom has no layout, so ScrollTrigger and
+the physics never run under test. `Journey.test.tsx` asserts the static rest
+state, the reduced-motion render and the links, which is exactly the content
+parity the design requires anyway. Motion is verified in a browser.
+
+`App.test.tsx` additionally asserts that the homepage and the journey quote the
+same figures, name the same steps and list the same services. The two pages tell
+one story twice, and them drifting apart would not look like a failure: it would
+look like a site that simply says two different things. See
+[journey.md](./journey.md) section 20.
 
 ## 3. Backend (planned)
 

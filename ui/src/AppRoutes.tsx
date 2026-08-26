@@ -10,6 +10,8 @@ const SignIn = lazy(() => import('./pages/auth/SignIn'));
 const SignUp = lazy(() => import('./pages/auth/SignUp'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const PlusPage = lazy(() => import('./pages/plus/PlusPage'));
+const JourneyPage = lazy(() => import('./pages/journey/JourneyPage'));
+const TermsPage = lazy(() => import('./pages/terms/TermsPage'));
 const ServicesPage = lazy(() => import('./pages/services/ServicesPage'));
 const PartnerPage = lazy(() => import('./pages/partner/PartnerPage'));
 const CartPage = lazy(() => import('./pages/cart/CartPage'));
@@ -42,6 +44,14 @@ const AppRoutes: React.FC = () => (
             <Route
                 path="plus"
                 element={<PlusPage />}
+            />
+            <Route
+                path="journey"
+                element={<JourneyPage />}
+            />
+            <Route
+                path="terms"
+                element={<TermsPage />}
             />
             <Route
                 path="laundries"

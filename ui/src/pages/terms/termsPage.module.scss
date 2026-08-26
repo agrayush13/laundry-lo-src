@@ -1,0 +1,22 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.terms {
+    @include m.page-shell(42rem);
+
+    padding: 3rem 1.5rem 5rem;
+}
+
+.termsTitle {
+    margin: 0 0 1.5rem;
+    font-size: t.$font-size-page-title;
+    font-weight: t.$font-weight-black;
+    letter-spacing: t.$tracking-tight;
+}
+
+.termsBody {
+    margin: 0 0 1rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-body-lg;
+    line-height: t.$line-height-base;
+}

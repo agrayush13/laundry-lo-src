@@ -18,6 +18,8 @@ import styles from './servicesPage.module.scss';
 const ServicesPage: React.FC = () => {
     const {
         pinCode,
+        serviceName,
+        clearService,
         partners,
         sortKey,
         setSortKey,
@@ -63,6 +65,18 @@ const ServicesPage: React.FC = () => {
                                 onClick={clearTags}
                             >
                                 {LISTING_COPY.clearFilters}
+                            </button>
+                        )}
+                        {serviceName && (
+                            <button
+                                type="button"
+                                className={styles.listingChip}
+                                aria-pressed="true"
+                                aria-label={`${serviceName}. ${LISTING_COPY.clearService}`}
+                                onClick={clearService}
+                            >
+                                {serviceName}
+                                <span aria-hidden="true">×</span>
                             </button>
                         )}
                         {TAG_SLUGS.map((tag) => (

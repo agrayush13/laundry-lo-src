@@ -1,3 +1,4 @@
+@use './styles/fonts';
 @use './styles/theme';
 @use './styles/tokens' as t;
 
@@ -132,4 +133,26 @@ body {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+}
+
+// A route change that fades rather than cuts, for the routes that ask for it.
+// See SoftLink: the attribute goes on while the old page leaves and comes off
+// once the new one is standing, so the fetch in between happens behind the
+// fade instead of behind a loading state.
+body {
+    transition: opacity 420ms ease-out;
+}
+
+body[data-leaving] {
+    opacity: 0;
+    transition-duration: 220ms;
+    transition-timing-function: ease-in;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body,
+    body[data-leaving] {
+        opacity: 1;
+        transition: none;
+    }
 }

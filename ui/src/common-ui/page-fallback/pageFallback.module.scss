@@ -4,26 +4,30 @@
     display: grid;
     place-items: center;
     min-height: 60vh;
+    padding: 4rem 1.5rem;
 }
 
-.spinner {
-    width: 1.75rem;
-    height: 1.75rem;
-    border: 2px solid t.$color-border;
-    border-top-color: t.$color-primary;
-    border-radius: t.$radius-circle;
-    animation: spin 0.7s linear infinite;
+.fallbackDrum {
+    width: 56px;
+
+    // The water turns over rather than the mark spinning: a rotating ring reads
+    // as a spinner, and this is a drum.
+    animation: slosh 2.4s ease-in-out infinite;
 }
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
+@keyframes slosh {
+    0%,
+    100% {
+        transform: rotate(-9deg);
+    }
+
+    50% {
+        transform: rotate(9deg);
     }
 }
 
-// Respect a reduced-motion preference.
 @media (prefers-reduced-motion: reduce) {
-    .spinner {
+    .fallbackDrum {
         animation: none;
     }
 }
