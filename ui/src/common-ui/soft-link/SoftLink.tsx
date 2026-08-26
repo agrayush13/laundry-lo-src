@@ -34,6 +34,13 @@ interface SoftLinkProps {
  * Still a real link underneath, so the middle click, the modifier click and the
  * context menu all work; only the plain left click is taken over. Under reduced
  * motion it is an ordinary link and nothing fades.
+ *
+ * Nothing renders this at the moment. It was built for the header's link into
+ * the cycle, and the cycle is no longer advertised there (see `PRIMARY_NAV`), so
+ * the only way in is a typed URL, which is a full page load that no in-app
+ * transition can dress. It is kept whole rather than deleted because the cycle
+ * is coming back as a build of its own, and this is what it should be entered
+ * by. Anything else that is a place rather than a page can use it meanwhile.
  */
 const SoftLink: React.FC<SoftLinkProps> = ({ to, className, preload, children }) => {
     const navigate = useNavigate();

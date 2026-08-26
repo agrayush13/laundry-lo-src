@@ -158,8 +158,7 @@ is "how does this work", and the answer is the cycle in order, not the fourth
 sixth of it.
 
 **Superseded: the custom wind cursor (S4 only).** Inside S4's bounds the cursor
-became a wind-swirl mark and moving it pushed a gust. Cut in v2.4; see decision
-20.
+became a wind-swirl mark and moving it pushed a gust. Cut in v2.4; see decision 20.
 
 **5.4 Pin-code input.** One component, two placements (S1 hero, S6 footer):
 6-digit validation, then navigate to the listing. Serviceability (the friendly
@@ -1028,6 +1027,7 @@ Settled 2026-08-24, before implementation.
     is no fixed bottom to aim at: the scenes are lazy, and each one that mounts
     pins its section and inserts a spacer, so a tour aimed once from the top
     stops about a fifth of the way down.
+
 24. **The page is paced by its holds, and a hard scroll has a speed limit.**
     Every hold carries a factor of 1.15 over what it was first built at. There
     is no separate speed control and there should not be one: a phase is
@@ -1048,7 +1048,6 @@ Settled 2026-08-24, before implementation.
     a phase nobody saw. Ordinary scrolling never opens a gap that wide and is
     untouched by either change.
 
-
 ## 20. Living beside the homepage
 
 The journey is a second telling of the same story, so the two pages can disagree,
@@ -1059,12 +1058,12 @@ laundries while the journey counted fifty two.
 
 So neither page owns the shared facts.
 
-| Fact | Written in | Read by |
-| --- | --- | --- |
-| The four steps | `cycleConfig.ts`, `DRY.steps` | the journey's dry phase, the homepage's How It Works |
-| The three figures | `cycleConfig.ts`, `SPIN.stats` | the journey's spin phase, the homepage hero |
-| The services and their prices | `data/services.ts` | both pages, the listing, the cart |
-| The Plus perks and price | `membershipConfig.ts` | both pages, the Plus page, the cart, the booking summary |
+| Fact                          | Written in                     | Read by                                                  |
+| ----------------------------- | ------------------------------ | -------------------------------------------------------- |
+| The four steps                | `cycleConfig.ts`, `DRY.steps`  | the journey's dry phase, the homepage's How It Works     |
+| The three figures             | `cycleConfig.ts`, `SPIN.stats` | the journey's spin phase, the homepage hero              |
+| The services and their prices | `data/services.ts`             | both pages, the listing, the cart                        |
+| The Plus perks and price      | `membershipConfig.ts`          | both pages, the Plus page, the cart, the booking summary |
 
 What each surface adds is its own: the homepage attaches an icon and a sentence
 of explanation to each step, and the journey prints the step on a garment. The

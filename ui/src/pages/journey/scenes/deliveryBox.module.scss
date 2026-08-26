@@ -1,0 +1,109 @@
+@use '../../../styles/tokens' as t;
+
+.box {
+    width: 100%;
+    height: auto;
+}
+
+.shadow {
+    fill: t.$color-ink;
+    opacity: 0.07;
+}
+
+// Carton, then two steps darker for the inside. Flat tones, no gradients.
+.front {
+    fill: #e0d3ba;
+}
+
+.side {
+    fill: #d2c3a6;
+}
+
+.flap {
+    fill: #dccdb2;
+}
+
+.flapEdge {
+    fill: #bfae8f;
+}
+
+.interiorBack {
+    fill: #c2b193;
+}
+
+.interiorSide {
+    fill: #ad9b7c;
+}
+
+.ink {
+    fill: t.$color-ink;
+}
+
+.blue {
+    fill: t.$color-cloth-blue;
+}
+
+.pink {
+    fill: t.$color-soap-pink;
+}
+
+.mint {
+    fill: t.$color-mint;
+}
+
+.tan {
+    fill: t.$color-amber-soft;
+}
+
+.collar {
+    fill: #3c3833;
+}
+
+.seam {
+    fill: none;
+    stroke: t.$color-ink;
+    stroke-width: 1;
+    opacity: 0.12;
+}
+
+.seamLight {
+    fill: none;
+    stroke: t.$color-cream;
+    stroke-width: 1.2;
+    opacity: 0.35;
+}
+
+// One printing, so the letters and the drum's ring take the same ink. Muted
+// rather than black: this is stamped on a carton, not set on a page.
+.brand {
+    fill: t.$color-text-muted;
+    stroke: t.$color-text-muted;
+}
+
+.brandWater {
+    fill: t.$color-drum;
+    stroke: none;
+}
+
+// The water's blue rather than the ink, exactly as the lockup has it.
+.brandDot {
+    stroke: t.$color-drum;
+}
+
+.sock {
+    fill: t.$color-ink;
+}
+
+.string {
+    fill: none;
+    stroke: t.$color-text-subtle;
+    stroke-width: 2;
+}
+
+.peg {
+    fill: #c8a878;
+}
+
+.pegDark {
+    fill: #b28f5f;
+}

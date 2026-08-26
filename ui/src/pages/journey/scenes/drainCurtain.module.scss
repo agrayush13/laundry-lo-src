@@ -1,0 +1,50 @@
+@use '../../../styles/tokens' as t;
+
+// An SVG is a replaced element: with a viewBox and only a height, its width
+// comes from the intrinsic ratio and `left`/`right` are ignored, which left the
+// curtain about two thirds of the way across the page. The width has to be
+// stated.
+.curtain {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: clamp(78px, 14vh, 140px);
+    pointer-events: none;
+}
+
+.curtainBack {
+    fill: t.$color-drum;
+    opacity: 0.45;
+}
+
+.curtainFront {
+    fill: t.$color-drum;
+    opacity: 0.75;
+}
+
+.droplet {
+    fill: t.$color-drum;
+    opacity: 0;
+}
+
+// The same water-in-a-line motif as the drum, and the only thing that stays.
+.line {
+    fill: none;
+    stroke: t.$color-drum;
+    stroke-width: 2;
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    // No sweep, no drips: just the line the section rests with.
+    .curtainBack,
+    .curtainFront,
+    .droplet {
+        display: none;
+    }
+
+    .line {
+        opacity: 1;
+    }
+}

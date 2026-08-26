@@ -1,0 +1,41 @@
+@use '../../../styles/tokens' as t;
+
+.scene {
+    width: 100%;
+    height: auto;
+}
+
+.rope {
+    fill: none;
+    stroke: #b9975b;
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+// The second strand rides the same curve, lighter and broken up.
+.ropeTwist {
+    fill: none;
+    stroke: #d9c091;
+    stroke-width: 1.4;
+    stroke-dasharray: 7 9;
+    stroke-linecap: round;
+    transform: translateY(-1px);
+}
+
+.anchor {
+    fill: #8d7250;
+}
+
+.anchorHook {
+    stroke: #8d7250;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+}
+
+@media (max-width: t.$breakpoint-md) {
+    // Five garments on a phone rather than six shrunk past recognition. The
+    // handkerchief is dressing, so it is the one that goes.
+    .hanging[data-garment='hanky'] {
+        display: none;
+    }
+}

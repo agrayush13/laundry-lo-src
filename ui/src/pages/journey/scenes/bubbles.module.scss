@@ -1,0 +1,30 @@
+@use '../../../styles/tokens' as t;
+
+.bubbles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.bubble {
+    position: absolute;
+    bottom: 12%;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid t.$color-drum;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .bubble:nth-child(even) {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bubbles {
+        display: none;
+    }
+}

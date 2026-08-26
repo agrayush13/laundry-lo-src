@@ -1,0 +1,153 @@
+@use '../../../styles/mixins' as m;
+@use '../../../styles/tokens' as t;
+
+.deliver {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    max-width: t.$content-width;
+    margin: 0 auto;
+}
+
+// The scene takes the space the footer does not, so the section fills a viewport
+// without the footer floating in the middle of it.
+.deliverScene {
+    position: relative;
+    display: flex;
+    flex: 1;
+    gap: 3rem;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3rem 0;
+}
+
+.deliverBox {
+    width: min(30rem, 46%);
+}
+
+.deliverCopy {
+    max-width: 30rem;
+}
+
+.deliverTitle {
+    @include m.cycle-display;
+
+    margin: 0 0 1rem;
+    font-size: t.$font-size-page-title;
+}
+
+.deliverSubtitle {
+    margin: 0 0 2rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-body-lg;
+    line-height: t.$line-height-base;
+}
+
+// Hangs where the string ends, and is not there to be clicked until the box is.
+.deliverTag {
+    position: absolute;
+    top: 46%;
+    right: 2%;
+    display: inline-flex;
+    visibility: hidden;
+    opacity: 0;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-sm;
+    background: t.$color-surface;
+    color: t.$color-text;
+    font-size: t.$font-size-xl;
+    font-weight: t.$font-weight-semibold;
+    text-decoration: none;
+}
+
+.deliverFooter {
+    padding: 1.5rem 0 0;
+    border-top: 1px solid t.$color-border;
+}
+
+.deliverFooterTop,
+.deliverFooterBottom {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.deliverFooterBottom {
+    margin-top: 1rem;
+}
+
+.deliverLinks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+
+    a {
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xl;
+        text-decoration: none;
+
+        &:hover {
+            color: t.$color-primary;
+        }
+    }
+}
+
+// The honesty counterweight to the figures in the spin: plain, and not in fine
+// print.
+.deliverDisclaimer {
+    margin: 0;
+    color: t.$color-text;
+    font-size: t.$font-size-xl;
+}
+
+.deliverCopyright {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin: 0;
+    color: t.$color-text-subtle;
+    font-size: t.$font-size-lg;
+
+    a {
+        color: t.$color-text;
+        text-decoration: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .deliverTag {
+        visibility: visible;
+        opacity: 1;
+    }
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .deliverScene {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 2rem 0;
+    }
+
+    .deliverBox {
+        width: 70%;
+        margin: 0 auto;
+    }
+
+    .deliverTag {
+        top: auto;
+        right: 8%;
+        bottom: 28%;
+    }
+
+    .deliverFooterTop,
+    .deliverFooterBottom {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+}

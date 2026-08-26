@@ -1,0 +1,67 @@
+@use '../../../styles/tokens' as t;
+
+.machine {
+    width: 100%;
+    height: auto;
+}
+
+// Hinges live in the timeline, not here: GSAP computes its own origin for SVG
+// and overrides transform-origin, so PIVOT in washTimeline.ts is what decides
+// that the door opens on its left edge rather than from its middle.
+.drum,
+.drawer,
+.water {
+    transform-box: fill-box;
+}
+
+// Everything the pour brings is absent until the pour brings it.
+.cup,
+.drawerTint,
+.ribbon,
+.foam,
+.swirls {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    // The rest state is the whole state: nothing pours, so nothing is missing.
+    .cup,
+    .drawerTint,
+    .ribbon,
+    .foam,
+    .swirls {
+        opacity: 0;
+    }
+}
+
+.led {
+    animation: standby 2.6s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.ledHalo {
+    fill: #5fbf9a;
+    opacity: 0.28;
+}
+
+@keyframes standby {
+    0%,
+    38%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    54%,
+    80% {
+        opacity: 0.15;
+        transform: scale(0.82);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .led {
+        animation: none;
+    }
+}

@@ -1,0 +1,32 @@
+@use '../../../styles/tokens' as t;
+
+/**
+ * Both glyphs are built in a 100-unit box whose bottom edge is the baseline, so
+ * `vertical-align: baseline` seats them on the line of type exactly as a letter
+ * sits. Heights are in `em` and follow the letter they stand in for: a t is
+ * shorter than an l.
+ */
+.glyph {
+    display: inline-block;
+    width: auto;
+    vertical-align: baseline;
+    fill: currentcolor;
+}
+
+.tee {
+    height: 0.74em;
+}
+
+.sock {
+    height: 0.86em;
+}
+
+// Cut out of the silhouette rather than drawn on it, so the ribbing reads as
+// shadow between the ribs. The hero is always paper, which is what shows through.
+.cut {
+    fill: t.$color-cream;
+}
+
+.stain {
+    fill: t.$color-amber;
+}

@@ -1,0 +1,29 @@
+@use '../../styles/tokens' as t;
+
+.dial {
+    position: fixed;
+    right: 2.25rem;
+    bottom: 2.25rem;
+    z-index: t.$z-header;
+    width: 40px;
+    pointer-events: none;
+    transition: opacity t.$transition-base;
+}
+
+.dialHidden {
+    opacity: 0;
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .dial {
+        right: auto;
+        left: 1.25rem;
+        bottom: 1.25rem;
+        width: 32px;
+        opacity: 0.6;
+    }
+
+    .dialHidden {
+        opacity: 0;
+    }
+}

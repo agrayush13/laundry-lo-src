@@ -1,0 +1,108 @@
+@use '../../../styles/tokens' as t;
+
+// Solid fill, the hero's language. The outline icons belong to the service
+// cards and stay there.
+.ink {
+    fill: t.$color-ink;
+}
+
+.pink {
+    fill: t.$color-soap-pink;
+}
+
+.mint {
+    fill: t.$color-mint;
+}
+
+.blue {
+    fill: t.$color-cloth-blue;
+}
+
+.tan {
+    fill: t.$color-amber-soft;
+}
+
+// Seams, hems and fold lines: a shade of the cloth itself rather than a line
+// drawn on top of it.
+.seam {
+    fill: none;
+    stroke: t.$color-ink;
+    stroke-width: 1.5;
+    opacity: 0.14;
+}
+
+.notch {
+    fill: t.$color-cream;
+}
+
+.pegWood {
+    fill: #c8a878;
+}
+
+.pegWoodDark {
+    fill: #b28f5f;
+}
+
+.pegSpring {
+    fill: #8d7250;
+}
+
+// Light implied by effect, never by source: the garment's own outline, offset
+// the same way for every one of them and faint enough to read as cast rather
+// than drawn. No filter, so it stays transform-only when the wind picks up.
+.shadow {
+    fill: t.$color-ink;
+    opacity: 0.06;
+    transform: translate(13px, 11px);
+}
+
+.print,
+.printOnInk {
+    font-family: t.$font-sans;
+}
+
+.printNumber {
+    font-size: 17px;
+    font-weight: t.$font-weight-bold;
+    letter-spacing: 0.04em;
+}
+
+.printLabel {
+    font-size: 13.5px;
+    font-weight: t.$font-weight-semibold;
+}
+
+@media (width <= 900px) {
+    // Five garments rather than six, each drawn larger, so the print has to grow
+    // with them to stay legible.
+    .printNumber {
+        font-size: 21px;
+    }
+
+    .printLabel {
+        font-size: 16px;
+    }
+}
+
+// 12:1 and 6:1 against the pale cloths.
+.print {
+    .printNumber {
+        fill: t.$color-print-blue;
+    }
+
+    .printLabel {
+        fill: t.$color-ink;
+    }
+}
+
+// 8.7:1 and 15.9:1 against ink. Steel blue cannot reach 4.5:1 on a black
+// garment, so the number takes the illustration's own blue here.
+.printOnInk {
+    .printNumber {
+        fill: t.$color-drum;
+    }
+
+    .printLabel {
+        fill: t.$color-cream;
+    }
+}
