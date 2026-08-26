@@ -1,0 +1,107 @@
+@use '../../../styles/tokens' as t;
+
+.wash {
+    display: grid;
+    flex: 1;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: center;
+
+    // The hero block sits above centre, with more room under it than over it
+    // (see journey.md 6.1). The lean is toward the scroll cue, which is the one
+    // instruction this screen gives, and it is what stops the first viewport
+    // reading as a poster rather than the top of something.
+    // Reserved from the bottom of the grid band rather than nudged with a
+    // transform: a transform here would become the containing block for the cue,
+    // which is absolute against the section, and carry it up too. Capped against
+    // the viewport so a short screen keeps the room it needs for the content.
+    padding-bottom: min(5rem, 8vh);
+}
+
+.washCopy {
+    max-width: 34rem;
+}
+
+.washEyebrow {
+    margin: 0 0 1.5rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-lg;
+    font-weight: t.$font-weight-semibold;
+    letter-spacing: t.$tracking-wider;
+    text-transform: uppercase;
+}
+
+.washSubtitle {
+    max-width: 26rem;
+    margin: 0 0 2.25rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-body-lg;
+    line-height: t.$line-height-base;
+}
+
+.washSearch {
+    margin-bottom: 1rem;
+}
+
+.washMicro {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-xl;
+    list-style: none;
+
+    li + li::before {
+        margin-right: 0.5rem;
+        content: '·';
+    }
+}
+
+.washMachine {
+    justify-self: center;
+    width: 100%;
+    max-width: 24rem;
+    height: auto;
+}
+
+.washCue {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0;
+    color: t.$color-text-subtle;
+    font-size: t.$font-size-md;
+    font-weight: t.$font-weight-semibold;
+    letter-spacing: t.$tracking-wider;
+    text-transform: uppercase;
+    transform: translateX(-50%);
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .wash {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+        align-content: center;
+
+        // Less of a lean on a phone: there is less room to give away, and the
+        // cue is closer to the content already.
+        padding-bottom: min(2.5rem, 5vh);
+    }
+
+    // The input never moves out of the first viewport, so the machine is what
+    // gives way when the screen is short.
+    .washMachine {
+        order: -1;
+        max-width: 55%;
+    }
+
+    .washSubtitle {
+        margin-bottom: 1.5rem;
+    }
+}

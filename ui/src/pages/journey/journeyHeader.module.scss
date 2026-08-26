@@ -1,0 +1,39 @@
+@use '../../styles/tokens' as t;
+
+.header {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: t.$z-header;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 2rem 3.5rem;
+
+    @media (max-width: t.$breakpoint-md) {
+        padding: 1.5rem;
+    }
+}
+
+.headerBrand {
+    display: inline-flex;
+    color: t.$color-text;
+}
+
+// A button that has to sit in a line of text without looking like a button:
+// the cycle has one piece of chrome and a filled pill would be the loudest
+// thing on the first screen.
+.headerTour {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: t.$color-text-muted;
+    font-family: inherit;
+    font-size: t.$font-size-body;
+    cursor: pointer;
+
+    &:hover {
+        color: t.$color-primary;
+    }
+}

@@ -1,0 +1,126 @@
+@use '../../../styles/mixins' as m;
+@use '../../../styles/tokens' as t;
+
+// Deliberately not positioned: the curtain and the bubbles are section-wide and
+// section-top, and a containing block here would trap them inside the card
+// column, which is half the page and starts below the eyebrow.
+.rinse {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    align-items: center;
+    width: 100%;
+    max-width: t.$content-width;
+    margin: 0 auto;
+}
+
+.rinseTitle {
+    @include m.cycle-display;
+
+    margin: 0;
+    font-size: t.$font-size-section-title;
+}
+
+.rinseGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.rinseCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    height: 100%;
+    padding: 1.5rem;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-lg;
+    color: t.$color-text;
+    text-decoration: none;
+    transition: transform t.$transition-fast;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
+
+    // One small motion on hover, never a loop.
+    &:hover .rinseCardIcon {
+        transform: translateY(-3px) rotate(-6deg);
+    }
+}
+
+.rinseCardIcon {
+    margin-bottom: 0.75rem;
+    color: t.$color-text;
+    transition: transform t.$transition-base;
+}
+
+.rinseCardName {
+    margin: 0;
+    font-size: t.$font-size-h4;
+}
+
+.rinseCardCopy {
+    margin: 0 0 1rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-xl;
+}
+
+.rinseCardPrice {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.875rem;
+    border-top: 1px solid t.$color-border;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-xl;
+}
+
+.rinseCardArrow {
+    margin-left: auto;
+    color: t.$color-primary;
+}
+
+// A wash of colour rather than the colour itself: the pastels belong to the
+// illustration, and a card painted in one of them at full strength would shout
+// over the section it is supposed to keep quiet.
+.blue {
+    background: color-mix(in srgb, t.$color-rinse 30%, t.$color-surface);
+}
+
+.mint {
+    background: color-mix(in srgb, t.$color-mint 30%, t.$color-surface);
+}
+
+.pink {
+    background: color-mix(in srgb, t.$color-soap-pink 30%, t.$color-surface);
+}
+
+.amber {
+    background: color-mix(in srgb, t.$color-amber-soft 30%, t.$color-surface);
+}
+
+.rinseCta {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    color: t.$color-primary;
+    font-weight: t.$font-weight-bold;
+    text-decoration: none;
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .rinseGrid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.75rem;
+    }
+
+    .rinseCard {
+        padding: 1.125rem;
+    }
+}

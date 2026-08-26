@@ -1,0 +1,6 @@
+@use '../../styles/tokens' as t;
+
+.cycle {
+    position: relative;
+    background: t.$color-cream;
+}

@@ -1,0 +1,82 @@
+@use '../../../styles/mixins' as m;
+@use '../../../styles/tokens' as t;
+
+// Both headlines occupy the same cell: the clean one arrives in the dirty one's
+// place rather than below it.
+.stack {
+    display: grid;
+    margin-bottom: 1.75rem;
+}
+
+.headline,
+.clean {
+    @include m.cycle-display;
+
+    grid-area: 1 / 1;
+    margin: 0;
+    font-size: t.$font-size-hero;
+    line-height: 1.05;
+}
+
+.line {
+    // Spaces are letters too here, and each one has to hold its width while the
+    // line closes up around the letters that have left.
+    display: block;
+    white-space: pre;
+}
+
+.letter {
+    position: relative;
+    display: inline-block;
+
+    // The axes are custom properties so the browser interpolates them and the
+    // starch leaves each letter on its own schedule. The resting values are the
+    // display voice's; the wash pulls them apart from there.
+    font-variation-settings:
+        'opsz' 32,
+        'wght' var(--letter-wght, 720),
+        'SOFT' var(--letter-soft, 0),
+        'WONK' var(--letter-wonk, 0);
+}
+
+.letterInk {
+    display: inline-block;
+}
+
+// The cloth a letter becomes once it has tumbled far enough that no one is
+// reading it any more. Sized to the letter it replaces, and invisible until then.
+.letterScrap {
+    position: absolute;
+    inset: 18% 4%;
+    border-radius: 3px;
+
+    // The wash assigns each letter its own colour as it tumbles.
+    background: var(--letter-scrap, #{t.$color-soap-pink});
+    opacity: 0;
+}
+
+// Silent until the water beat.
+.clean {
+    opacity: 0;
+}
+
+.cleanAccent {
+    color: t.$color-primary;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    // Nothing washes anything away, so the two headlines stack and both read.
+    .stack {
+        gap: 0.5rem;
+    }
+
+    .headline,
+    .clean {
+        grid-area: auto;
+    }
+
+    .clean {
+        font-size: t.$font-size-section-title;
+        opacity: 1;
+    }
+}

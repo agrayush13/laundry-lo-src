@@ -4,6 +4,7 @@ import { SERVICE_TYPES } from '../data/services';
 import { DRY, SPIN } from '../config/cycleConfig';
 import { HERO, HOW_IT_WORKS_SECTION } from '../config/homeConfig';
 import { MEMBERSHIP_SECTION } from '../config/membershipConfig';
+import { PRIMARY_NAV, ROUTES } from '../config/navigationConfig';
 import { renderApp } from '../__mocks__/renderWithProviders';
 
 describe('App', () => {
@@ -48,9 +49,15 @@ describe('App', () => {
         expect(input).toHaveValue('5600');
     });
 
-    it('offers the journey from the header', () => {
+    it('does not advertise the journey', () => {
         renderApp();
-        expect(screen.getByRole('link', { name: 'Journey' })).toHaveAttribute('href', '/journey');
+
+        // Reachable by typing the URL and by nothing else. The route still
+        // resolves; the header simply does not send anybody there, because a
+        // visitor who came to price a wash should not be offered the scenic
+        // route as one of four things in the nav.
+        expect(screen.queryByRole('link', { name: 'Journey' })).toBeNull();
+        PRIMARY_NAV.forEach(({ href }) => expect(href).not.toBe(ROUTES.journey));
     });
 
     it('carries the app chrome, which the journey does not', () => {

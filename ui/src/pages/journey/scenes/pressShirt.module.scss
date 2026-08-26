@@ -1,0 +1,82 @@
+@use '../../../styles/mixins' as m;
+@use '../../../styles/tokens' as t;
+
+.shirt {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.cloth {
+    fill: t.$color-surface;
+    stroke: t.$color-border;
+    stroke-width: 1.5;
+}
+
+.collar {
+    fill: t.$color-surface-muted;
+}
+
+// The dash that lets the iron rub a crease out is set on the element, not here.
+// Butt caps on purpose: a round cap leaves a nub behind at the erased end.
+.wrinkle {
+    fill: none;
+    stroke: t.$color-ink;
+    stroke-width: 2;
+    opacity: 0.13;
+}
+
+.perk {
+    font-family: t.$font-sans;
+    font-size: 30px;
+    font-weight: t.$font-weight-bold;
+    fill: t.$color-text;
+}
+
+// The back of a panel, seen once it has turned over. One flat tone step, no
+// gradients.
+.underside {
+    fill: t.$color-surface-muted;
+    opacity: 0;
+}
+
+.creases {
+    stroke: t.$color-ink;
+    stroke-width: 1.5;
+    opacity: 0;
+}
+
+.chestBrand {
+    @include m.cycle-display(700, 32);
+
+    font-size: 54px;
+    fill: t.$color-ink;
+}
+
+// Fraunces italic is not self-hosted for one word, so this is a synthesised
+// oblique. Swap it for the real italic file if the fold ever grows more of them.
+.chestPlan {
+    font-family: t.$font-cycle;
+    font-size: 46px;
+    font-style: italic;
+    fill: t.$color-amber;
+}
+
+.ironBody {
+    fill: t.$color-ink;
+}
+
+.ironHandle {
+    fill: none;
+    stroke: t.$color-ink;
+    stroke-width: 10;
+    stroke-linecap: round;
+}
+
+.steam {
+    fill: none;
+    stroke: t.$color-text-subtle;
+    stroke-width: 5;
+    stroke-linecap: round;
+    opacity: 0;
+}

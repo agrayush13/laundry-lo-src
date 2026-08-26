@@ -1,0 +1,202 @@
+@use '../../../styles/mixins' as m;
+@use '../../../styles/tokens' as t;
+
+// Deliberately not positioned. The weather and the pool are absolute against the
+// section, which runs the full width of the window; a containing block here
+// would pen them into the column the figures are set in, and the water would
+// stop short of both edges of the screen.
+.spin {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    width: 100%;
+    max-width: t.$content-width;
+    margin: 0 auto;
+}
+
+.stats {
+    display: grid;
+
+    // Radial rather than a row: a flat stat line is what this section exists not
+    // to be. The drum holds the middle, and the third figure sits beneath it on
+    // the same axis.
+    grid-template-areas:
+        'turnaround . partners'
+        '. drum .'
+        '. pincodes .';
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem 2rem;
+    align-content: center;
+    justify-items: center;
+    width: 100%;
+    margin: 0;
+}
+
+.stat {
+    text-align: center;
+
+    &:nth-child(1) {
+        grid-area: turnaround;
+    }
+
+    &:nth-child(2) {
+        grid-area: partners;
+    }
+
+    &:nth-child(3) {
+        grid-area: pincodes;
+    }
+}
+
+.value {
+    @include m.cycle-display(740, 40);
+
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    margin: 0;
+    font-size: clamp(3.25rem, 10.5vw, 10rem);
+    line-height: 1;
+
+    // No tracking games at this size: each digit is a fixed-width window onto a
+    // strip, and negative tracking would run the windows into each other.
+    letter-spacing: normal;
+}
+
+// One digit's worth of window onto a strip of digits. The width is fixed rather
+// than measured from the glyph, because Fraunces' display figures are wider than
+// their advance and neighbouring slots would otherwise collide.
+.slot {
+    display: inline-block;
+    overflow: hidden;
+    width: 0.72em;
+    height: 1em;
+    text-align: center;
+    vertical-align: bottom;
+
+    // Faded at the lip of the window, so a digit arrives and leaves rather than
+    // being sliced off at a hard edge. This is the whole of the blur: no filter,
+    // because that is a repaint of a moving layer every frame, and nothing that
+    // moves geometry either. Stretching the window was tried and was the bug it
+    // looks like: scaling a one-em box to one and a half shows one and a half
+    // digits, so every figure read as two halves of two different numbers.
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        #000000 20%,
+        #000000 80%,
+        transparent 100%
+    );
+    opacity: var(--legible, 1);
+}
+
+.strip {
+    display: block;
+    transform: translateY(calc(var(--slot, 0) * -1em));
+
+    > span {
+        display: block;
+        width: 100%;
+        height: 1em;
+        line-height: 1;
+    }
+}
+
+// Only the plus takes the accent. The h is part of how long, not a mark.
+.suffix {
+    margin-left: 0.06em;
+    color: t.$color-text-muted;
+
+    &[data-accent] {
+        color: t.$color-primary;
+    }
+}
+
+.label {
+    margin: 0.5rem 0 0;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-body;
+}
+
+.axis {
+    grid-area: drum;
+    width: clamp(92px, 8.5vw, 148px);
+}
+
+.weather {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+// Drawn upright at the top left corner and put where it belongs by the hook,
+// which measures the drum rather than guessing at it: the whole spray is
+// anchored on the axis, and the axis is a grid cell whose position depends on
+// how tall the figures beside it turn out to be. Each drop is turned to face the way it is thrown, so it reads as travelling
+// rather than as a tick sliding sideways.
+.droplet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 11px;
+    background: t.$color-drum;
+
+    // An actual drop: round at the nose, tapering to a point at the tail. Cut
+    // as a mask rather than drawn as a background, so the colour stays a token
+    // and the stretch a fast drop gets elongates the shape along its own axis
+    // instead of shearing it. A border-radius teardrop needs a fixed forty five
+    // degree turn of its own, which non-uniform scale would skew.
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 20'%3E%3Cpath d='M6 20C2.7 20 0 17 0 13.4 0 8.6 6 0 6 0s6 8.6 6 13.4C12 17 9.3 20 6 20z' fill='%23000000'/%3E%3C/svg%3E");
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    opacity: 0;
+}
+
+// Grows as the water lands, and drains as the dry takes over. Absolute against
+// the section, so it spans the window rather than the content column.
+.poolDrain {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 14px;
+    transform-origin: bottom;
+}
+
+.pool {
+    width: 100%;
+    height: 100%;
+    background: t.$color-drum;
+    transform: scaleY(0.12);
+    transform-origin: bottom;
+}
+
+@media (max-width: t.$breakpoint-md) {
+    // The triangle compresses to a vertical arc rather than a centred list, so
+    // the diagonal energy survives the narrow screen.
+    .stats {
+        grid-template-areas:
+            'turnaround .'
+            'drum drum'
+            'pincodes pincodes'
+            '. partners';
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .value {
+        font-size: clamp(3.25rem, 19vw, 9rem);
+    }
+
+    // Ambient particle counts halve on a phone.
+    .droplet:nth-child(even) {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .weather {
+        display: none;
+    }
+}

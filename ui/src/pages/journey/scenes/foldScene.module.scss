@@ -1,0 +1,88 @@
+@use '../../../styles/mixins' as m;
+@use '../../../styles/tokens' as t;
+
+.fold {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 1.25rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.foldTitle {
+    @include m.cycle-display;
+
+    margin: 0;
+    font-size: t.$font-size-section-title;
+}
+
+.foldStage {
+    position: relative;
+    width: min(46rem, 100%);
+}
+
+// Hangs off the folded shirt's lower right corner. The shirt folds down to the
+// middle column, which is 330 to 630 of a 960-wide box, and then settles a
+// hundred units down the 620-tall box to sit in the middle of it, so the tag
+// sits just outside that.
+.foldTag {
+    position: absolute;
+    top: 60%;
+    left: 66%;
+    display: flex;
+    gap: 0.875rem;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-sm;
+    background: t.$color-surface;
+    box-shadow: t.$shadow-sm;
+
+    // Inert, and out of the tab order, until there is a folded shirt to hang on.
+    visibility: hidden;
+    opacity: 0;
+}
+
+.foldPrice {
+    display: flex;
+    gap: 0.125rem;
+    align-items: baseline;
+    margin: 0;
+    font-weight: t.$font-weight-bold;
+
+    span {
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+    }
+}
+
+.foldCta {
+    color: t.$color-primary;
+    font-weight: t.$font-weight-bold;
+    text-decoration: none;
+
+    &:hover {
+        color: t.$color-primary-dark;
+    }
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .foldTag {
+        top: auto;
+        bottom: -1.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    // Nothing folds, so the shirt stays open with every perk readable and the
+    // tag is simply there.
+    .foldTag {
+        position: static;
+        visibility: visible;
+        opacity: 1;
+    }
+}

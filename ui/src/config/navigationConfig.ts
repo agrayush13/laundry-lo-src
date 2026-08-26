@@ -5,11 +5,17 @@ export interface NavLink {
     href: string;
 }
 
+/**
+ * The journey is deliberately not here. It is reachable by typing the URL and by
+ * nothing else: it is a showpiece rather than a product surface, and a nav item
+ * for it sends everybody who came to price a wash into the long way round
+ * instead. `ROUTES.journey` still resolves, and the route still suppresses the
+ * app chrome; it is only unadvertised.
+ */
 export const PRIMARY_NAV: NavLink[] = [
     { label: 'Services', href: '/#services' },
     { label: 'How It Works', href: '/#how-it-works' },
     { label: 'Pricing', href: '/#pricing' },
-    { label: 'Journey', href: '/journey' },
 ];
 
 export const HEADER_ACTIONS = {

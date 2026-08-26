@@ -7,7 +7,6 @@ import { useCart } from '../../context/CartContext';
 import { toInitials } from '../../hooks/useInitials';
 import Icon from '../icons/Icon';
 import Logo from '../logo/Logo';
-import SoftLink from '../soft-link/SoftLink';
 import ThemeToggle from '../theme-toggle/ThemeToggle';
 import styles from './header.module.scss';
 
@@ -44,30 +43,16 @@ const Header: React.FC = () => {
                         "/#how-it-works" is a full page load, and the browser
                         looks for the section before React has drawn it.
 
-                        The journey is entered behind a fade, because it is a
-                        place rather than a page and it opens on a full screen
-                        of its own. Its chunk is warmed by the same click, so
-                        the fade covers the fetch. */}
-                    {PRIMARY_NAV.map(({ label, href }) =>
-                        href === ROUTES.journey ? (
-                            <SoftLink
-                                key={href}
-                                className={styles.headerLink}
-                                to={href}
-                                preload={() => import('../../pages/journey/JourneyPage')}
-                            >
-                                {label}
-                            </SoftLink>
-                        ) : (
-                            <Link
-                                key={href}
-                                className={styles.headerLink}
-                                to={href}
-                            >
-                                {label}
-                            </Link>
-                        )
-                    )}
+                        Nothing here points at the journey; see PRIMARY_NAV. */}
+                    {PRIMARY_NAV.map(({ label, href }) => (
+                        <Link
+                            key={href}
+                            className={styles.headerLink}
+                            to={href}
+                        >
+                            {label}
+                        </Link>
+                    ))}
                 </nav>
 
                 {user ? (
