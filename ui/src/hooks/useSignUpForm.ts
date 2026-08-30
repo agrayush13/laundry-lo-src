@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES } from '../config/navigationConfig';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +16,8 @@ const EMPTY_FIELDS: SignUpFields = { fullName: '', email: '', phone: '', passwor
 export const useSignUpForm = () => {
     const { signUp } = useAuth();
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const redirectTo = (state as { from?: string } | null)?.from ?? ROUTES.home;
     const [fields, setFields] = useState<SignUpFields>(EMPTY_FIELDS);
 
     return {
@@ -26,7 +28,7 @@ export const useSignUpForm = () => {
             event.preventDefault();
             const { fullName, email, phone } = fields;
             signUp({ fullName, email, phone });
-            navigate(ROUTES.home);
+            navigate(redirectTo, { replace: true });
         },
     };
 };

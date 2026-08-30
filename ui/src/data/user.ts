@@ -14,12 +14,21 @@ export interface User {
     preferences: { sms: boolean; email: boolean };
 }
 
-/** Stand-in for the signed-in account until the auth API exists. */
+/**
+ * Stand-in for the signed-in account until the auth API exists.
+ *
+ * The addresses are Bengaluru ones, in pincodes the seed actually serves. They
+ * used to be in Gurugram, 2,000 km from every partner, which meant the demo
+ * modelled a laundry collecting from another state and nothing objected -
+ * serviceability is not checked anywhere yet, so the mock data was the only
+ * thing saying whether an order made sense.
+ */
 export const MOCK_USER: User = {
     fullName: 'Ayush Agrawal',
     email: 'ayush.agrawal@gmail.com',
     phone: '+91 98765 43210',
-    memberSince: 'January 2024',
+    // ISO 8601, per api-contract.md section 1: no pre-formatted display strings.
+    memberSince: '2024-01-14T00:00:00Z',
     addresses: [
         {
             id: 'home',
@@ -27,19 +36,19 @@ export const MOCK_USER: User = {
             recipientName: 'Ayush Agrawal',
             phone: '+91 98765 43210',
             building: '42',
-            street: 'Sector 15, Gurugram, Haryana',
+            street: 'Sector 5, HSR Layout, Bengaluru',
             landmark: '',
-            pincode: '122001',
+            pincode: '560103',
         },
         {
             id: 'office',
             label: 'Office',
             recipientName: 'Ayush Agrawal',
             phone: '+91 98765 43210',
-            building: 'WeWork, Cyber Hub',
-            street: 'DLF Phase 2, Gurugram',
+            building: 'WeWork, Embassy Golf Links',
+            street: 'Domlur, Bengaluru',
             landmark: '',
-            pincode: '122002',
+            pincode: '560102',
         },
     ],
     preferences: { sms: true, email: false },

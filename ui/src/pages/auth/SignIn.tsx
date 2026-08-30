@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../../common-ui/icons/Icon';
 import { IconName } from '../../common-ui/icons/registry';
 import { AUTH_COPY } from '../../config/authConfig';
@@ -14,6 +14,7 @@ import styles from './auth.module.scss';
 const { signIn: copy, divider, fields, methods } = AUTH_COPY;
 
 const SignIn: React.FC = () => {
+    const { state } = useLocation();
     const { method, setMethod, identifier, setIdentifier, password, setPassword, submit } =
         useSignInForm();
     const field = method === 'email' ? fields.email : fields.phone;
@@ -76,7 +77,12 @@ const SignIn: React.FC = () => {
                 />
 
                 <p className={styles.authForgot}>
-                    <Link to={ROUTES.forgotPassword}>{copy.forgot}</Link>
+                    <Link
+                        to={ROUTES.forgotPassword}
+                        state={state}
+                    >
+                        {copy.forgot}
+                    </Link>
                 </p>
 
                 <button
@@ -88,7 +94,13 @@ const SignIn: React.FC = () => {
             </form>
 
             <p className={styles.authSwitch}>
-                {copy.switchPrompt} <Link to={ROUTES.signUp}>{copy.switchAction}</Link>
+                {copy.switchPrompt}{' '}
+                <Link
+                    to={ROUTES.signUp}
+                    state={state}
+                >
+                    {copy.switchAction}
+                </Link>
             </p>
         </AuthCard>
     );
