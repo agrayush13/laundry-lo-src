@@ -93,3 +93,13 @@ export const ICONS = {
 } as const;
 
 export type IconName = keyof typeof ICONS;
+
+/**
+ * Icon keys arrive from the API, which is free to add one before the client
+ * knows it. An unknown key falls back to a neutral parcel rather than crashing
+ * a whole catalogue over a missing glyph.
+ */
+const FALLBACK_ICON: IconName = 'box';
+
+export const iconFor = (key: string): IconName =>
+    Object.prototype.hasOwnProperty.call(ICONS, key) ? (key as IconName) : FALLBACK_ICON;

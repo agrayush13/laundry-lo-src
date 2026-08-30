@@ -8,6 +8,7 @@ interface QuantityStepperProps {
     label: string;
     quantity: number;
     size?: 'md' | 'sm';
+    max?: number;
     onChange: (quantity: number) => void;
 }
 
@@ -15,6 +16,7 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
     label,
     quantity,
     size = 'md',
+    max = 99,
     onChange,
 }) => (
     <div
@@ -31,10 +33,11 @@ const QuantityStepper: React.FC<QuantityStepperProps> = ({
                 size={ICON_SIZE.sm}
             />
         </button>
-        <output aria-label={`${label} quantity`}>{quantity}</output>
+        <span aria-label={`${label} quantity`}>{quantity}</span>
         <button
             type="button"
             aria-label={`Add one ${label}`}
+            disabled={quantity >= max}
             onClick={() => onChange(quantity + 1)}
         >
             <Icon

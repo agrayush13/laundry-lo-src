@@ -1,20 +1,19 @@
 import { useNavigate } from 'react-router-dom';
-import { getPartner } from '../data/partners';
 import { ROUTES } from '../config/navigationConfig';
 import { useCart } from '../context/CartContext';
-import { createOrderId } from '../utils/ordersUtils';
+import { createOrderIdentifiers } from '../utils/ordersUtils';
 
 /** Cart contents plus the hand-off into checkout. */
 export const useCheckout = () => {
     const navigate = useNavigate();
     const cart = useCart();
-    const partner = cart.partnerId ? getPartner(cart.partnerId) : undefined;
 
-    const hasServices = cart.lines.length > 0 && Boolean(partner);
+    // The partner travels with the cart, so naming where the order is going
+    // costs no request.
+    const hasServices = cart.lines.length > 0 && cart.partner !== null;
 
     return {
         ...cart,
-        partner,
         isEmpty: cart.lines.length === 0 && !cart.hasPlus,
         hasServices,
         canCheckout: hasServices || cart.hasPlus,
@@ -27,7 +26,7 @@ export const useCheckout = () => {
 
             navigate(ROUTES.orderConfirmed, {
                 replace: true,
-                state: { orderId: createOrderId() },
+                state: createOrderIdentifiers(),
             });
         },
     };
