@@ -285,10 +285,21 @@ describe('cart', () => {
 
         await user.click(within(dialog).getByRole('button', { name: 'Keep current cart' }));
         expect(screen.queryByRole('dialog')).toBeNull();
+        expect(add).toHaveFocus();
 
         await user.click(add);
-        await user.click(screen.getByRole('button', { name: 'Replace cart' }));
-        await user.click(screen.getByRole('button', { name: 'View Cart' }));
+        const reopened = screen.getByRole('dialog', { name: 'Start a new cart?' });
+        const keep = within(reopened).getByRole('button', { name: 'Keep current cart' });
+        const replace = within(reopened).getByRole('button', { name: 'Replace cart' });
+        await user.tab();
+        expect(replace).toHaveFocus();
+        await user.tab();
+        expect(keep).toHaveFocus();
+
+        await user.click(replace);
+        const viewCart = screen.getByRole('button', { name: 'View Cart' });
+        expect(viewCart).toHaveFocus();
+        await user.click(viewCart);
 
         expect(await screen.findByText('CleanFold Laundry')).toBeInTheDocument();
         expect(screen.queryByRole('heading', { name: 'Jacket / Coat' })).toBeNull();
