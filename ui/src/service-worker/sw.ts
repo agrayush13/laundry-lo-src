@@ -1,9 +1,9 @@
 /// <reference lib="webworker" />
-import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { createHandlerBoundToURL, precacheAndRoute } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
-import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies';
+import { API_CACHE_NAME, CACHEABLE_API_PATH } from '../config/cacheConfig';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -25,14 +25,31 @@ registerRoute(
 );
 
 /**
- * Reads from the API: serve the cached copy immediately, refresh in the
- * background. Ready for when the backend lands; harmless until then.
+ * Availability is never served from a cache. A day-old slot list offers windows
+ * that are full or already past, and the whole reason slots come from the server
+ * is that only it knows which are real.
  */
 registerRoute(
-    ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET',
+    ({ url, request }) => url.pathname.endsWith('/slots') && request.method === 'GET',
+    new NetworkOnly()
+);
+
+/**
+ * Public partner reads, and only those: serve the cached copy immediately,
+ * refresh in the background. The window is minutes rather than a day because
+ * `is_open` is a switch a partner can throw, and a shop that just closed must
+ * stop taking orders promptly. See api-contract.md decision 2.
+ *
+ * The match is an allowlist rather than `/api/`, because Cache Storage keys on
+ * the URL and ignores `Authorization`. A prefix match would silently adopt
+ * `/me`, `/cart` and `/orders` the day they ship, and hand one account's data to
+ * the next account on the same device. See config/cacheConfig.ts.
+ */
+registerRoute(
+    ({ url, request }) => request.method === 'GET' && CACHEABLE_API_PATH.test(url.pathname),
     new StaleWhileRevalidate({
-        cacheName: 'api-reads',
-        plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 })],
+        cacheName: API_CACHE_NAME,
+        plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 5 * 60 })],
     })
 );
 
@@ -68,7 +85,5 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
         self.skipWaiting();
     }
 });
-
-clientsClaim();
 
 export {};

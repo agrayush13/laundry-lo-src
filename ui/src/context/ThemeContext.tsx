@@ -40,7 +40,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // Follow the OS while the user has no explicit preference.
     useEffect(() => {
-        const query = window.matchMedia('(prefers-color-scheme: dark)');
+        const query = window.matchMedia?.('(prefers-color-scheme: dark)');
+        if (!query) return undefined;
+
         const onChange = (event: MediaQueryListEvent) => setSystemIsDark(event.matches);
 
         query.addEventListener('change', onChange);
@@ -63,6 +65,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             root.setAttribute('data-theme', active);
         }
     }, [active]);
+
+    // Browser chrome should follow the rendered palette rather than staying
+    // light around a dark page.
+    useEffect(() => {
+        document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute('content', resolved === 'dark' ? '#1c1917' : '#f3ece0');
+    }, [resolved]);
 
     const setPreference = useCallback((theme: Theme) => {
         setPreferenceState(theme);

@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { InjectManifest } = require('workbox-webpack-plugin');
 
 /**
@@ -25,16 +26,6 @@ class EmitHostRewrites {
                         '_redirects',
                         new sources.RawSource('/*    /index.html    200\n')
                     );
-                    // Vercel / other static hosts that read a config file
-                    compilation.emitAsset(
-                        'netlify.toml',
-                        new sources.RawSource(
-                            '[[redirects]]\n' +
-                                '  from = "/*"\n' +
-                                '  to = "/index.html"\n' +
-                                '  status = 200\n'
-                        )
-                    );
                 }
             );
         });
@@ -53,8 +44,8 @@ class EmitHostRewrites {
 /**
  * Root-relative urls in CSS point at public/, which is copied verbatim and never
  * hashed. Left to itself css-loader would try to resolve them through the module
- * graph and fail: the preloaded font is referenced by the same absolute URL in
- * the page head, so its name has to survive the build unchanged.
+ * graph and fail, while these files deliberately keep the stable names used by
+ * the document head and manifest.
  */
 const cssUrls = { url: { filter: (url) => !url.startsWith('/') } };
 
@@ -100,6 +91,7 @@ class EmitPublicAssets {
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
+    const styleLoader = isProduction ? MiniCssExtractPlugin.loader : 'style-loader';
 
     return {
         entry: './src/index.tsx',
@@ -125,12 +117,12 @@ module.exports = (env, argv) => {
                 },
                 {
                     test: /\.css$/,
-                    use: ['style-loader', { loader: 'css-loader', options: cssUrls }],
+                    use: [styleLoader, { loader: 'css-loader', options: cssUrls }],
                 },
                 {
                     test: /\.module\.s[ac]ss$/i,
                     use: [
-                        'style-loader',
+                        styleLoader,
                         {
                             loader: 'css-loader',
                             options: {
@@ -153,11 +145,7 @@ module.exports = (env, argv) => {
                 {
                     test: /\.s[ac]ss$/i,
                     exclude: /\.module\.s[ac]ss$/i,
-                    use: [
-                        'style-loader',
-                        { loader: 'css-loader', options: cssUrls },
-                        'sass-loader',
-                    ],
+                    use: [styleLoader, { loader: 'css-loader', options: cssUrls }, 'sass-loader'],
                 },
                 {
                     test: /\.(png|jpe?g|gif|svg)$/i,
@@ -172,6 +160,14 @@ module.exports = (env, argv) => {
                 template: './public/index.html',
                 favicon: './src/assets/laundrylo-appicon-v2.svg',
             }),
+            ...(isProduction
+                ? [
+                      new MiniCssExtractPlugin({
+                          filename: '[name].[contenthash].css',
+                          chunkFilename: '[name].[contenthash].chunk.css',
+                      }),
+                  ]
+                : []),
             // Dev has no service worker: a stale cache while editing is worse
             // than no offline support.
             ...(isProduction
@@ -181,7 +177,7 @@ module.exports = (env, argv) => {
                           swDest: 'service-worker.js',
                           // Source maps are emitted outside dist and must never
                           // be precached; nor should the host rewrite files.
-                          exclude: [/\.map$/, /^_redirects$/, /^netlify\.toml$/],
+                          exclude: [/\.map$/, /^_redirects$/, /^og-image\.png$/],
                           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
                       }),
                   ]
@@ -193,6 +189,15 @@ module.exports = (env, argv) => {
             hot: true,
             port: 3000,
             open: true,
+            // The API is reached same-origin so the browser never negotiates
+            // CORS in development, and the client needs no environment-specific
+            // base URL. Production is expected to proxy /api the same way.
+            proxy: [
+                {
+                    context: ['/api'],
+                    target: 'http://localhost:8787',
+                },
+            ],
         },
         optimization: {
             // Split the framework and icon library out of the app bundle so
@@ -229,6 +234,15 @@ module.exports = (env, argv) => {
             },
             runtimeChunk: 'single',
         },
+        // A budget that fails on regressions is more useful than webpack's
+        // default warning, while leaving room for the current app shell.
+        performance: isProduction
+            ? {
+                  hints: 'error',
+                  maxEntrypointSize: 450 * 1024,
+                  maxAssetSize: 5 * 1024 * 1024,
+              }
+            : false,
         // hidden-source-map still emits .map files for error reporting but omits
         // the sourceMappingURL comment, so browsers do not fetch and expose the
         // original TSX. Upload the maps to the error tracker; do not deploy them.

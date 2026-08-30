@@ -15,6 +15,24 @@
             name="theme-color"
             content="#F3ECE0"
         />
+        <script>
+            try {
+                var storedTheme = localStorage.getItem('laundrylo.theme');
+                var explicitTheme = storedTheme === 'dark' || storedTheme === 'light';
+                var darkTheme = explicitTheme
+                    ? storedTheme === 'dark'
+                    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+                if (explicitTheme) {
+                    document.documentElement.setAttribute('data-theme', storedTheme);
+                }
+                document
+                    .querySelector('meta[name="theme-color"]')
+                    .setAttribute('content', darkTheme ? '#1c1917' : '#f3ece0');
+            } catch (error) {
+                // Storage and matchMedia are optional enhancements; CSS still renders.
+            }
+        </script>
         <link
             rel="manifest"
             href="/manifest.json"
@@ -28,14 +46,13 @@
             content="yes"
         />
         <meta
+            name="mobile-web-app-capable"
+            content="yes"
+        />
+        <meta
             name="apple-mobile-web-app-title"
             content="laundrylo"
         />
-        <link
-            rel="canonical"
-            href="https://laundrylo.com/"
-        />
-
         <!--
             Open Graph and Twitter previews. Crawlers do not run JavaScript and
             resolve nothing relative, so the origin is spelled out here rather
@@ -48,10 +65,6 @@
         <meta
             property="og:site_name"
             content="laundrylo"
-        />
-        <meta
-            property="og:url"
-            content="https://laundrylo.com/"
         />
         <meta
             property="og:title"
@@ -113,6 +126,9 @@
         />
     </head>
     <body>
+        <noscript>
+            laundrylo needs JavaScript to search laundries, manage the cart and schedule a pickup.
+        </noscript>
         <div id="root"></div>
     </body>
 </html>
