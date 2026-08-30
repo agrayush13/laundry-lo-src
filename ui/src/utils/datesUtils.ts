@@ -1,13 +1,5 @@
-export const TIME_SLOTS = [
-    '8:00 AM - 10:00 AM',
-    '10:00 AM - 12:00 PM',
-    '12:00 PM - 2:00 PM',
-    '2:00 PM - 4:00 PM',
-    '4:00 PM - 6:00 PM',
-    '6:00 PM - 8:00 PM',
-];
-
 const pad = (value: number) => String(value).padStart(2, '0');
+const PARTNER_TIME_ZONE = 'Asia/Kolkata';
 
 /** ISO date (yyyy-mm-dd) in local time, so it doesn't shift across timezones. */
 const toIsoDate = (date: Date) =>
@@ -41,6 +33,7 @@ export const formatFullDate = (isoDate: string) =>
 /** ISO timestamp to a short "20 Aug, 10:30 am" for order timelines. */
 export const formatEventTime = (isoTimestamp: string) =>
     new Date(isoTimestamp).toLocaleString('en-IN', {
+        timeZone: PARTNER_TIME_ZONE,
         day: 'numeric',
         month: 'short',
         hour: 'numeric',
@@ -50,33 +43,49 @@ export const formatEventTime = (isoTimestamp: string) =>
 /** ISO timestamp to a plain "20 Aug 2026" date. */
 export const formatTimestampDate = (isoTimestamp: string) =>
     new Date(isoTimestamp).toLocaleDateString('en-IN', {
+        timeZone: PARTNER_TIME_ZONE,
         day: 'numeric',
         month: 'short',
         year: 'numeric',
     });
 
-/** Position of a slot within the day, used to order two slots. */
-export const slotIndex = (slot: string) => TIME_SLOTS.indexOf(slot);
+const formatTimeOfDay = (isoTimestamp: string) =>
+    new Date(isoTimestamp).toLocaleTimeString('en-IN', {
+        timeZone: PARTNER_TIME_ZONE,
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+
+/**
+ * A slot's two instants as one readable window, e.g. "8:00 am - 10:00 am".
+ * The server sends instants and never display strings, so this is the only
+ * place a slot acquires a label. The service is in Bengaluru, so its wall-clock
+ * time must not shift when a customer opens the page from another timezone.
+ */
+export const formatSlotRange = (startsAt: string, endsAt: string) =>
+    `${formatTimeOfDay(startsAt)} - ${formatTimeOfDay(endsAt)}`;
 
 /**
  * A delivery must land strictly after its pickup - same day is fine, but only
- * in a later slot.
+ * in a later slot. Slots are ordered by when they actually start rather than by
+ * their position in a fixed list, so a partner adding an evening window does not
+ * reorder anything.
  */
 export const isAfter = (
-    candidate: { date: string; slot: string },
-    reference: { date: string; slot: string }
+    candidate: { date: string; startsAt: string },
+    reference: { date: string; startsAt: string }
 ) => {
     if (!reference.date || !candidate.date) {
-        return true;
+        return false;
     }
 
     if (candidate.date !== reference.date) {
         return candidate.date > reference.date;
     }
 
-    if (!reference.slot || !candidate.slot) {
-        return true;
+    if (!reference.startsAt || !candidate.startsAt) {
+        return false;
     }
 
-    return slotIndex(candidate.slot) > slotIndex(reference.slot);
+    return Date.parse(candidate.startsAt) > Date.parse(reference.startsAt);
 };

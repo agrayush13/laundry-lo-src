@@ -65,16 +65,15 @@ const AppRoutes: React.FC = () => (
                 path="cart"
                 element={<CartPage />}
             />
-            <Route
-                path="checkout"
-                element={<CheckoutPage />}
-            />
-            <Route
-                path="order-confirmed"
-                element={<OrderConfirmed />}
-            />
-
             <Route element={<ProtectedRoute />}>
+                <Route
+                    path="checkout"
+                    element={<CheckoutPage />}
+                />
+                <Route
+                    path="order-confirmed"
+                    element={<OrderConfirmed />}
+                />
                 <Route
                     path="profile"
                     element={<ProfilePage />}

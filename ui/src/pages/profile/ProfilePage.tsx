@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Icon from '../../common-ui/icons/Icon';
 import { ICON_SIZE } from '../../config/brandConfig';
+import { COMMON_COPY } from '../../config/commonConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { PREFERENCES, PROFILE_COPY, PROFILE_FIELDS } from '../../config/profileConfig';
 import { useAuth } from '../../context/AuthContext';
@@ -10,6 +11,7 @@ import { User } from '../../data/user';
 import { toInitials } from '../../hooks/useInitials';
 import { useProfileEditor } from '../../hooks/useProfileEditor';
 import { formatAddress } from '../../utils/addressUtils';
+import { formatTimestampDate } from '../../utils/datesUtils';
 import styles from './profilePage.module.scss';
 
 const ProfilePage: React.FC = () => {
@@ -44,7 +46,8 @@ const ProfilePage: React.FC = () => {
                         <div>
                             <h1 className={styles.profileName}>{account.fullName}</h1>
                             <p className={styles.profileMember}>
-                                {PROFILE_COPY.memberSincePrefix} {account.memberSince}
+                                {PROFILE_COPY.memberSincePrefix}{' '}
+                                {formatTimestampDate(account.memberSince)}
                             </p>
                         </div>
                     </div>
@@ -164,6 +167,7 @@ const ProfilePage: React.FC = () => {
                                         type="button"
                                         aria-label={`Edit ${savedAddress.label} address`}
                                         disabled
+                                        title={COMMON_COPY.comingSoon}
                                     >
                                         <Icon
                                             name="pencil"

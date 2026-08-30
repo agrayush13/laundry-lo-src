@@ -76,10 +76,14 @@ export const CHECKOUT_COPY = {
     scheduleSubtitle: 'Select your preferred date and time',
     summaryHeading: 'Order Summary',
     orderingFrom: 'Ordering from',
+    checkingPartner: 'Checking whether this laundry is accepting orders',
+    partnerCheckFailed: "We couldn't verify that this laundry is accepting orders.",
     sameAddressNote: 'Delivery will be at the same address',
     paymentNote: 'Payment will be collected at pickup',
     pickupLabel: 'Pickup',
     deliveryLabel: 'Delivery',
+    loadingSlots: 'Loading available slots',
+    noSlots: 'This laundry has no pickup slots open in the next week.',
     selectDate: 'Select Date',
     selectSlot: 'Select Time Slot',
     confirm: 'Confirm Booking',
@@ -95,11 +99,16 @@ export const VALIDATION_COPY = {
     pickup: 'Choose a pickup date and time.',
     delivery: 'Choose a delivery date and time.',
     deliveryBeforePickup: 'Delivery must be after pickup.',
+    partnerClosed:
+        'This laundry has stopped taking orders since you added to your cart. ' +
+        'Your cart is safe; pick another laundry to book this one in.',
 } as const;
 
 export const CONFIRMATION_COPY = {
     title: 'Booking Confirmed!',
-    body: "Your laundry pickup has been scheduled. You'll receive a confirmation SMS shortly.",
+    body:
+        'This demo shows how confirmation would look. No real order, pickup, payment ' +
+        'or SMS has been created.',
     orderPrefix: 'Order #',
     primary: 'Back to Home',
     secondary: 'Book Another Service',

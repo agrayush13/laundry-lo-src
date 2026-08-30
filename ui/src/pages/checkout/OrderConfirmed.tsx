@@ -8,7 +8,7 @@ import { useConfirmedOrder } from '../../hooks/useConfirmedOrder';
 import styles from './checkout.module.scss';
 
 const OrderConfirmed: React.FC = () => {
-    const orderId = useConfirmedOrder();
+    const { orderId, orderReference } = useConfirmedOrder();
 
     // Reached without completing a booking (e.g. a direct link or refresh).
     if (!orderId) {
@@ -32,7 +32,7 @@ const OrderConfirmed: React.FC = () => {
             <p className={styles.confirmedText}>{CONFIRMATION_COPY.body}</p>
             <p className={styles.confirmedOrder}>
                 {CONFIRMATION_COPY.orderPrefix}
-                {orderId}
+                {orderReference}
             </p>
 
             <div className={styles.confirmedActions}>
