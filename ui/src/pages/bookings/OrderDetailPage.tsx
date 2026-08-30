@@ -74,7 +74,7 @@ const OrderDetailPage: React.FC = () => {
                     <h2 className={styles.orderHeading}>{ORDERS_COPY.items}</h2>
                     <ul className={styles.orderItems}>
                         {order.lines.map((line) => (
-                            <li key={line.name}>
+                            <li key={line.itemId}>
                                 <span>
                                     <Icon
                                         name="box"

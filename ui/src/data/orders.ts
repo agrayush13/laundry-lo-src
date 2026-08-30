@@ -1,6 +1,6 @@
+import { PriceUnit } from '../models/catalogModels';
 import { Money, addMoney, multiplyMoney, rupees } from '../models/moneyModels';
 import { TAX_RATE } from '../config/cartConfig';
-import { PriceUnit } from './menu';
 
 /** Lowercase slugs, not display strings; labels live in ordersConfig. */
 export type OrderStatus = 'processing' | 'out_for_delivery' | 'delivered' | 'cancelled';
@@ -11,7 +11,13 @@ export type OrderStatus = 'processing' | 'out_for_delivery' | 'delivered' | 'can
  * never need a backend deploy.
  */
 export type OrderEventType =
-    'placed' | 'confirmed' | 'picked_up' | 'in_progress' | 'out_for_delivery' | 'delivered';
+    | 'placed'
+    | 'confirmed'
+    | 'picked_up'
+    | 'in_progress'
+    | 'out_for_delivery'
+    | 'delivered'
+    | 'cancelled';
 
 export interface OrderEvent {
     type: OrderEventType;
@@ -54,20 +60,23 @@ export interface Order {
     events: OrderEvent[];
 }
 
+// Matches the account's saved Home address, and sits in a pincode the seeded
+// partners actually serve: these orders are all with Bengaluru laundries.
 const HOME: OrderAddress = {
     label: 'Home',
     building: '42',
-    street: 'Sector 15, Gurugram, Haryana',
-    pincode: '122001',
+    street: 'Sector 5, HSR Layout, Bengaluru',
+    pincode: '560103',
 };
 
 const totalsFor = (subtotal: Money): OrderTotals => {
+    const delivery = rupees(0);
     const tax = multiplyMoney(subtotal, TAX_RATE);
     return {
         subtotal,
-        delivery: rupees(0),
+        delivery,
         tax,
-        total: addMoney(subtotal, tax),
+        total: addMoney(subtotal, delivery, tax),
     };
 };
 
