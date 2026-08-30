@@ -1,6 +1,20 @@
 import { ApiErrorBody, ApiErrorCode } from '../models/apiModels';
 import { API_BASE_URL, API_COPY, API_TIMEOUT_MS } from '../config/apiConfig';
 
+const API_ERROR_CODES = new Set<ApiErrorCode>([
+    'VALIDATION_FAILED',
+    'UNAUTHENTICATED',
+    'FORBIDDEN',
+    'NOT_FOUND',
+    'PARTNER_NOT_FOUND',
+    'CART_PARTNER_CONFLICT',
+    'SLOT_UNAVAILABLE',
+    'IDEMPOTENCY_KEY_REQUIRED',
+    'RATE_LIMITED',
+    'INTERNAL_ERROR',
+    'NETWORK_ERROR',
+]);
+
 /**
  * Every failure reaching a component is one of these, whether it came from the
  * server's error envelope, a dead connection or a response that wasn't JSON.
@@ -28,10 +42,28 @@ export class ApiError extends Error {
     }
 }
 
-const isErrorBody = (body: unknown): body is ApiErrorBody =>
-    typeof body === 'object' &&
-    body !== null &&
-    typeof (body as ApiErrorBody).error?.code === 'string';
+const isStringRecord = (value: unknown): value is Record<string, string> =>
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((entry) => typeof entry === 'string');
+
+const isErrorBody = (body: unknown): body is ApiErrorBody => {
+    if (typeof body !== 'object' || body === null) return false;
+
+    const error = (body as { error?: unknown }).error;
+    if (typeof error !== 'object' || error === null) return false;
+
+    const candidate = error as Record<string, unknown>;
+    return (
+        typeof candidate.code === 'string' &&
+        API_ERROR_CODES.has(candidate.code as ApiErrorCode) &&
+        typeof candidate.message === 'string' &&
+        candidate.message.trim().length > 0 &&
+        typeof candidate.requestId === 'string' &&
+        (candidate.fields === undefined || isStringRecord(candidate.fields))
+    );
+};
 
 /** Undefined and empty values are dropped rather than sent as `?tags=`. */
 export type QueryParams = Record<string, string | number | string[] | undefined>;

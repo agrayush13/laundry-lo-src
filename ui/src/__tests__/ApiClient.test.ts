@@ -51,4 +51,27 @@ describe('the API client', () => {
             requestId: 'req_123',
         });
     });
+
+    it('falls back to a safe message when an error envelope is incomplete', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue(
+                new Response(
+                    JSON.stringify({
+                        error: {
+                            code: 'PARTNER_NOT_FOUND',
+                            requestId: 'req_123',
+                        },
+                    }),
+                    { status: 502, headers: { 'Content-Type': 'application/json' } }
+                )
+            )
+        );
+
+        await expect(apiGet('/partners/nope')).rejects.toMatchObject({
+            code: 'INTERNAL_ERROR',
+            message: API_COPY.unexpectedError,
+            status: 502,
+        });
+    });
 });

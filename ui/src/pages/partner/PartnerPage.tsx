@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import AsyncBoundary from '../../common-ui/async-boundary/AsyncBoundary';
 import BackLink from '../../common-ui/back-link/BackLink';
@@ -31,6 +31,57 @@ const PartnerPage: React.FC = () => {
         confirmPartnerSwitch,
         viewCart,
     } = usePartnerMenu();
+    const partnerSwitchTrigger = useRef<HTMLButtonElement | null>(null);
+    const cartButton = useRef<HTMLButtonElement | null>(null);
+    const replaceCartDialog = useRef<HTMLElement | null>(null);
+    const focusAfterPartnerSwitch = useRef<'trigger' | 'cart' | null>(null);
+
+    useEffect(() => {
+        if (pendingPartnerSwitch || focusAfterPartnerSwitch.current === null) return;
+
+        const target =
+            focusAfterPartnerSwitch.current === 'trigger'
+                ? partnerSwitchTrigger.current
+                : cartButton.current;
+        target?.focus();
+        focusAfterPartnerSwitch.current = null;
+    }, [pendingPartnerSwitch]);
+
+    const cancelSwitch = () => {
+        focusAfterPartnerSwitch.current = 'trigger';
+        cancelPartnerSwitch();
+    };
+
+    const confirmSwitch = () => {
+        focusAfterPartnerSwitch.current = 'cart';
+        confirmPartnerSwitch();
+    };
+
+    const handlePartnerSwitchKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            cancelSwitch();
+            return;
+        }
+
+        if (event.key !== 'Tab') return;
+
+        const controls =
+            replaceCartDialog.current?.querySelectorAll<HTMLButtonElement>(
+                'button:not([disabled])'
+            );
+        if (!controls?.length) return;
+
+        const first = controls[0]!;
+        const last = controls[controls.length - 1]!;
+        if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
 
     // A partner that is gone is not a failed request, and offering Try again
     // for it would be offering to fail identically.
@@ -169,13 +220,15 @@ const PartnerPage: React.FC = () => {
                                                             type="button"
                                                             className={styles.menuAdd}
                                                             aria-label={`${CART_COPY.add} ${label}`}
-                                                            onClick={() =>
+                                                            onClick={(event) => {
+                                                                partnerSwitchTrigger.current =
+                                                                    event.currentTarget;
                                                                 changeQuantity(
                                                                     item,
                                                                     category.name,
                                                                     1
-                                                                )
-                                                            }
+                                                                );
+                                                            }}
                                                         >
                                                             <Icon
                                                                 name="plus"
@@ -213,6 +266,7 @@ const PartnerPage: React.FC = () => {
                                     </span>
                                 </p>
                                 <button
+                                    ref={cartButton}
                                     className="button button--primary"
                                     type="button"
                                     onClick={viewCart}
@@ -227,11 +281,10 @@ const PartnerPage: React.FC = () => {
                         <div
                             className={styles.replaceCartBackdrop}
                             role="presentation"
-                            onKeyDown={(event) => {
-                                if (event.key === 'Escape') cancelPartnerSwitch();
-                            }}
+                            onKeyDown={handlePartnerSwitchKeyDown}
                         >
                             <section
+                                ref={replaceCartDialog}
                                 className={`card ${styles.replaceCartDialog}`}
                                 role="dialog"
                                 aria-modal="true"
@@ -249,14 +302,14 @@ const PartnerPage: React.FC = () => {
                                         className="button button--secondary"
                                         type="button"
                                         autoFocus
-                                        onClick={cancelPartnerSwitch}
+                                        onClick={cancelSwitch}
                                     >
                                         {PARTNER_COPY.keepCart}
                                     </button>
                                     <button
                                         className="button button--primary"
                                         type="button"
-                                        onClick={confirmPartnerSwitch}
+                                        onClick={confirmSwitch}
                                     >
                                         {PARTNER_COPY.replaceCart}
                                     </button>
