@@ -1,0 +1,16 @@
+{
+  "name": "laundrylo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "laundrylo monorepo - React SPA in ui/, API in api/, database in supabase/",
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:status": "supabase status",
+    "db:local:reset": "psql \"${LAUNDRYLO_DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}\" -v ON_ERROR_STOP=1 -q -c 'drop schema if exists public cascade; drop schema if exists auth cascade; create schema public;' -f supabase/local/00_supabase_shim.sql -f supabase/migrations/20260826090000_init.sql -f supabase/migrations/20260826090100_rls.sql -f supabase/migrations/20260826090200_search_and_slots.sql -f supabase/migrations/20260830100000_harden_slot_generation.sql -f supabase/migrations/20260830110000_service_vocabulary_and_ids.sql -f supabase/seed.sql"
+  },
+  "devDependencies": {
+    "supabase": "^2.34.3"
+  }
+}
