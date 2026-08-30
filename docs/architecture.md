@@ -1,8 +1,8 @@
 # laundrylo - architecture
 
-Status: **living document**. Describes the frontend as built, and the backend as
-planned. Pairs with [api-contract.md](./api-contract.md) and
-[schema.md](./schema.md).
+Status: **living document**. Describes the frontend and backend read path as
+built, with the backend write path still planned. Pairs with
+[api-contract.md](./api-contract.md) and [schema.md](./schema.md).
 
 ---
 
@@ -53,9 +53,10 @@ ui/src/
   hooks/         all logic; components stay JSX-only
   context/       Auth, Cart, Theme providers
   config/        copy, routes, tokens, tunables - no literals in components
-  models/        shared TypeScript types
+  models/        shared TypeScript types, including the API's wire shapes
   motion/        the journey's scroll spine, loaded on demand
-  data/          seed data; deleted once services exist
+  services/      the only place that talks to the API
+  data/          what the API does not serve yet: orders, the user, service cards
   utils/         pure helpers
   styles/        shared SCSS mixins and tokens
   __tests__/     integration tests
@@ -70,6 +71,13 @@ Naming: components PascalCase, directories kebab-case, styles
 - **TSX files contain JSX only.** Every non-trivial decision lives in a hook -
   `useCheckoutForm`, `usePartnerListing`, `usePinCodeSearch`. This is why the
   pages are small and the hooks are where the behaviour is.
+- **Only `services/` calls `fetch`.** Hooks call a service, components call a
+  hook. `services/apiClient.ts` is the one place a response becomes either data
+  or an `ApiError`, so no component ever sees a status code.
+- **Every request has three states, and `AsyncBoundary` renders all three.**
+  Loading, failed with a way to retry, and loaded. A screen cannot quietly skip
+  one, and data is cleared while reloading rather than held: showing the previous
+  partners under new filters says something untrue until the network answers.
 - **No hardcoded copy, colours, fonts or data in components.** Copy and tunables
   live in `config/`, design tokens in CSS custom properties.
 - **Theming is runtime.** Light and dark are CSS custom property sets; Sass
@@ -80,11 +88,18 @@ Naming: components PascalCase, directories kebab-case, styles
 
 ### State
 
-| Concern | Where it lives | Persistence                                                |
-| ------- | -------------- | ---------------------------------------------------------- |
-| Cart    | `CartContext`  | `localStorage`, versioned, cleared on order placement      |
-| Auth    | `AuthContext`  | `localStorage` today; moves to Supabase's session handling |
-| Theme   | `ThemeContext` | `localStorage`                                             |
+| Concern         | Where it lives | Persistence                                                |
+| --------------- | -------------- | ---------------------------------------------------------- |
+| Cart            | `CartContext`  | `localStorage`, versioned, cleared on order placement      |
+| Auth            | `AuthContext`  | `localStorage` today; moves to Supabase's session handling |
+| Theme           | `ThemeContext` | `localStorage`                                             |
+| Partners, slots | the API        | Partner reads cached 5 min by the SW; slots never cached   |
+
+The cart carries the partner's id **and name**, and each line carries the
+category it was added from. Both are copied at add time because the catalogue
+that priced them is per partner and lives on the server: without them the cart
+would have to fetch before it could name where the order is going, or say which
+of three "Shirt / T-shirt" lines is which.
 
 The cart is versioned (`STORAGE_VERSION`) so a shape change discards stale data
 rather than letting it reach components, and all reads are wrapped in try/catch
@@ -208,6 +223,44 @@ using the brand tokens and wordmark, rendered headless at exactly 1200x630. The
 source is kept in the repo so the card can be regenerated when the brand or
 strapline changes, rather than being an orphaned binary.
 
+### Offline and installability
+
+`public/manifest.json` makes the app installable: standalone display, the cream
+brand colour for the splash and title bar, and shortcuts to Bookings and Cart.
+Installation is left to the browser's own affordance rather than a custom
+prompt, so there is no dismissal state to keep and nothing to nag with.
+
+Icons ship in two sets. The `any` icons are the app tile as drawn. The
+`maskable` icons are a separate render, because Android crops maskable icons to
+a circle: the drum sits inside the 80% safe zone with cream bleeding to every
+edge. Reusing the full-bleed tile for both would clip the artwork on most
+Android launchers.
+
+The service worker is built by Workbox's `InjectManifest` from
+`ui/src/service-worker/sw.ts`, so the precache list is generated from the assets
+webpack actually emitted rather than hand-maintained. Source maps, `_redirects`
+and the social preview are excluded: none of them belongs in a client cache.
+Runtime rules cover what precaching cannot - `StaleWhileRevalidate` for the
+allowlisted public partner reads, `NetworkOnly` for slots, `CacheFirst` for
+images and font files, and a navigation route that resolves every client-side
+path to the shell.
+
+The shell and previously visited partner catalogues work offline; live slot
+availability deliberately does not. The cart persists to `localStorage`.
+
+A new worker is never allowed to take over on its own. It parks in `waiting`,
+the app offers a reload, and only then does it receive `SKIP_WAITING` and reload
+on `controllerchange`. Silently swapping the bundle would reload someone out of
+a half-filled checkout form.
+
+No service worker is registered in development. A stale cache while editing
+costs more than offline support is worth.
+
+Two consequences worth remembering. The plugin that copies `public/` recurses,
+because `public/icons/` would otherwise be dropped from every build. And
+`service-worker.js` must not be served with a long cache lifetime, or a deploy
+takes as long to reach users as that header allows.
+
 ### Error handling
 
 A class-component error boundary wraps the app and renders a branded fallback
@@ -236,7 +289,11 @@ one story twice, and them drifting apart would not look like a failure: it would
 look like a site that simply says two different things. See
 [journey.md](./journey.md) section 20.
 
-## 3. Backend (planned)
+## 3. Backend
+
+Partly built. The read path - partners, catalogue, slots - is serving from
+[`api/`](../api/) over a real Postgres schema; the cart, orders and profile
+routes are not written yet.
 
 ### Why Supabase
 
@@ -245,12 +302,71 @@ factor: it gives short-lived access JWTs, automatic refresh rotation, OAuth
 providers, and revocation at the refresh-token layer, none of which we want to
 build. See [api-contract.md](./api-contract.md) decision 4.
 
+### Why a Node service in front of it
+
+A plain HTTP service in `api/` rather than Supabase Edge Functions or PostgREST
+straight from the client. The contract's shapes - one error envelope, money
+objects, cursor pagination, server-computed totals, idempotent order placement -
+are the service's job. Pushing them into Postgres functions and the client is
+exactly how they drift apart.
+
+TypeScript on Hono, `pg` for Postgres, `jose` for token verification, Zod for
+query validation.
+
+```
+api/src/
+  app.ts       middleware, routing, the error envelope
+  config.ts    every environment value, resolved at boot
+  models.ts    the wire shapes, mirroring ui/src/models
+  auth/        Supabase token verification
+  db/          connection pool and the RLS session wrapper
+  http/        errors, money, cursors, validation, serializers
+  queries/     SQL, one function per query
+  routes/      one file per resource
+```
+
+The rule that shapes it: **a storage row never reaches a response.**
+`http/serializers.ts` is the only place a snake_case column becomes a camelCase
+field, so a column rename cannot reach the client.
+
+### Database
+
+Built by `supabase/migrations/`, filled by `supabase/seed.sql`, documented in
+[schema.md](./schema.md). Five migrations: tables and enums, then RLS, then the
+derived pieces the listing needs - `pincode_centroids` and a haversine function
+for distance, the `partner_details` view deriving `services` and `startingPrice`
+from the catalogue, and `generate_slots`, which turns a partner's opening hours
+into bookable rows - followed by the constraints and grants that harden slot
+generation, followed by the catalogue vocabulary and opaque-id hardening.
+
+Two things are derived rather than stored, and that is the point of them:
+`Partner.services` is the distinct set of `catalog_categories.service`, and
+`startingPrice` is the cheapest active item. Neither can advertise something the
+partner does not actually sell.
+
 ### Request path
 
 1. Client attaches `Authorization: Bearer <supabase access token>`.
-2. API verifies the token against Supabase's JWKS.
+2. API verifies the token against Supabase's JWKS, or against a shared HS256
+   secret when running the local stack. A malformed or expired token is a `401`,
+   never a silent downgrade to anonymous: the user believes they are signed in,
+   and quietly showing them a signed-out view is the harder failure to diagnose.
 3. `auth.uid()` identifies the caller; Row Level Security enforces ownership at
    the database rather than trusting application code.
+
+### Row Level Security is not bypassed
+
+The service holds a privileged connection and could ignore RLS entirely. It does
+not. `db/pool.ts` exposes `asCaller`, which opens a transaction, sets
+`request.jwt.claims`, and assumes the `anon` or `authenticated` role before
+running the query. A handler that forgets an ownership check returns nothing
+rather than someone else's rows, and because `set local` is scoped to the
+transaction, a pooled connection cannot leak one request's caller into the next.
+
+Order placement is not built yet. Because it writes across tables a customer
+cannot write directly, the write path must choose an explicit privileged
+transaction or a narrow security-definer function rather than accidentally
+bypassing RLS through the pool login.
 
 ### What the server owns, non-negotiably
 
@@ -258,8 +374,10 @@ build. See [api-contract.md](./api-contract.md) decision 4.
   server-side and returned. The client renders what it is given.
 - **Availability.** Slot capacity, partner hours and holidays. Booking increments
   the slot count inside the order transaction, so `409 SLOT_UNAVAILABLE` is
-  truthful under concurrency.
-- **`isOpen`.** Manual toggle plus optional auto-scheduling from opening hours.
+  truthful under concurrency. A slot that has already started is reported
+  unavailable rather than hidden, so the client has one rule to render.
+- **`isOpen`.** Manual toggle plus optional auto-scheduling from opening hours,
+  resolved by `is_partner_open` at query time.
 - **Order history.** Item names, prices and addresses are snapshotted onto the
   order at placement so later edits never rewrite the past.
 
@@ -281,15 +399,19 @@ The UI currently runs on seed data in `ui/src/data/`. The route to a real
 backend, in order:
 
 1. **Agree the contract.** Done - see [api-contract.md](./api-contract.md).
-2. **Mock it with MSW** against that exact shape. The UI gets loading, empty and
-   error states, and reshapes to per-item pricing, without waiting for a server.
+2. **Build the schema and the read path.** Done - `supabase/` and `api/` serve
+   partners, catalogue and slots against that contract.
 3. **Introduce `services/*Services.ts`** as the only place that talks to the
-   network. Components and hooks call services, never `fetch` directly.
-4. **Build the backend** against the same contract; flip MSW off.
-5. **Delete `data/*.ts`.**
+   network. Done - the listing, the partner page and the checkout schedule all
+   read from the API, and `data/partners.ts` and `data/menu.ts` are gone.
+4. **Build the write path**: `/me`, `/addresses`, `/cart` with server-computed
+   totals, `POST /orders`, `/membership`.
+5. **Delete the rest of `data/*.ts`** - orders, the user, and the homepage
+   service cards, once there is an endpoint behind each.
 
-Step 2 is the leverage point: it flushes out every missing state while the
-contract is still cheap to change.
+Step 4 is the leverage point now. Until it lands the cart still does its own tax
+arithmetic and a confirmed order is still a client-side id, which is the last
+place the app tells the customer something the server has not agreed to.
 
 ## 5. Known gaps
 
