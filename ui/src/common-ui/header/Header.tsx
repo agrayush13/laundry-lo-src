@@ -55,92 +55,78 @@ const Header: React.FC = () => {
                     ))}
                 </nav>
 
-                {user ? (
-                    <div className={styles.headerActions}>
-                        <ThemeToggle />
-                        <Link
-                            className={styles.headerCart}
-                            to={cart.href}
-                            aria-label={cartCount > 0 ? `${cart.label} (${cartCount})` : cart.label}
-                        >
-                            <Icon name={cart.icon} />
-                            {cartCount > 0 && (
-                                <span
-                                    className={styles.headerCartCount}
-                                    aria-hidden="true"
-                                >
-                                    {cartCount}
-                                </span>
-                            )}
-                        </Link>
-                        <Link
-                            className={styles.headerBookings}
-                            to={authenticated.bookings.href}
-                            aria-label={authenticated.bookings.label}
-                        >
-                            <Icon name={authenticated.bookings.icon} />
-                            <span className={styles.headerLabel}>
-                                {authenticated.bookings.label}
-                            </span>
-                        </Link>
-                        <Link
-                            className={styles.headerAccount}
-                            to={authenticated.profile.href}
-                            aria-label={user.fullName}
-                        >
+                <div className={styles.headerActions}>
+                    <ThemeToggle />
+                    <Link
+                        className={styles.headerCart}
+                        to={cart.href}
+                        aria-label={cartCount > 0 ? `${cart.label} (${cartCount})` : cart.label}
+                    >
+                        <Icon name={cart.icon} />
+                        {cartCount > 0 && (
                             <span
-                                className={styles.headerAvatar}
+                                className={styles.headerCartCount}
                                 aria-hidden="true"
                             >
-                                {toInitials(user.fullName)}
+                                {cartCount}
                             </span>
-                            <span className={styles.headerLabel}>
-                                {user.fullName.split(' ')[0]}
-                            </span>
-                        </Link>
-                        <button
-                            className={styles.headerSignout}
-                            type="button"
-                            aria-label={authenticated.signOut.label}
-                            onClick={handleSignOut}
-                        >
-                            <Icon name={authenticated.signOut.icon} />
-                        </button>
-                    </div>
-                ) : (
-                    <div className={styles.headerActions}>
-                        <ThemeToggle />
-                        <Link
-                            className={styles.headerCart}
-                            to={cart.href}
-                            aria-label={cartCount > 0 ? `${cart.label} (${cartCount})` : cart.label}
-                        >
-                            <Icon name={cart.icon} />
-                            {cartCount > 0 && (
+                        )}
+                    </Link>
+                    {user ? (
+                        <>
+                            <Link
+                                className={styles.headerBookings}
+                                to={authenticated.bookings.href}
+                                aria-label={authenticated.bookings.label}
+                            >
+                                <Icon name={authenticated.bookings.icon} />
+                                <span className={styles.headerLabel}>
+                                    {authenticated.bookings.label}
+                                </span>
+                            </Link>
+                            <Link
+                                className={styles.headerAccount}
+                                to={authenticated.profile.href}
+                                aria-label={user.fullName}
+                            >
                                 <span
-                                    className={styles.headerCartCount}
+                                    className={styles.headerAvatar}
                                     aria-hidden="true"
                                 >
-                                    {cartCount}
+                                    {toInitials(user.fullName)}
                                 </span>
-                            )}
-                        </Link>
-                        <Link
-                            className={styles.headerSignin}
-                            to={guest.signIn.href}
-                            aria-label={guest.signIn.label}
-                        >
-                            <Icon name={guest.signIn.icon} />
-                            <span className={styles.headerLabel}>{guest.signIn.label}</span>
-                        </Link>
-                        <Link
-                            className={`button button--primary ${styles.headerCta}`}
-                            to={guest.cta.href}
-                        >
-                            {guest.cta.label}
-                        </Link>
-                    </div>
-                )}
+                                <span className={styles.headerLabel}>
+                                    {user.fullName.split(' ')[0]}
+                                </span>
+                            </Link>
+                            <button
+                                className={styles.headerSignout}
+                                type="button"
+                                aria-label={authenticated.signOut.label}
+                                onClick={handleSignOut}
+                            >
+                                <Icon name={authenticated.signOut.icon} />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <Link
+                                className={styles.headerSignin}
+                                to={guest.signIn.href}
+                                aria-label={guest.signIn.label}
+                            >
+                                <Icon name={guest.signIn.icon} />
+                                <span className={styles.headerLabel}>{guest.signIn.label}</span>
+                            </Link>
+                            <Link
+                                className={`button button--primary ${styles.headerCta}`}
+                                to={guest.cta.href}
+                            >
+                                {guest.cta.label}
+                            </Link>
+                        </>
+                    )}
+                </div>
             </div>
         </header>
     );
