@@ -52,6 +52,7 @@ const MAX_LOOKAHEAD = 0.55;
 
 let pending: Promise<ScrollSpine> | null = null;
 let spine: ScrollSpine | null = null;
+let tick: ((time: number) => void) | null = null;
 
 const build = async (): Promise<ScrollSpine> => {
     // Lenis ships the stylesheet it needs to keep the document scrollable while
@@ -77,7 +78,7 @@ const build = async (): Promise<ScrollSpine> => {
     // changed and GSAP's ticker has to advance Lenis. Wiring it the other way
     // round leaves the triggers a frame behind the content.
     lenis.on('scroll', ScrollTrigger.update);
-    gsap.ticker.add((time) => {
+    tick = (time) => {
         // Reel the target back in before the frame is drawn, so momentum from a
         // hard scroll turns into a longer journey rather than a jump.
         const lookahead = window.innerHeight * MAX_LOOKAHEAD;
@@ -88,7 +89,8 @@ const build = async (): Promise<ScrollSpine> => {
         }
 
         lenis.raf(time * 1000);
-    });
+    };
+    gsap.ticker.add(tick);
     gsap.ticker.lagSmoothing(0);
 
     spine = { gsap, ScrollTrigger, lenis };
@@ -109,6 +111,10 @@ export const destroyScrollSpine = () => {
     }
 
     spine.ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+    if (tick) {
+        spine.gsap.ticker.remove(tick);
+        tick = null;
+    }
     spine.gsap.ticker.lagSmoothing(500, 33);
     spine.lenis.destroy();
     spine = null;

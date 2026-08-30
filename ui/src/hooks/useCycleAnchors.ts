@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { CYCLE_SECTIONS } from '../config/cycleConfig';
 import { softCut } from '../motion/softCut';
 import { loadScrollSpine } from '../motion/spine';
@@ -24,6 +24,7 @@ const TOO_FAR = 2;
  */
 export const useCycleAnchors = () => {
     const { hash } = useLocation();
+    const navigate = useNavigate();
     const prefersReduced = usePrefersReducedMotion();
 
     useEffect(() => {
@@ -60,9 +61,24 @@ export const useCycleAnchors = () => {
         };
 
         const onClick = (event: MouseEvent) => {
-            const link = (event.target as Element).closest?.('a');
+            const link = (event.target as Element).closest?.('a') as HTMLAnchorElement | null;
             const href = link?.getAttribute('href');
-            if (!href) {
+            if (!link || !href) {
+                return;
+            }
+
+            const modified =
+                event.button !== 0 ||
+                event.metaKey ||
+                event.ctrlKey ||
+                event.shiftKey ||
+                event.altKey;
+            if (
+                modified ||
+                event.defaultPrevented ||
+                link.hasAttribute('download') ||
+                (link.target && link.target !== '_self')
+            ) {
                 return;
             }
 
@@ -75,12 +91,12 @@ export const useCycleAnchors = () => {
 
             event.preventDefault();
             scrollTo(target);
-            window.history.replaceState(null, '', target);
+            navigate(target, { replace: true });
         };
 
         document.addEventListener('click', onClick);
         return () => document.removeEventListener('click', onClick);
-    }, [prefersReduced]);
+    }, [navigate, prefersReduced]);
 
     // A hash the page was opened with, once there is a page to scroll.
     useEffect(() => {
@@ -88,11 +104,37 @@ export const useCycleAnchors = () => {
             return undefined;
         }
 
+        let cancelled = false;
+        let secondFrame: number | undefined;
         const frame = window.requestAnimationFrame(() => {
             const element = document.querySelector<HTMLElement>(hash);
-            element?.scrollIntoView();
+            if (!element) return;
+
+            if (prefersReduced) {
+                element.scrollIntoView({ behavior: 'auto' });
+                return;
+            }
+
+            void loadScrollSpine()
+                .then(({ ScrollTrigger, lenis }) => {
+                    if (cancelled) return;
+                    // Lazy scenes above the target insert pin spacers. Refresh,
+                    // aim, then aim once more after the next layout so a deep
+                    // link does not land at the target's old position.
+                    ScrollTrigger.refresh();
+                    lenis.scrollTo(element, { immediate: true });
+                    secondFrame = window.requestAnimationFrame(() => {
+                        ScrollTrigger.refresh();
+                        lenis.scrollTo(element, { immediate: true });
+                    });
+                })
+                .catch(() => element.scrollIntoView({ behavior: 'auto' }));
         });
 
-        return () => window.cancelAnimationFrame(frame);
-    }, [hash]);
+        return () => {
+            cancelled = true;
+            window.cancelAnimationFrame(frame);
+            if (secondFrame !== undefined) window.cancelAnimationFrame(secondFrame);
+        };
+    }, [hash, prefersReduced]);
 };
