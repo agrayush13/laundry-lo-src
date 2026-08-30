@@ -35,3 +35,6 @@ temp/
 *.swp
 *.swo
 *~
+
+# Local development and planning notes
+docs/worklog.md

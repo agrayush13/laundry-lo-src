@@ -1,6 +1,7 @@
 # laundrylo - data schema
 
-Status: **draft**. Targets Postgres on Supabase. Pairs with
+Status: **implemented**. Postgres on Supabase, built by
+`supabase/migrations/` and filled by `supabase/seed.sql`. Pairs with
 [api-contract.md](./api-contract.md); this is the storage shape behind it.
 
 ---
@@ -8,7 +9,8 @@ Status: **draft**. Targets Postgres on Supabase. Pairs with
 ## 1. Conventions
 
 - **Primary keys** are opaque text ids with a type prefix (`ord_01J8XR3K2W`),
-  generated as ULIDs. Never sequential integers, never guessable from a URL.
+  generated as time-ordered ULIDs with cryptographic entropy. Never sequential
+  integers, never guessable from a URL.
 - **Money** is stored as `integer` minor units (paise) alongside a `currency`
   text column. No floats anywhere in the schema.
 - **Timestamps** are `timestamptz`, always UTC. `created_at` / `updated_at` on
@@ -111,19 +113,20 @@ Many-to-many; tags are slugs (`free-pickup`), never display strings.
 
 ### catalog_categories
 
-| Column       | Type    | Notes                                         |
-| ------------ | ------- | --------------------------------------------- |
-| `id`         | text PK |                                               |
-| `partner_id` | text FK | catalogs are **per partner**                  |
-| `service`    | text    | canonical slug: `wash-fold`, `dry-clean`, ... |
-| `name`       | text    | "Wash & Fold", "Dry Cleaning"                 |
-| `position`   | integer | display order                                 |
+| Column       | Type    | Notes                         |
+| ------------ | ------- | ----------------------------- |
+| `id`         | text PK |                               |
+| `partner_id` | text FK | catalogs are **per partner**  |
+| `service`    | text    | constrained canonical slug    |
+| `name`       | text    | "Wash & Fold", "Dry Cleaning" |
+| `position`   | integer | display order                 |
 
 `service` is the platform's vocabulary, `name` is the partner's. They are
 separate so a partner can call a category "Express Dry Clean" without falling out
-of a `services=dry-clean` filter, and so the homepage service cards keep working
+of a `services=dry-cleaning` filter, and so the homepage service cards keep working
 when partners rename things. `Partner.services` in the API is the distinct set of
-`service` values across a partner's categories.
+`service` values across a partner's categories. A database check rejects values
+outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`.
 
 ### catalog_items
 
@@ -304,14 +307,39 @@ partners 1--* partner_hours
 - `addresses (user_id)`
 - unique `orders (user_id, idempotency_key)` - double-tap protection
 
-## 6. Open questions
+## 6. Questions answered by the first migration
 
-- Do partners set their own catalog prices, or does the platform own a rate card
-  that partners opt into? Changes whether `catalog_items` is per partner or a
-  shared table with partner overrides.
-- Are slots generated ahead (a row per slot per day) or derived from
-  `partner_hours` plus a bookings count? Generated rows are simpler to reason
-  about and to block for holidays; derived rows avoid a growing table.
-- Distance: computed in Postgres with PostGIS, or precomputed per pincode?
-- Do we need a `partner_staff` table, or is a single `owner_id` enough for the
-  first version of the admin panel?
+Status of this document is now **implemented** for everything above:
+`supabase/migrations/` builds it and `supabase/seed.sql` fills it with the
+Bengaluru demo set.
+
+- **Catalogue prices are per partner.** `catalog_items` hangs off a partner's
+  own categories, with no shared rate card and no override table. The seed
+  scales one base rate card by a per-partner factor, which is a seeding
+  convenience rather than a schema the platform enforces.
+- **Slots are generated ahead**, one row per slot per day, by
+  `generate_slots(partner_id, from_date, days)` reading `partner_hours`. Derived
+  windows avoid a growing table but leave `booked` and holiday blocking with
+  nowhere to live, and it is `booked` that makes `409 SLOT_UNAVAILABLE` truthful
+  under concurrency. The table is small - one partner-fortnight is roughly 80
+  rows - and old rows can be pruned once orders reference a snapshot.
+- **Distance is haversine from a pincode centroid**, not PostGIS.
+  `pincode_centroids` maps a searched pincode to a point, `haversine_meters`
+  measures from it, and `GET /partners` accepts explicit `latitude`/`longitude`
+  to override. PostGIS earns its place when there is a map view and radius
+  search; a scalar function costs no extension today.
+- **`owner_id` alone**, no `partner_staff`. One administrator per partner is
+  enough for the first admin panel, and the RLS policies all funnel through
+  `owns_partner(partner_id)`, so adding staff later changes that one function
+  rather than every policy.
+- **`rating` and `review_count` are denormalised columns** for now, seeded from
+  the demo data, exactly as this document allowed. They become an aggregate over
+  `reviews` when reviews ship, and the API already reads them through the
+  `partner_details` view, so that swap does not touch a route.
+
+Still open:
+
+- Who generates slots in production, and how far ahead? The seed calls
+  `generate_slots` directly through the privileged `service_role`; a scheduled
+  job needs to roll the window forward and decide how far out a customer may book.
+- Pruning. `slots` and `order_events` both grow without bound.

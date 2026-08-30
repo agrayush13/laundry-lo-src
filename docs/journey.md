@@ -374,12 +374,17 @@ Prices are read from `SERVICE_TYPES` rather than typed into the section, so the
 cards and the booking flow cannot drift. The v2.1 per-kg figures (₹49/kg,
 ₹69/kg) are gone with the per-kg model.
 
-Two known data seams, deliberately left for backend time rather than patched in
-the seed: Premium Care's `startingPrice` (₹349) is higher than the cheapest
-item in its nearest catalogue category, and the service ids do not match the
-catalogue category ids (`dry-cleaning` against `dry-clean`, `premium-care`
-against `special`). Ironing (from ₹15/piece) is a fifth catalogue category with
-no card, because the grid is 2x2.
+Two data seams in the seed, both closed by the backend and both still present in
+the client until it reads from the API: Premium Care's `startingPrice` (₹349) is
+higher than the cheapest item in its nearest catalogue category, and the service
+ids do not match the catalogue category ids (`dry-cleaning` against `dry-clean`,
+`premium-care` against `special`). Server-side a category carries a canonical
+`service` slug next to the partner's own name, so the four slugs are the only
+vocabulary the filter knows, and `startingPrice` is derived as the cheapest
+active item rather than stored, so it cannot quote a price the catalogue does not
+offer. Ironing (from ₹15/piece) was a fifth catalogue category with no card,
+because the grid is 2x2; it is not in the seeded catalogues, and bringing it back
+means adding a fifth service slug rather than an orphan category.
 
 **Anatomy, top to bottom:** outline garment icon, tight gap, service name
 (Fraunces), one-line description, hairline rule, price row with a small

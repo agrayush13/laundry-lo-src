@@ -1,11 +1,17 @@
-# laundrylo API contract - draft for review
+# laundrylo API contract
 
-Status: **agreed**. The client's local seed data now matches these shapes, so
-swapping in a real API is a transport change rather than a reshape. Still to do:
-mock it (MSW), then implement the backend against it.
+Status: **agreed, partly built**. The client's local seed data matches these
+shapes, so swapping in a real API is a transport change rather than a reshape.
 
-Not yet matching the client: totals are computed client-side because there is no
-server to compute them, and Supabase Auth is designed but not wired.
+Built, serving in `api/`, and **consumed by the client**: `GET /partners`,
+`GET /partners/{id}`, `GET /partners/{id}/catalog`, `GET /partners/{id}/slots`,
+over the schema in [schema.md](./schema.md). Token verification is wired; nothing
+in the read path requires a token. `sort` also accepts `price`, which the listing
+has always offered.
+
+Not yet built: `/me`, `/addresses`, `/cart`, `POST /orders`, `/membership`. Until
+the cart lands, totals are still computed client-side, and orders, the signed-in
+user and the homepage service cards still come from `ui/src/data/`.
 
 Base URL: `/api/v1`
 
@@ -41,12 +47,12 @@ One shape for every failure:
 
 ```json
 {
-    "error": {
-        "code": "VALIDATION_FAILED",
-        "message": "Pincode must be 6 digits.",
-        "fields": { "pincode": "Must be 6 digits." },
-        "requestId": "01J8..."
-    }
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Pincode must be 6 digits.",
+    "fields": { "pincode": "Must be 6 digits." },
+    "requestId": "01J8..."
+  }
 }
 ```
 
@@ -116,12 +122,12 @@ keyed by the Supabase user id for fields Supabase does not model:
 
 ```json
 {
-    "id": "usr_01J8",
-    "fullName": "Ayush Agrawal",
-    "email": "ayush.agrawal@gmail.com",
-    "phone": "+91 98765 43210",
-    "memberSince": "2024-01-14T00:00:00Z",
-    "preferences": { "sms": true, "email": false }
+  "id": "usr_01J8",
+  "fullName": "Ayush Agrawal",
+  "email": "ayush.agrawal@gmail.com",
+  "phone": "+91 98765 43210",
+  "memberSince": "2024-01-14T00:00:00Z",
+  "preferences": { "sms": true, "email": false }
 }
 ```
 
@@ -139,31 +145,31 @@ adding one does not require re-fetching the profile.
 
 ```json
 {
-    "data": [
-        {
-            "id": "1001",
-            "name": "SparkleWash Express",
-            "rating": 4.9,
-            "reviewCount": 234,
-            "address": {
-                "line1": "12, MG Road",
-                "line2": "Sector 5",
-                "city": "Bengaluru",
-                "pincode": "560103"
-            },
-            "distanceMeters": 800,
-            "tags": ["free-pickup", "eco-friendly"],
-            "services": ["wash-fold", "wash-iron", "dry-clean"],
-            "turnaroundHours": 24,
-            "startingPrice": { "amount": 2000, "currency": "INR", "unit": "piece" },
-            "isOpen": true,
-            "image": {
-                "url": "https://cdn.../sparklewash.jpg",
-                "alt": "Front-loading washing machines"
-            }
-        }
-    ],
-    "nextCursor": null
+  "data": [
+    {
+      "id": "1001",
+      "name": "SparkleWash Express",
+      "rating": 4.9,
+      "reviewCount": 234,
+      "address": {
+        "line1": "12, MG Road",
+        "line2": "Sector 5",
+        "city": "Bengaluru",
+        "pincode": "560103"
+      },
+      "distanceMeters": 800,
+      "tags": ["free-pickup", "eco-friendly"],
+      "services": ["wash-fold", "wash-iron", "dry-cleaning"],
+      "turnaroundHours": 24,
+      "startingPrice": { "amount": 2000, "currency": "INR", "unit": "piece" },
+      "isOpen": true,
+      "image": {
+        "url": "https://cdn.../sparklewash.jpg",
+        "alt": "Front-loading washing machines"
+      }
+    }
+  ],
+  "nextCursor": null
 }
 ```
 
@@ -184,39 +190,44 @@ card links to `/laundries?pin=560103&service=wash-fold`. See decision 8.
 
 `isOpen` is stored server-side and toggleable from the admin panel. See decision 2.
 
+`sort=distance` requires either `pincode` or a latitude/longitude pair. Without
+an origin there is no meaningful distance to sort, so the API returns `422`
+instead of presenting a stable-looking but arbitrary order.
+
 ### `GET /partners/{id}`
 
 → `200` the same object, plus `openingHours` and `about`.
-→ `404` `{ "error": { "code": "PARTNER_NOT_FOUND" } }` - the UI currently
-redirects silently; it should show a not-found state.
+→ `404` `{ "error": { "code": "PARTNER_NOT_FOUND" } }`; the UI renders a
+dedicated not-found state.
 
 ### `GET /partners/{id}/catalog`
 
 ```json
 {
-    "categories": [
+  "categories": [
+    {
+      "id": "cat_1001_wash-fold",
+      "service": "wash-fold",
+      "name": "Wash & Fold",
+      "items": [
         {
-            "id": "wash-fold",
-            "name": "Wash & Fold",
-            "items": [
-                {
-                    "id": "wf-shirt",
-                    "name": "Shirt / T-shirt",
-                    "description": "Machine wash with premium detergent, neatly folded",
-                    "price": { "amount": 2000, "currency": "INR" },
-                    "unit": "piece",
-                    "iconKey": "shirt"
-                },
-                {
-                    "id": "wf-trousers",
-                    "name": "Trousers / Jeans",
-                    "price": { "amount": 3000, "currency": "INR" },
-                    "unit": "piece",
-                    "iconKey": "box"
-                }
-            ]
+          "id": "wf-shirt",
+          "name": "Shirt / T-shirt",
+          "description": "Machine wash with premium detergent, neatly folded",
+          "price": { "amount": 2000, "currency": "INR" },
+          "unit": "piece",
+          "iconKey": "shirt"
+        },
+        {
+          "id": "wf-trousers",
+          "name": "Trousers / Jeans",
+          "price": { "amount": 3000, "currency": "INR" },
+          "unit": "piece",
+          "iconKey": "box"
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
@@ -239,6 +250,16 @@ an icon registry to map a key onto a glyph.
 **Catalogue is per partner**, unlike today's mock where every partner shares one
 menu and one price list.
 
+A category carries both `service` and `name`: `service` is the platform's slug,
+which is what `services=` filters on, and `name` is the partner's own wording.
+Royal Dry Cleaners calls its category "Express Dry Clean" and still answers
+`services=dry-cleaning`. The four slugs are `wash-fold`, `wash-iron`,
+`dry-cleaning` and `premium-care`, matching `ServiceId` in the client.
+
+`startingPrice` on a partner is **derived**, not stored: it is the cheapest
+active item in that partner's catalogue. A partner therefore cannot advertise a
+starting price its catalogue does not actually offer.
+
 ---
 
 ## 4. Addresses
@@ -250,15 +271,15 @@ menu and one price list.
 
 ```json
 {
-    "id": "adr_01J8",
-    "label": "Home",
-    "recipientName": "Ayush Agrawal",
-    "phone": "+91 98765 43210",
-    "building": "42",
-    "street": "Sector 15, Gurugram, Haryana",
-    "landmark": "",
-    "pincode": "122001",
-    "isDefault": true
+  "id": "adr_01J8",
+  "label": "Home",
+  "recipientName": "Ayush Agrawal",
+  "phone": "+91 98765 43210",
+  "building": "42",
+  "street": "Sector 5, HSR Layout, Bengaluru",
+  "landmark": "",
+  "pincode": "560103",
+  "isDefault": true
 }
 ```
 
@@ -273,25 +294,25 @@ necessarily the account holder.
 
 ```json
 {
-    "days": [
+  "days": [
+    {
+      "date": "2026-07-19",
+      "slots": [
         {
-            "date": "2026-07-19",
-            "slots": [
-                {
-                    "id": "slt_0800",
-                    "startsAt": "2026-07-19T08:00:00+05:30",
-                    "endsAt": "2026-07-19T10:00:00+05:30",
-                    "available": true
-                },
-                {
-                    "id": "slt_1000",
-                    "startsAt": "2026-07-19T10:00:00+05:30",
-                    "endsAt": "2026-07-19T12:00:00+05:30",
-                    "available": false
-                }
-            ]
+          "id": "slt_0800",
+          "startsAt": "2026-07-19T02:30:00Z",
+          "endsAt": "2026-07-19T04:30:00Z",
+          "available": true
+        },
+        {
+          "id": "slt_1000",
+          "startsAt": "2026-07-19T04:30:00Z",
+          "endsAt": "2026-07-19T06:30:00Z",
+          "available": false
         }
-    ]
+      ]
+    }
+  ]
 }
 ```
 
@@ -313,29 +334,29 @@ Assumes a **server-side cart** per open question 1.
 
 ```json
 {
-    "id": "crt_01J8",
-    "partner": { "id": "1001", "name": "SparkleWash Express" },
-    "items": [
-        {
-            "itemId": "wf-shirt",
-            "name": "Shirt / T-shirt",
-            "quantity": 3,
-            "unit": "piece",
-            "unitPrice": { "amount": 2000, "currency": "INR" },
-            "lineTotal": { "amount": 6000, "currency": "INR" }
-        }
-    ],
-    "membership": {
-        "plan": "plus",
-        "price": { "amount": 9900, "currency": "INR" },
-        "period": "month"
-    },
-    "totals": {
-        "subtotal": { "amount": 6000, "currency": "INR" },
-        "delivery": { "amount": 0, "currency": "INR" },
-        "tax": { "amount": 1080, "currency": "INR" },
-        "total": { "amount": 7080, "currency": "INR" }
+  "id": "crt_01J8",
+  "partner": { "id": "1001", "name": "SparkleWash Express" },
+  "items": [
+    {
+      "itemId": "wf-shirt",
+      "name": "Shirt / T-shirt",
+      "quantity": 3,
+      "unit": "piece",
+      "unitPrice": { "amount": 2000, "currency": "INR" },
+      "lineTotal": { "amount": 6000, "currency": "INR" }
     }
+  ],
+  "membership": {
+    "plan": "plus",
+    "price": { "amount": 9900, "currency": "INR" },
+    "period": "month"
+  },
+  "totals": {
+    "subtotal": { "amount": 6000, "currency": "INR" },
+    "delivery": { "amount": 0, "currency": "INR" },
+    "tax": { "amount": 1080, "currency": "INR" },
+    "total": { "amount": 7080, "currency": "INR" }
+  }
 }
 ```
 
@@ -356,13 +377,13 @@ Header: `Idempotency-Key: <uuid>`
 
 ```json
 {
-    "cartId": "crt_01J8",
-    "addressId": "adr_01J8",
-    "pickupSlotId": "slt_0800",
-    "pickupDate": "2026-07-19",
-    "deliverySlotId": "slt_1800",
-    "deliveryDate": "2026-07-21",
-    "paymentMethod": "cash_on_pickup"
+  "cartId": "crt_01J8",
+  "addressId": "adr_01J8",
+  "pickupSlotId": "slt_0800",
+  "pickupDate": "2026-07-19",
+  "deliverySlotId": "slt_1800",
+  "deliveryDate": "2026-07-21",
+  "paymentMethod": "cash_on_pickup"
 }
 ```
 
@@ -376,39 +397,39 @@ a real case the UI has no handling for.
 
 ```json
 {
-    "id": "ord_01J8XR3K2W",
-    "reference": "LL-2026-001",
-    "status": "processing",
-    "placedAt": "2024-03-20T10:30:00Z",
-    "partner": { "id": "1001", "name": "SparkleWash Express" },
-    "lines": [
-        {
-            "itemId": "wf-shirt",
-            "name": "Shirt / T-shirt",
-            "quantity": 5,
-            "unit": "piece",
-            "amount": { "amount": 10000, "currency": "INR" }
-        }
-    ],
-    "totals": {
-        "subtotal": { "amount": 10000, "currency": "INR" },
-        "delivery": { "amount": 0, "currency": "INR" },
-        "tax": { "amount": 1800, "currency": "INR" },
-        "total": { "amount": 11800, "currency": "INR" }
-    },
-    "deliveryAddress": {
-        "label": "Home",
-        "building": "42",
-        "street": "Sector 15, Gurugram, Haryana",
-        "pincode": "122001"
-    },
-    "pickup": { "date": "2024-03-20", "startsAt": "...", "endsAt": "..." },
-    "delivery": { "date": "2024-03-22", "startsAt": "...", "endsAt": "..." },
-    "events": [
-        { "type": "placed", "occurredAt": "2024-03-20T10:30:00Z" },
-        { "type": "confirmed", "occurredAt": "2024-03-20T10:45:00Z" },
-        { "type": "picked_up", "occurredAt": "2024-03-20T14:00:00Z" }
-    ]
+  "id": "ord_01J8XR3K2W",
+  "reference": "LL-2026-001",
+  "status": "processing",
+  "placedAt": "2024-03-20T10:30:00Z",
+  "partner": { "id": "1001", "name": "SparkleWash Express" },
+  "lines": [
+    {
+      "itemId": "wf-shirt",
+      "name": "Shirt / T-shirt",
+      "quantity": 5,
+      "unit": "piece",
+      "amount": { "amount": 10000, "currency": "INR" }
+    }
+  ],
+  "totals": {
+    "subtotal": { "amount": 10000, "currency": "INR" },
+    "delivery": { "amount": 0, "currency": "INR" },
+    "tax": { "amount": 1800, "currency": "INR" },
+    "total": { "amount": 11800, "currency": "INR" }
+  },
+  "deliveryAddress": {
+    "label": "Home",
+    "building": "42",
+    "street": "Sector 5, HSR Layout, Bengaluru",
+    "pincode": "560103"
+  },
+  "pickup": { "date": "2024-03-20", "startsAt": "...", "endsAt": "..." },
+  "delivery": { "date": "2024-03-22", "startsAt": "...", "endsAt": "..." },
+  "events": [
+    { "type": "placed", "occurredAt": "2024-03-20T10:30:00Z" },
+    { "type": "confirmed", "occurredAt": "2024-03-20T10:45:00Z" },
+    { "type": "picked_up", "occurredAt": "2024-03-20T14:00:00Z" }
+  ]
 }
 ```
 
@@ -470,7 +491,7 @@ Reviewed 2026-07-25.
    schema change. Follow-up: the footer copy "you only pay once your laundry has
    been weighed" must change.
 
-8. **Listing filters by service.** `Partner` carries a `services` array of
+7. **Listing filters by service.** `Partner` carries a `services` array of
    catalogue category slugs, and `GET /partners` accepts `services=`. The
    alternative, deriving it by joining every partner's catalogue at query time,
    makes the cheapest and most common query on the site pay for the rarest need.
