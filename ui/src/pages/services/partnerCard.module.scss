@@ -27,6 +27,16 @@
         }
     }
 
+    // A partner with no photo yet: a calm surface rather than a broken image.
+    &Placeholder {
+        display: grid;
+        width: 100%;
+        height: 100%;
+        place-items: center;
+        background: t.$color-surface-muted;
+        color: t.$color-text-subtle;
+    }
+
     &Closed {
         position: absolute;
         padding: 0.4375rem 0.875rem;

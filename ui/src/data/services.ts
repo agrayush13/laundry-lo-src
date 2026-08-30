@@ -1,8 +1,8 @@
+import { PriceUnit } from '../models/catalogModels';
 import { Money, rupees } from '../models/moneyModels';
 import { CURRENCY } from '../config/brandConfig';
 import { unsplashImage } from '../utils/imagesUtils';
 import { formatAmount } from '../utils/moneyUtils';
-import { PriceUnit } from './menu';
 
 export type ServiceId = 'wash-fold' | 'wash-iron' | 'dry-cleaning' | 'premium-care';
 

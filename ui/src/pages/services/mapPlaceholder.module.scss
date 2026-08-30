@@ -1,7 +1,7 @@
 @use '../../styles/tokens' as t;
 
 .mapView {
-    // Sticks beside the results on desktop, leads them on mobile.
+    // Sticks beside the results on desktop and follows them on mobile.
     position: sticky;
     top: 6rem;
     display: grid;
@@ -56,7 +56,6 @@
         // escape the map and lay themselves over the page.
         position: relative;
         top: auto;
-        order: -1;
         min-height: 14rem;
     }
 }

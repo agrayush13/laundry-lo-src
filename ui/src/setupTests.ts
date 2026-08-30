@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { installApiFixture } from './__mocks__/apiFixtures';
 
 // happy-dom has no layout engine, so its IntersectionObserver never fires and
 // anything gated on visibility would stay unmounted for the whole suite. Report
@@ -38,4 +39,13 @@ vi.mock('./motion/spine', () => ({
 // start from a clean slate or state leaks between them.
 beforeEach(() => {
     window.localStorage.clear();
+
+    // Partners, catalogues and slots come from the API now. The fixture serves
+    // the same demo set as the database seed, so the journeys these tests drive
+    // stay real without needing a server running.
+    installApiFixture();
+});
+
+afterEach(() => {
+    vi.unstubAllGlobals();
 });

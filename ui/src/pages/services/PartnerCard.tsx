@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../../common-ui/card/Card';
+import Icon from '../../common-ui/icons/Icon';
 import Money from '../../common-ui/money/Money';
 import PartnerIdentity from '../../common-ui/partner-identity/PartnerIdentity';
+import { ICON_SIZE } from '../../config/brandConfig';
 import { LISTING_COPY } from '../../config/listingConfig';
 import { ROUTES } from '../../config/navigationConfig';
-import { Partner } from '../../data/partners';
+import { Partner } from '../../models/partnerModels';
 import styles from './partnerCard.module.scss';
 
 interface PartnerCardProps {
@@ -18,13 +20,25 @@ const PartnerCard: React.FC<PartnerCardProps> = ({ partner }) => (
         className={styles.partner}
     >
         <div className={styles.partnerMedia}>
-            <img
-                className={styles.partnerImage}
-                src={partner.image.url}
-                alt={partner.image.alt}
-                loading="lazy"
-                data-closed={!partner.isOpen}
-            />
+            {partner.image ? (
+                <img
+                    className={styles.partnerImage}
+                    src={partner.image.url}
+                    alt={partner.image.alt}
+                    loading="lazy"
+                    data-closed={!partner.isOpen}
+                />
+            ) : (
+                <div
+                    className={styles.partnerPlaceholder}
+                    aria-hidden="true"
+                >
+                    <Icon
+                        name="shirt"
+                        size={ICON_SIZE.xxl}
+                    />
+                </div>
+            )}
             {!partner.isOpen && <span className={styles.partnerClosed}>{LISTING_COPY.closed}</span>}
         </div>
 
@@ -38,10 +52,16 @@ const PartnerCard: React.FC<PartnerCardProps> = ({ partner }) => (
                 <p className={styles.partnerPrice}>
                     <span>{LISTING_COPY.startingFrom}</span>
                     <strong>
-                        <Money
-                            value={partner.startingPrice}
-                            unit={partner.startingPrice.unit}
-                        />
+                        {partner.startingPrice ? (
+                            <Money
+                                value={partner.startingPrice}
+                                unit={partner.startingPrice.unit}
+                            />
+                        ) : (
+                            // Derived from the catalogue, so this means the
+                            // partner has nothing priced to sell yet.
+                            LISTING_COPY.priceUnknown
+                        )}
                     </strong>
                 </p>
                 {partner.isOpen ? (

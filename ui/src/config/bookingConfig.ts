@@ -11,6 +11,12 @@ export interface AddressFieldConfig {
 }
 
 export const PIN_CODE_LENGTH = 6;
+export const CHECKOUT_ADDRESS_ID_PREFIX = 'checkout-address';
+
+/** Shown when a pin code search is submitted with fewer digits than that. */
+export const PIN_CODE_COPY = {
+    invalid: 'Enter a 6-digit pin code.',
+} as const;
 
 /**
  * Where the listing starts when a visitor arrives without a pin code, which the
