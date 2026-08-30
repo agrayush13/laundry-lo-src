@@ -2,13 +2,19 @@ import React from 'react';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Card from '../../common-ui/card/Card';
 import { ROUTES } from '../../config/navigationConfig';
-import { ADDRESS_LABEL_SUGGESTIONS, PROFILE_COPY } from '../../config/profileConfig';
+import {
+    ADDRESS_LABEL_SUGGESTIONS,
+    LABEL_FIELD_ID,
+    PROFILE_COPY,
+    SAVED_ADDRESS_ID_PREFIX,
+} from '../../config/profileConfig';
 import { useAddressForm } from '../../hooks/useAddressForm';
 import AddressFields from '../checkout/AddressFields';
 import styles from './addAddressPage.module.scss';
 
 const AddAddressPage: React.FC = () => {
-    const { label, address, canSave, setLabel, updateAddress, save, cancel } = useAddressForm();
+    const { label, address, errors, setLabel, updateAddress, save, cancel } = useAddressForm();
+    const labelErrorId = `${LABEL_FIELD_ID}-error`;
 
     return (
         <div className={styles.addAddress}>
@@ -24,15 +30,24 @@ const AddAddressPage: React.FC = () => {
                 <Card className={styles.addAddressCard}>
                     <form onSubmit={save}>
                         <p className={styles.addAddressField}>
-                            <label htmlFor="address-label">{PROFILE_COPY.labelField}</label>
+                            <label htmlFor={LABEL_FIELD_ID}>{PROFILE_COPY.labelField}</label>
                             <input
-                                id="address-label"
+                                id={LABEL_FIELD_ID}
                                 value={label}
                                 placeholder={PROFILE_COPY.labelPlaceholder}
                                 maxLength={20}
+                                aria-invalid={Boolean(errors.label)}
+                                aria-describedby={errors.label ? labelErrorId : undefined}
                                 onChange={(event) => setLabel(event.target.value)}
-                                required
                             />
+                            {errors.label && (
+                                <span
+                                    className={styles.addAddressError}
+                                    id={labelErrorId}
+                                >
+                                    {errors.label}
+                                </span>
+                            )}
                         </p>
 
                         <ul className={styles.addAddressSuggestions}>
@@ -51,6 +66,8 @@ const AddAddressPage: React.FC = () => {
 
                         <AddressFields
                             address={address}
+                            idPrefix={SAVED_ADDRESS_ID_PREFIX}
+                            errors={errors}
                             onChange={updateAddress}
                         />
 
@@ -58,7 +75,6 @@ const AddAddressPage: React.FC = () => {
                             <button
                                 className="button button--primary"
                                 type="submit"
-                                disabled={!canSave}
                             >
                                 {PROFILE_COPY.saveAddress}
                             </button>

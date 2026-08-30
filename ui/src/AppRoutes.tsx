@@ -1,5 +1,5 @@
 import React, { lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import Layout from './common-ui/layout/Layout';
 import ProtectedRoute from './common-ui/protected-route/ProtectedRoute';
 import Home from './pages/home/Home';
@@ -21,6 +21,7 @@ const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const AddAddressPage = lazy(() => import('./pages/profile/AddAddressPage'));
 const BookingsPage = lazy(() => import('./pages/bookings/BookingsPage'));
 const OrderDetailPage = lazy(() => import('./pages/bookings/OrderDetailPage'));
+const NotFoundPage = lazy(() => import('./pages/not-found/NotFoundPage'));
 
 const AppRoutes: React.FC = () => (
     <Routes>
@@ -65,16 +66,15 @@ const AppRoutes: React.FC = () => (
                 path="cart"
                 element={<CartPage />}
             />
-            <Route
-                path="checkout"
-                element={<CheckoutPage />}
-            />
-            <Route
-                path="order-confirmed"
-                element={<OrderConfirmed />}
-            />
-
             <Route element={<ProtectedRoute />}>
+                <Route
+                    path="checkout"
+                    element={<CheckoutPage />}
+                />
+                <Route
+                    path="order-confirmed"
+                    element={<OrderConfirmed />}
+                />
                 <Route
                     path="profile"
                     element={<ProfilePage />}
@@ -93,14 +93,13 @@ const AppRoutes: React.FC = () => (
                 />
             </Route>
 
+            {/*
+             * A dead URL says so, rather than redirecting home. The redirect was
+             * silent, and `replace` meant Back could not undo it.
+             */}
             <Route
                 path="*"
-                element={
-                    <Navigate
-                        to="/"
-                        replace
-                    />
-                }
+                element={<NotFoundPage />}
             />
         </Route>
     </Routes>

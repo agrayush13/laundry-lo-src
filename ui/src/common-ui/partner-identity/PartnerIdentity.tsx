@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ICON_SIZE } from '../../config/brandConfig';
-import { LISTING_COPY, TAG_LABELS } from '../../config/listingConfig';
+import { LISTING_COPY, tagLabel } from '../../config/listingConfig';
 import { ROUTES } from '../../config/navigationConfig';
-import { Partner } from '../../data/partners';
+import { Partner } from '../../models/partnerModels';
 import { formatDistance, formatPartnerAddress } from '../../utils/partnersUtils';
 import Icon from '../icons/Icon';
 import styles from './partnerIdentity.module.scss';
@@ -23,6 +23,7 @@ const PartnerIdentity: React.FC<PartnerIdentityProps> = ({
     linkToPartner = false,
 }) => {
     const Heading = size === 'lg' ? 'h1' : 'h2';
+    const distance = formatDistance(partner.distanceMeters);
 
     return (
         <div
@@ -31,19 +32,31 @@ const PartnerIdentity: React.FC<PartnerIdentityProps> = ({
         >
             <div className={styles.partnerIdentityHead}>
                 <Heading className={styles.partnerIdentityName}>
-                    {linkToPartner ? (
+                    {/*
+                     * A closed partner is not linked, even from a card that asked
+                     * for it. The disabled Book button beside this was the only
+                     * guard, and the name sat next to it as a live route straight
+                     * past it into the menu.
+                     */}
+                    {linkToPartner && partner.isOpen ? (
                         <Link to={ROUTES.laundry(partner.id)}>{partner.name}</Link>
                     ) : (
                         partner.name
                     )}
                 </Heading>
                 <p className={styles.partnerIdentityRating}>
-                    <Icon
-                        name="star"
-                        size={ICON_SIZE.xs}
-                        fill="currentColor"
-                    />
-                    {partner.rating.toFixed(1)} ({partner.reviewCount})
+                    {partner.rating === null ? (
+                        LISTING_COPY.ratingUnknown
+                    ) : (
+                        <>
+                            <Icon
+                                name="star"
+                                size={ICON_SIZE.xs}
+                                fill="currentColor"
+                            />
+                            {partner.rating.toFixed(1)} ({partner.reviewCount})
+                        </>
+                    )}
                 </p>
             </div>
 
@@ -52,12 +65,15 @@ const PartnerIdentity: React.FC<PartnerIdentityProps> = ({
                     name="pin"
                     size={ICON_SIZE.sm}
                 />
-                {formatPartnerAddress(partner.address)} • {formatDistance(partner.distanceMeters)}
+                {formatPartnerAddress(partner.address)}
+                {/* Distance is a property of the search, so it is absent when
+                    the listing was not searched by pin code. */}
+                {distance && ` • ${distance}`}
             </p>
 
             <ul className={styles.partnerIdentityTags}>
                 {partner.tags.map((tag) => (
-                    <li key={tag}>{TAG_LABELS[tag]}</li>
+                    <li key={tag}>{tagLabel(tag)}</li>
                 ))}
             </ul>
 

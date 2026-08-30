@@ -15,15 +15,36 @@ describe('App', () => {
         ).toBeInTheDocument();
     });
 
-    it('enables the search only once a full pin code is entered', async () => {
+    it('offers a keyboard shortcut to the main content', () => {
+        renderApp();
+        expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute(
+            'href',
+            '#main-content'
+        );
+        expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
+    });
+
+    it('explains a short pin code rather than sitting disabled', async () => {
         renderApp();
         const input = screen.getByLabelText(/pin code/i);
         const submit = screen.getByRole('button', { name: /find services/i });
 
-        expect(submit).toBeDisabled();
-
-        await userEvent.type(input, '560001');
+        // The button stays live: a disabled control gives no reason and leaves
+        // the tab order, so the app's headline action would simply vanish.
         expect(submit).toBeEnabled();
+
+        await userEvent.type(input, '5600');
+        await userEvent.click(submit);
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(/6-digit pin code/i);
+        expect(input).toHaveAttribute('aria-invalid', 'true');
+        // Still on the homepage: nothing was searched.
+        expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+
+        // Typing again withdraws the complaint.
+        await userEvent.type(input, '01');
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(input).toHaveAttribute('aria-invalid', 'false');
     });
 
     it('renders every homepage section', () => {
@@ -39,6 +60,12 @@ describe('App', () => {
         sections.forEach((name) => {
             expect(screen.getByRole('heading', { name })).toBeInTheDocument();
         });
+    });
+
+    it('does not advertise the retired per-kg price model', () => {
+        renderApp();
+        expect(screen.queryByText(/per-kg/i)).toBeNull();
+        expect(screen.getByText(/per-item pricing is clear up front/i)).toBeInTheDocument();
     });
 
     it('ignores non-numeric characters in the pin code', async () => {

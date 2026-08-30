@@ -9,9 +9,12 @@ export interface Address {
 }
 
 export interface SlotSelection {
-    /** ISO date string, e.g. 2026-07-22. */
+    /** ISO date string, e.g. 2026-07-22, in the partner's timezone. */
     date: string;
-    slot: string;
+    /** The server's slot id, which is what an order will be placed against. */
+    slotId: string;
+    /** ISO 8601 UTC instant; what two slots are ordered by. */
+    startsAt: string;
 }
 
 export interface Booking {
@@ -21,7 +24,7 @@ export interface Booking {
     delivery: SlotSelection;
 }
 
-export const EMPTY_SLOT: SlotSelection = { date: '', slot: '' };
+export const EMPTY_SLOT: SlotSelection = { date: '', slotId: '', startsAt: '' };
 
 export const emptyAddress = (pincode: string): Address => ({
     recipientName: '',

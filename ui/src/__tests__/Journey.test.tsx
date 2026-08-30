@@ -31,14 +31,17 @@ describe('the journey', () => {
         }
     });
 
-    it('enables the search only once a full pin code is entered', async () => {
+    it('explains a short pin code rather than sitting disabled', async () => {
         await openJourney();
-        const submit = screen.getAllByRole('button', { name: /find laundries/i })[0];
+        const submit = screen.getAllByRole('button', { name: /find laundries/i })[0]!;
 
-        expect(submit).toBeDisabled();
-
-        await userEvent.type(heroPinInput(), '560001');
         expect(submit).toBeEnabled();
+
+        await userEvent.type(heroPinInput(), '5600');
+        await userEvent.click(submit);
+
+        expect(await screen.findByRole('alert')).toHaveTextContent(/6-digit pin code/i);
+        expect(heroPinInput()).toHaveAttribute('aria-invalid', 'true');
     });
 
     it('ignores non-numeric characters in the pin code', async () => {

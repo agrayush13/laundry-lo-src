@@ -1,13 +1,14 @@
 import React from 'react';
+import AsyncBoundary from '../../common-ui/async-boundary/AsyncBoundary';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Icon from '../../common-ui/icons/Icon';
 import { ICON_SIZE } from '../../config/brandConfig';
 import {
     LISTING_COPY,
-    SORT_OPTIONS,
     SortKey,
     TAG_LABELS,
     TAG_SLUGS,
+    availableSortOptions,
 } from '../../config/listingConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { usePartnerListing } from '../../hooks/usePartnerListing';
@@ -20,7 +21,12 @@ const ServicesPage: React.FC = () => {
         pinCode,
         serviceName,
         clearService,
+        state,
         partners,
+        hasMore,
+        isLoadingMore,
+        moreError,
+        loadMore,
         sortKey,
         setSortKey,
         isTagActive,
@@ -44,9 +50,12 @@ const ServicesPage: React.FC = () => {
                         {pinCode || LISTING_COPY.titleFallback}
                     </span>
                 </h1>
+                {/* Counting is something only a loaded page can do honestly. */}
                 <p className={styles.listingCount}>
-                    {partners.length} {partners.length === 1 ? 'service' : 'services'}{' '}
-                    {LISTING_COPY.countSuffix}
+                    {state.data &&
+                        `${partners.length} ${partners.length === 1 ? 'partner' : 'partners'} ${
+                            LISTING_COPY.countSuffix
+                        }`}
                 </p>
 
                 <div className={styles.listingToolbar}>
@@ -98,7 +107,7 @@ const ServicesPage: React.FC = () => {
                             value={sortKey}
                             onChange={(event) => setSortKey(event.target.value as SortKey)}
                         >
-                            {SORT_OPTIONS.map(({ value, label }) => (
+                            {availableSortOptions(Boolean(pinCode)).map(({ value, label }) => (
                                 <option
                                     key={value}
                                     value={value}
@@ -111,17 +120,53 @@ const ServicesPage: React.FC = () => {
                 </div>
 
                 <div className={styles.listingLayout}>
-                    {partners.length > 0 ? (
-                        <ul className={styles.listingResults}>
-                            {partners.map((partner) => (
-                                <li key={partner.id}>
-                                    <PartnerCard partner={partner} />
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className={styles.listingEmpty}>{LISTING_COPY.empty}</p>
-                    )}
+                    <AsyncBoundary
+                        state={state}
+                        label={LISTING_COPY.loading}
+                        isEmpty={() => partners.length === 0}
+                        empty={
+                            <p className={styles.listingEmpty}>
+                                {pinCode && activeCount === 0 && !serviceName
+                                    ? LISTING_COPY.emptyForPin
+                                    : LISTING_COPY.empty}
+                            </p>
+                        }
+                    >
+                        {() => (
+                            <div>
+                                <ul className={styles.listingResults}>
+                                    {partners.map((partner) => (
+                                        <li key={partner.id}>
+                                            <PartnerCard partner={partner} />
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                {hasMore && (
+                                    <div className={styles.listingMore}>
+                                        {moreError && (
+                                            <p
+                                                className={styles.listingMoreError}
+                                                role="alert"
+                                            >
+                                                {moreError}
+                                            </p>
+                                        )}
+                                        <button
+                                            type="button"
+                                            className="button button--secondary"
+                                            onClick={loadMore}
+                                            disabled={isLoadingMore}
+                                        >
+                                            {isLoadingMore
+                                                ? LISTING_COPY.showingMore
+                                                : LISTING_COPY.showMore}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </AsyncBoundary>
 
                     <MapPlaceholder pinCount={partners.length} />
                 </div>

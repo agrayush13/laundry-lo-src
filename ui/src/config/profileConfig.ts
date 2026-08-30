@@ -25,7 +25,12 @@ export const PROFILE_COPY = {
     labelField: 'Label',
     labelPlaceholder: 'e.g. Home',
     saveAddress: 'Save address',
+    labelRequired: 'Name this address, so you can pick it at checkout.',
 } as const;
+
+/** Shared by the input and by whatever has to send focus back to it. */
+export const LABEL_FIELD_ID = 'address-label';
+export const SAVED_ADDRESS_ID_PREFIX = 'saved-address';
 
 export const ADDRESS_LABEL_SUGGESTIONS = ['Home', 'Office', 'Parents'] as const;
 

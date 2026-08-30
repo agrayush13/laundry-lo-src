@@ -1,6 +1,6 @@
 import React from 'react';
 import Icon from '../../common-ui/icons/Icon';
-import { ADDRESS_PICKER_COPY } from '../../config/bookingConfig';
+import { ADDRESS_PICKER_COPY, CHECKOUT_ADDRESS_ID_PREFIX } from '../../config/bookingConfig';
 import { ICON_SIZE } from '../../config/brandConfig';
 import { SavedAddress } from '../../data/user';
 import { Address } from '../../models/bookingModels';
@@ -33,6 +33,7 @@ const AddressPicker: React.FC<AddressPickerProps> = ({
         return (
             <AddressFields
                 address={draft}
+                idPrefix={CHECKOUT_ADDRESS_ID_PREFIX}
                 errors={errors}
                 onChange={onDraftChange}
             />
@@ -101,6 +102,7 @@ const AddressPicker: React.FC<AddressPickerProps> = ({
                     </h3>
                     <AddressFields
                         address={draft}
+                        idPrefix={CHECKOUT_ADDRESS_ID_PREFIX}
                         errors={errors}
                         onChange={onDraftChange}
                     />

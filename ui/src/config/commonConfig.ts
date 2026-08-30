@@ -21,11 +21,20 @@ export const TERMS_COPY = {
         'laundrylo is a demo project built by Ayush Agrawal to show how a laundry ' +
             'marketplace could work. It is not a real service.',
         'No orders are placed, no pickups happen, no payments are taken and no ' +
-            'partner laundries are involved. Everything on the site runs on seeded ' +
-            'demo data in your own browser.',
-        'Anything you type into the site, including a pin code or an address, stays ' +
-            'in your browser and is never sent anywhere.',
+            'partner laundries are involved. Partner, catalogue and slot information ' +
+            'comes from a seeded demo API.',
+        'A pin code is sent to that demo API to filter nearby laundries. Account and ' +
+            'address details remain in your browser while the real order API is not connected.',
     ],
+} as const;
+
+export const NOT_FOUND_COPY = {
+    title: 'That page does not exist',
+    body:
+        'The link may be out of date, or the address may have a typo in it. ' +
+        'Everything else is where you left it.',
+    home: 'Back to home',
+    laundries: 'Find a laundry',
 } as const;
 
 export const ERROR_COPY = {

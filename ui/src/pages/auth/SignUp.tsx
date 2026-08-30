@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AUTH_COPY, SIGN_UP_FIELDS } from '../../config/authConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { useSignUpForm } from '../../hooks/useSignUpForm';
@@ -11,6 +11,7 @@ import styles from './auth.module.scss';
 const { signUp: copy, divider, fields } = AUTH_COPY;
 
 const SignUp: React.FC = () => {
+    const { state } = useLocation();
     const { fields: values, setField, submit } = useSignUpForm();
 
     return (
@@ -61,7 +62,13 @@ const SignUp: React.FC = () => {
             </form>
 
             <p className={styles.authSwitch}>
-                {copy.switchPrompt} <Link to={ROUTES.signIn}>{copy.switchAction}</Link>
+                {copy.switchPrompt}{' '}
+                <Link
+                    to={ROUTES.signIn}
+                    state={state}
+                >
+                    {copy.switchAction}
+                </Link>
             </p>
         </AuthCard>
     );

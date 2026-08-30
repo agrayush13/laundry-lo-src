@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { STORAGE_KEYS } from '../config/commonConfig';
 import { upcomingDates } from '../utils/datesUtils';
 import { renderApp } from '../__mocks__/renderWithProviders';
 import { pickSlot } from '../__mocks__/scheduleQueries';
@@ -16,12 +17,57 @@ const [today, tomorrow] = upcomingDates(2);
 beforeEach(() => window.localStorage.clear());
 
 describe('auth', () => {
+    it('discards an incompatible stored user instead of crashing the app', async () => {
+        window.localStorage.setItem(STORAGE_KEYS.user, JSON.stringify({ fullName: 'Legacy User' }));
+        renderApp();
+
+        expect(await screen.findByRole('link', { name: /sign in/i })).toBeInTheDocument();
+    });
+
+    it('keeps the in-memory session working when storage rejects writes', async () => {
+        const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new DOMException('Storage unavailable', 'QuotaExceededError');
+        });
+
+        try {
+            renderApp('/signin');
+            await signIn();
+            expect(await screen.findByRole('link', { name: /my bookings/i })).toBeInTheDocument();
+        } finally {
+            write.mockRestore();
+        }
+    });
+
+    it('discards a malformed versioned cart instead of crashing the app', async () => {
+        window.localStorage.setItem(
+            STORAGE_KEYS.cart,
+            JSON.stringify({ version: 2, partner: null, lines: {}, hasPlus: false })
+        );
+
+        renderApp('/cart');
+
+        expect(await screen.findByText('Your cart is empty.')).toBeInTheDocument();
+    });
+
     it('signs in and swaps the header for the account controls', async () => {
         renderApp('/signin');
         await signIn();
 
         expect(await screen.findByRole('link', { name: /my bookings/i })).toBeInTheDocument();
         expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
+    });
+
+    it('keeps the phone number used for phone sign-in', async () => {
+        const user = userEvent.setup();
+        renderApp('/signin');
+
+        await user.click(await screen.findByRole('tab', { name: 'Phone' }));
+        await user.type(screen.getByLabelText('Phone Number'), '9988776655');
+        await user.type(screen.getByLabelText('Password'), 'hunter2');
+        await user.click(screen.getByRole('button', { name: 'Sign In' }));
+        await user.click(await screen.findByRole('link', { name: /ayush/i }));
+
+        expect(await screen.findByText('9988776655')).toBeInTheDocument();
     });
 
     it('sends a signed-out visitor to sign in, then back where they were headed', async () => {
@@ -44,6 +90,20 @@ describe('auth', () => {
         await user.click(screen.getByRole('button', { name: 'Create Account' }));
 
         expect(await screen.findByRole('link', { name: /asha/i })).toBeInTheDocument();
+    });
+
+    it('returns a new account to the protected page it originally requested', async () => {
+        const user = userEvent.setup();
+        renderApp('/bookings');
+
+        await user.click(await screen.findByRole('link', { name: 'Sign up' }));
+        await user.type(screen.getByLabelText('Full Name'), 'Asha Menon');
+        await user.type(screen.getByLabelText('Email'), 'asha@example.com');
+        await user.type(screen.getByLabelText('Phone Number'), '9876500000');
+        await user.type(screen.getByLabelText('Password'), 'hunter2');
+        await user.click(screen.getByRole('button', { name: 'Create Account' }));
+
+        expect(await screen.findByRole('heading', { name: 'My Bookings' })).toBeInTheDocument();
     });
 
     it('signs out again', async () => {
@@ -172,7 +232,7 @@ describe('cart', () => {
         // Saved addresses are offered instead of an empty form.
         expect(await screen.findByText('Home')).toBeInTheDocument();
         expect(screen.getByText('Office')).toBeInTheDocument();
-        expect(screen.getByText(/42, Sector 15, Gurugram/)).toBeInTheDocument();
+        expect(screen.getByText(/42, Sector 5, HSR Layout/)).toBeInTheDocument();
         expect(screen.queryByLabelText('Full Name')).toBeNull();
 
         // Home is preselected, so only the schedule is missing.
@@ -191,7 +251,10 @@ describe('cart', () => {
         await user.click(screen.getByRole('button', { name: 'View Cart' }));
         await user.click(await screen.findByRole('button', { name: 'Place Order' }));
 
-        expect(screen.getByRole('heading', { name: 'Pickup Address' })).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
+        await signIn();
+
+        expect(await screen.findByRole('heading', { name: 'Pickup Address' })).toBeInTheDocument();
         expect(
             screen.getByRole('heading', { name: 'Schedule Pickup & Delivery' })
         ).toBeInTheDocument();
@@ -199,5 +262,35 @@ describe('cart', () => {
         // Confirm stays clickable and points at the first missing detail.
         await user.click(screen.getByRole('button', { name: /confirm booking/i }));
         expect(screen.getByText('Choose a pickup date and time.')).toBeInTheDocument();
+    });
+
+    it('asks before replacing items from another laundry', async () => {
+        const user = userEvent.setup();
+        const first = renderApp('/laundries/1001');
+
+        await user.click(
+            await screen.findByRole('button', { name: 'Add Jacket / Coat, Dry Cleaning' })
+        );
+        first.unmount();
+
+        renderApp('/laundries/1002');
+        const add = await screen.findByRole('button', {
+            name: 'Add Shirt / T-shirt, Wash & Fold',
+        });
+        await user.click(add);
+
+        const dialog = screen.getByRole('dialog', { name: 'Start a new cart?' });
+        expect(within(dialog).getByText('SparkleWash Express')).toBeInTheDocument();
+        expect(within(dialog).getByRole('button', { name: 'Keep current cart' })).toHaveFocus();
+
+        await user.click(within(dialog).getByRole('button', { name: 'Keep current cart' }));
+        expect(screen.queryByRole('dialog')).toBeNull();
+
+        await user.click(add);
+        await user.click(screen.getByRole('button', { name: 'Replace cart' }));
+        await user.click(screen.getByRole('button', { name: 'View Cart' }));
+
+        expect(await screen.findByText('CleanFold Laundry')).toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Jacket / Coat' })).toBeNull();
     });
 });

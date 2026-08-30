@@ -43,6 +43,17 @@ describe('buildTimeline', () => {
         expect(delivered.filter((entry) => entry.state === 'pending')).toHaveLength(0);
         expect(delivered[delivered.length - 1].state).toBe('current');
     });
+
+    it('ends a cancelled order at an explicit cancellation event', () => {
+        const cancelled = buildTimeline([at('placed'), at('confirmed'), at('cancelled')]);
+
+        expect(cancelled.map((entry) => entry.label)).toEqual([
+            'Order Placed',
+            'Confirmed by Vendor',
+            'Order Cancelled',
+        ]);
+        expect(cancelled[cancelled.length - 1]?.state).toBe('current');
+    });
 });
 
 describe('money', () => {

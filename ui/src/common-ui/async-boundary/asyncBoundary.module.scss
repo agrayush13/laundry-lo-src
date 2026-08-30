@@ -1,0 +1,45 @@
+@use '../../styles/tokens' as t;
+
+.asyncLoading {
+    display: grid;
+    place-items: center;
+    min-height: 40vh;
+    padding: 3rem 1.5rem;
+}
+
+.asyncDrum {
+    width: 44px;
+
+    // The same slosh as the route fallback: one loading language, two places.
+    animation: slosh 2.4s ease-in-out infinite;
+}
+
+.asyncError {
+    display: grid;
+    gap: 1rem;
+    justify-items: center;
+    padding: 3rem 1.5rem;
+    text-align: center;
+}
+
+.asyncErrorMessage {
+    max-width: 34ch;
+    color: t.$color-text-muted;
+}
+
+@keyframes slosh {
+    0%,
+    100% {
+        transform: rotate(-9deg);
+    }
+
+    50% {
+        transform: rotate(9deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .asyncDrum {
+        animation: none;
+    }
+}

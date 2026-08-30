@@ -80,3 +80,44 @@ export const CYCLE_FOOTER_LINKS: NavLink[] = [
     { label: 'terms', href: ROUTES.terms },
     { label: 'github', href: EXTERNAL_LINKS[0].href },
 ];
+
+export const APP_NAME = 'laundrylo';
+
+/**
+ * One title per route. A single-page app changes the document without changing
+ * the document title, so without this every route claims to be the homepage:
+ * the tab, the bookmark, the history entry and the screen reader's announcement
+ * of the new page are all the same string on all fifteen routes.
+ *
+ * Matched in order, so a dynamic route is listed after the literal one it would
+ * otherwise swallow. Titles are per pattern rather than per record, because the
+ * partner's name is not known until its request lands and a title that arrives
+ * late announces twice.
+ */
+const PAGE_TITLES: { match: RegExp; title: string }[] = [
+    { match: /^\/$/, title: 'Laundry pickup and delivery' },
+    { match: /^\/journey\/?$/, title: 'The cycle' },
+    { match: /^\/terms\/?$/, title: 'Terms' },
+    { match: /^\/signin\/?$/, title: 'Sign in' },
+    { match: /^\/signup\/?$/, title: 'Create an account' },
+    { match: /^\/forgot-password\/?$/, title: 'Reset your password' },
+    { match: /^\/plus\/?$/, title: 'laundrylo Plus' },
+    { match: /^\/laundries\/?$/, title: 'Laundries near you' },
+    { match: /^\/laundries\/[^/]+\/?$/, title: 'Laundry' },
+    { match: /^\/cart\/?$/, title: 'Your cart' },
+    { match: /^\/checkout\/?$/, title: 'Checkout' },
+    { match: /^\/order-confirmed\/?$/, title: 'Booking confirmed' },
+    { match: /^\/profile\/addresses\/new\/?$/, title: 'Add an address' },
+    { match: /^\/profile\/?$/, title: 'Your profile' },
+    { match: /^\/bookings\/?$/, title: 'My bookings' },
+    { match: /^\/bookings\/[^/]+\/?$/, title: 'Order' },
+];
+
+/** The page's own name, without the app name appended. */
+export const pageNameFor = (pathname: string) =>
+    PAGE_TITLES.find(({ match }) => match.test(pathname))?.title ?? 'Page not found';
+
+export const documentTitleFor = (pathname: string) =>
+    pathname === ROUTES.home
+        ? `${APP_NAME} - ${pageNameFor(pathname)}`
+        : `${pageNameFor(pathname)} - ${APP_NAME}`;

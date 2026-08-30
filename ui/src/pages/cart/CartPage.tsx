@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Card from '../../common-ui/card/Card';
 import Icon from '../../common-ui/icons/Icon';
+import { iconFor } from '../../common-ui/icons/registry';
 import Money from '../../common-ui/money/Money';
 import OrderTotals from '../../common-ui/order-totals/OrderTotals';
 import QuantityStepper from '../../common-ui/quantity-stepper/QuantityStepper';
@@ -10,7 +11,6 @@ import { ICON_SIZE } from '../../config/brandConfig';
 import { CART_COPY, PLUS_COPY } from '../../config/cartConfig';
 import { MEMBERSHIP_SECTION } from '../../config/membershipConfig';
 import { ROUTES } from '../../config/navigationConfig';
-import { serviceNameFor } from '../../data/menu';
 import { useCheckout } from '../../hooks/useCheckout';
 import { multiplyMoney } from '../../models/moneyModels';
 import styles from './cartPage.module.scss';
@@ -65,7 +65,7 @@ const CartPage: React.FC = () => {
                 )}
 
                 <ul className={styles.cartLines}>
-                    {lines.map(({ item, quantity }) => (
+                    {lines.map(({ item, categoryName, quantity }) => (
                         <Card
                             as="li"
                             className={styles.cartLine}
@@ -76,26 +76,25 @@ const CartPage: React.FC = () => {
                                 aria-hidden="true"
                             >
                                 <Icon
-                                    name={item.iconKey}
+                                    name={iconFor(item.iconKey)}
                                     size={ICON_SIZE.xl}
                                 />
                             </span>
                             <div className={styles.cartLineBody}>
                                 <h2 className={styles.cartLineName}>{item.name}</h2>
-                                <p className={styles.cartLineService}>{serviceNameFor(item.id)}</p>
+                                <p className={styles.cartLineService}>{categoryName}</p>
                                 <p className={styles.cartLinePrice}>
                                     <Money value={item.price} /> {CART_COPY.perPrefix} {item.unit}
                                 </p>
                             </div>
 
                             <QuantityStepper
-                                label={`${item.name}, ${serviceNameFor(item.id)}`}
-
+                                label={`${item.name}, ${categoryName}`}
                                 quantity={quantity}
-
                                 size="sm"
-
-                                onChange={(next) => partner && setQuantity(partner.id, item, next)}
+                                onChange={(next) =>
+                                    partner && setQuantity(partner, item, categoryName, next)
+                                }
                             />
 
                             <p className={styles.cartLineAmount}>
@@ -105,8 +104,10 @@ const CartPage: React.FC = () => {
                             <button
                                 className={styles.cartLineRemove}
                                 type="button"
-                                aria-label={`Remove ${item.name}, ${serviceNameFor(item.id)}`}
-                                onClick={() => partner && setQuantity(partner.id, item, 0)}
+                                aria-label={`Remove ${item.name}, ${categoryName}`}
+                                onClick={() =>
+                                    partner && setQuantity(partner, item, categoryName, 0)
+                                }
                             >
                                 <Icon
                                     name="trash"

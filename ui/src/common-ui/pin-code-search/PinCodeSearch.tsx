@@ -14,8 +14,9 @@ interface PinCodeSearchProps {
  * first.
  */
 const PinCodeSearch: React.FC<PinCodeSearchProps> = ({ className }) => {
-    const { pinCode, setPinCode, isValid, maxLength, submit } = usePinCodeSearch();
+    const { pinCode, error, inputRef, setPinCode, maxLength, submit } = usePinCodeSearch();
     const inputId = useId();
+    const errorId = `${inputId}-error`;
 
     return (
         <form
@@ -30,6 +31,7 @@ const PinCodeSearch: React.FC<PinCodeSearchProps> = ({ className }) => {
             </label>
             <input
                 className={styles.searchInput}
+                ref={inputRef}
                 id={inputId}
                 name="pinCode"
                 type="text"
@@ -38,16 +40,26 @@ const PinCodeSearch: React.FC<PinCodeSearchProps> = ({ className }) => {
                 maxLength={maxLength}
                 placeholder={PIN_SEARCH.placeholder}
                 value={pinCode}
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? errorId : undefined}
                 onChange={(event) => setPinCode(event.target.value)}
             />
             <button
                 className={styles.searchSubmit}
                 type="submit"
-                disabled={!isValid}
             >
                 {PIN_SEARCH.submit}
                 <Icon name="arrow-right" />
             </button>
+            {error && (
+                <span
+                    className={styles.searchError}
+                    id={errorId}
+                    role="alert"
+                >
+                    {error}
+                </span>
+            )}
         </form>
     );
 };

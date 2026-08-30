@@ -13,7 +13,7 @@ const ProtectedRoute: React.FC = () => {
         <Navigate
             to="/signin"
             replace
-            state={{ from: location.pathname }}
+            state={{ from: location.pathname + location.search + location.hash }}
         />
     );
 };

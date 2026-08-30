@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import Icon from '../../common-ui/icons/Icon';
 import { AUTH_COPY } from '../../config/authConfig';
 import { ICON_SIZE } from '../../config/brandConfig';
@@ -11,6 +11,7 @@ import styles from './auth.module.scss';
 const { forgotPassword: copy, fields } = AUTH_COPY;
 
 const ForgotPassword: React.FC = () => {
+    const { state } = useLocation();
     const { email, setEmail, isSent, submit } = useForgotPasswordForm();
 
     if (isSent) {
@@ -27,7 +28,12 @@ const ForgotPassword: React.FC = () => {
                     {copy.sentNote}
                 </p>
                 <p className={styles.authSwitch}>
-                    <Link to={ROUTES.signIn}>{copy.backToSignIn}</Link>
+                    <Link
+                        to={ROUTES.signIn}
+                        state={state}
+                    >
+                        {copy.backToSignIn}
+                    </Link>
                 </p>
             </AuthCard>
         );
@@ -64,7 +70,12 @@ const ForgotPassword: React.FC = () => {
             </form>
 
             <p className={styles.authSwitch}>
-                <Link to={ROUTES.signIn}>{copy.backToSignIn}</Link>
+                <Link
+                    to={ROUTES.signIn}
+                    state={state}
+                >
+                    {copy.backToSignIn}
+                </Link>
             </p>
         </AuthCard>
     );

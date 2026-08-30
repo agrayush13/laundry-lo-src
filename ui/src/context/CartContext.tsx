@@ -1,17 +1,33 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { CatalogItem } from '../models/catalogModels';
 import { Money, addMoney, multiplyMoney } from '../models/moneyModels';
-import { MenuItem } from '../data/menu';
 import { TAX_RATE } from '../config/cartConfig';
 import { STORAGE_KEYS } from '../config/commonConfig';
 import { MEMBERSHIP_SECTION } from '../config/membershipConfig';
 
+/**
+ * Enough of the partner to render the cart and checkout without another
+ * request. The catalogue is per partner and lives on the server now, so a bare
+ * id would mean a fetch before the cart could name where it is ordering from.
+ */
+export interface CartPartner {
+    id: string;
+    name: string;
+}
+
 export interface CartLine {
-    item: MenuItem;
+    item: CatalogItem;
+    /**
+     * Copied for display at add time because the catalogue it came from is no
+     * longer in the bundle. The catalogue item id itself uniquely identifies
+     * the line.
+     */
+    categoryName: string;
     quantity: number;
 }
 
 interface CartContextValue {
-    partnerId: string | null;
+    partner: CartPartner | null;
     lines: CartLine[];
     /** Plus is an account-level add-on, not tied to a partner. */
     hasPlus: boolean;
@@ -20,7 +36,12 @@ interface CartContextValue {
     taxes: Money;
     total: Money;
     quantityOf: (itemId: string) => number;
-    setQuantity: (partnerId: string, item: MenuItem, quantity: number) => void;
+    setQuantity: (
+        partner: CartPartner,
+        item: CatalogItem,
+        categoryName: string,
+        quantity: number
+    ) => void;
     setPlus: (hasPlus: boolean) => void;
     clear: () => void;
 }
@@ -29,14 +50,59 @@ interface CartContextValue {
  * Bumped whenever the stored shape changes. A mismatch discards the saved cart
  * rather than letting an outdated shape reach the components.
  */
-const STORAGE_VERSION = 1;
+const STORAGE_VERSION = 2;
 
 interface StoredCart {
     version: number;
-    partnerId: string | null;
+    partner: CartPartner | null;
     lines: CartLine[];
     hasPlus: boolean;
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
+
+const isPartner = (value: unknown): value is CartPartner =>
+    isRecord(value) && typeof value['id'] === 'string' && typeof value['name'] === 'string';
+
+const isCatalogItem = (value: unknown): value is CatalogItem => {
+    if (!isRecord(value)) return false;
+
+    const price = value['price'];
+    return (
+        typeof value['id'] === 'string' &&
+        typeof value['name'] === 'string' &&
+        (typeof value['description'] === 'string' || value['description'] === null) &&
+        isRecord(price) &&
+        Number.isSafeInteger(price['amount']) &&
+        (price['amount'] as number) >= 0 &&
+        price['currency'] === 'INR' &&
+        (value['unit'] === 'piece' || value['unit'] === 'bag' || value['unit'] === 'kg') &&
+        typeof value['iconKey'] === 'string'
+    );
+};
+
+const isCartLine = (value: unknown): value is CartLine =>
+    isRecord(value) &&
+    isCatalogItem(value['item']) &&
+    typeof value['categoryName'] === 'string' &&
+    Number.isInteger(value['quantity']) &&
+    (value['quantity'] as number) >= 1 &&
+    (value['quantity'] as number) <= 99;
+
+const isStoredCart = (value: unknown): value is StoredCart => {
+    if (!isRecord(value) || value['version'] !== STORAGE_VERSION) return false;
+
+    const partner = value['partner'];
+    const lines = value['lines'];
+    return (
+        (partner === null || isPartner(partner)) &&
+        Array.isArray(lines) &&
+        lines.every(isCartLine) &&
+        (lines.length === 0 || isPartner(partner)) &&
+        typeof value['hasPlus'] === 'boolean'
+    );
+};
 
 const readStoredCart = (): StoredCart | null => {
     try {
@@ -45,8 +111,8 @@ const readStoredCart = (): StoredCart | null => {
             return null;
         }
 
-        const parsed = JSON.parse(raw) as StoredCart;
-        return parsed.version === STORAGE_VERSION ? parsed : null;
+        const parsed: unknown = JSON.parse(raw);
+        return isStoredCart(parsed) ? parsed : null;
     } catch {
         // Corrupt or unavailable storage should never break the app.
         return null;
@@ -57,8 +123,10 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [stored] = useState(readStoredCart);
-    const [partnerId, setPartnerId] = useState<string | null>(stored?.partnerId ?? null);
-    const [lines, setLines] = useState<CartLine[]>(stored?.lines ?? []);
+    const [{ partner, lines }, setCart] = useState({
+        partner: stored?.partner ?? null,
+        lines: stored?.lines ?? [],
+    });
     const [hasPlus, setHasPlus] = useState(stored?.hasPlus ?? false);
 
     // The cart belongs to the browser rather than the account, so it survives a
@@ -70,12 +138,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return;
             }
 
-            const payload: StoredCart = { version: STORAGE_VERSION, partnerId, lines, hasPlus };
+            const payload: StoredCart = { version: STORAGE_VERSION, partner, lines, hasPlus };
             window.localStorage.setItem(STORAGE_KEYS.cart, JSON.stringify(payload));
         } catch {
             // Private browsing can reject writes; the in-memory cart still works.
         }
-    }, [partnerId, lines, hasPlus]);
+    }, [partner, lines, hasPlus]);
 
     const value = useMemo<CartContextValue>(() => {
         // Integer paise throughout; the backend will own these sums once it exists.
@@ -86,7 +154,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const taxes = multiplyMoney(subtotal, TAX_RATE);
 
         return {
-            partnerId,
+            partner,
             lines,
             hasPlus,
             itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
@@ -94,31 +162,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             taxes,
             total: addMoney(subtotal, taxes),
             quantityOf: (itemId) => lines.find((line) => line.item.id === itemId)?.quantity ?? 0,
-            setQuantity: (nextPartnerId, item, quantity) => {
-                // A cart belongs to one partner; switching partners starts a fresh cart.
-                const base = nextPartnerId === partnerId ? lines : [];
-                setPartnerId(nextPartnerId);
+            setQuantity: (nextPartner, item, categoryName, quantity) => {
+                setCart((current) => {
+                    // Read from the latest state rather than this render's
+                    // closure, so two changes in one React batch cannot erase
+                    // each other. Partner and lines move atomically for the
+                    // same reason.
+                    const base = nextPartner.id === current.partner?.id ? current.lines : [];
+                    const nextLines =
+                        quantity <= 0
+                            ? base.filter((line) => line.item.id !== item.id)
+                            : base.some((line) => line.item.id === item.id)
+                              ? base.map((line) =>
+                                    line.item.id === item.id
+                                        ? { item, categoryName, quantity }
+                                        : line
+                                )
+                              : [...base, { item, categoryName, quantity }];
 
-                if (quantity <= 0) {
-                    setLines(base.filter((line) => line.item.id !== item.id));
-                    return;
-                }
-
-                // Update in place so lines keep their position as quantities change.
-                setLines(
-                    base.some((line) => line.item.id === item.id)
-                        ? base.map((line) => (line.item.id === item.id ? { item, quantity } : line))
-                        : [...base, { item, quantity }]
-                );
+                    return { partner: nextPartner, lines: nextLines };
+                });
             },
             setPlus: setHasPlus,
             clear: () => {
-                setLines([]);
-                setPartnerId(null);
+                setCart({ partner: null, lines: [] });
                 setHasPlus(false);
             },
         };
-    }, [partnerId, lines, hasPlus]);
+    }, [partner, lines, hasPlus]);
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };

@@ -1,41 +1,47 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Address, EMPTY_SLOT, SlotSelection, emptyAddress } from '../models/bookingModels';
-import { getPartner } from '../data/partners';
-import { PIN_CODE_LENGTH, VALIDATION_COPY } from '../config/bookingConfig';
+import { getPartner, getPartnerSlots } from '../services/partnerServices';
+import {
+    CHECKOUT_ADDRESS_ID_PREFIX,
+    SCHEDULE_DAYS,
+    VALIDATION_COPY,
+} from '../config/bookingConfig';
 import { ROUTES } from '../config/navigationConfig';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { addressFieldId, isValidPhone, isValidPinCode } from '../utils/addressUtils';
 import { isAfter } from '../utils/datesUtils';
-import { createOrderId } from '../utils/ordersUtils';
+import { focusField } from '../utils/formUtils';
+import { createOrderIdentifiers } from '../utils/ordersUtils';
 import { NEW_ADDRESS_ID } from '../pages/checkout/AddressPicker';
+import { useAsync } from './useAsync';
 
 export type CheckoutField = keyof typeof VALIDATION_COPY;
 
 /** Anchors the validation messages onto something scrollable. */
 export const SCHEDULE_ANCHOR_ID = 'checkout-schedule';
 
-const isSlotComplete = ({ date, slot }: SlotSelection) => Boolean(date && slot);
+const isSlotComplete = ({ date, slotId }: SlotSelection) => Boolean(date && slotId);
 
 const focusProblem = (field: CheckoutField) => {
     // Address problems land on their input; slot problems have no input to
     // focus, so they scroll to the schedule block instead.
-    const target =
-        field === 'pickup' || field === 'delivery' || field === 'deliveryBeforePickup'
-            ? document.getElementById(SCHEDULE_ANCHOR_ID)
-            : document.getElementById(field);
+    const isSlotProblem =
+        field === 'pickup' || field === 'delivery' || field === 'deliveryBeforePickup';
 
-    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    if (target instanceof HTMLInputElement) {
-        target.focus({ preventScroll: true });
-    }
+    const target = isSlotProblem
+        ? SCHEDULE_ANCHOR_ID
+        : field === 'partnerClosed'
+          ? field
+          : addressFieldId(CHECKOUT_ADDRESS_ID_PREFIX, field);
+    focusField(target);
 };
 
 /**
  * Collects the details the cart doesn't capture - address and slots - and
- * turns the cart into a confirmed order. Signed-in customers pick a saved
- * address; everyone else fills the form.
+ * turns the cart into a confirmed order. Checkout is account-only; customers
+ * can pick a saved address or fill the form for a different one.
  */
 export const useCheckoutForm = () => {
     const navigate = useNavigate();
@@ -43,7 +49,27 @@ export const useCheckoutForm = () => {
     const { user } = useAuth();
 
     const savedAddresses = user?.addresses ?? [];
-    const partner = cart.partnerId ? getPartner(cart.partnerId) : undefined;
+    const partner = cart.partner;
+
+    // Slots are the partner's, and the server owns them: capacity, opening
+    // hours and holidays are all things this client cannot know.
+    const slots = useAsync(
+        (signal) =>
+            partner ? getPartnerSlots(partner.id, SCHEDULE_DAYS, signal) : Promise.resolve([]),
+        [partner?.id]
+    );
+
+    // `isOpen` is a switch the partner can throw between adding to the cart and
+    // confirming, so the cart's copy of the partner cannot answer it. Asked here
+    // rather than remembered, and re-asked on every visit to this page.
+    const live = useAsync(
+        (signal) => (partner ? getPartner(partner.id, signal) : Promise.resolve(null)),
+        [partner?.id]
+    );
+
+    // Unknown until the request lands. Only a definite `false` means closed;
+    // the page separately blocks confirmation while this check is unresolved.
+    const isPartnerClosed = live.data !== null && live.data?.isOpen === false;
 
     const [selectedAddressId, setSelectedAddressId] = useState(
         savedAddresses[0]?.id ?? NEW_ADDRESS_ID
@@ -60,17 +86,23 @@ export const useCheckoutForm = () => {
     const findProblems = (): CheckoutField[] => {
         const problems: CheckoutField[] = [];
 
+        if (isPartnerClosed) {
+            problems.push('partnerClosed');
+        }
+
         if (!selectedSaved) {
             if (!address.recipientName.trim()) problems.push('recipientName');
-            if (!address.phone.trim()) problems.push('phone');
+            if (!isValidPhone(address.phone)) problems.push('phone');
             if (!address.building.trim()) problems.push('building');
             if (!address.street.trim()) problems.push('street');
-            if (address.pincode.length !== PIN_CODE_LENGTH) problems.push('pincode');
+            if (!isValidPinCode(address.pincode)) problems.push('pincode');
         }
 
         if (!isSlotComplete(pickup)) problems.push('pickup');
         if (!isSlotComplete(delivery)) problems.push('delivery');
-        else if (!isAfter(delivery, pickup)) problems.push('deliveryBeforePickup');
+        else if (isSlotComplete(pickup) && !isAfter(delivery, pickup)) {
+            problems.push('deliveryBeforePickup');
+        }
 
         return problems;
     };
@@ -89,6 +121,10 @@ export const useCheckoutForm = () => {
     return {
         ...cart,
         partner,
+        live,
+        slots,
+        days: slots.data ?? [],
+        isPartnerClosed,
         savedAddresses,
         selectedAddressId,
         draftAddress,
@@ -96,7 +132,7 @@ export const useCheckoutForm = () => {
         pickup,
         delivery,
         errors,
-        isEmpty: cart.lines.length === 0 || !partner,
+        isEmpty: cart.lines.length === 0 || partner === null,
         selectAddress: (id: string) => {
             setSelectedAddressId(id);
             setErrors({});
@@ -112,6 +148,10 @@ export const useCheckoutForm = () => {
             // A delivery chosen earlier may now sit before the pickup.
             if (delivery.date && !isAfter(delivery, next)) {
                 setDeliverySlot(EMPTY_SLOT);
+                setErrors((current) => ({
+                    ...current,
+                    deliveryBeforePickup: VALIDATION_COPY.deliveryBeforePickup,
+                }));
             } else {
                 clearError('deliveryBeforePickup');
             }
@@ -136,7 +176,7 @@ export const useCheckoutForm = () => {
 
             navigate(ROUTES.orderConfirmed, {
                 replace: true,
-                state: { orderId: createOrderId() },
+                state: createOrderIdentifiers(),
             });
         },
     };

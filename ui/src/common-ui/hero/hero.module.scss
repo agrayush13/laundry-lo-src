@@ -56,8 +56,18 @@
 
     &Search {
         display: flex;
+        flex-wrap: wrap;
         gap: 1rem;
         margin-bottom: 2.5rem;
+    }
+
+    // Sits on its own row under the field it belongs to, so appearing does not
+    // reflow the input and the button out from under the pointer.
+    &SearchError {
+        flex-basis: 100%;
+        margin-top: -0.5rem;
+        color: t.$color-danger;
+        font-size: t.$font-size-sm;
     }
 
     &Field {

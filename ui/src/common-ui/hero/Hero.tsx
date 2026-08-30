@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { HERO } from '../../config/homeConfig';
 import { usePinCodeSearch } from '../../hooks/usePinCodeSearch';
 import Icon from '../icons/Icon';
 import styles from './hero.module.scss';
 
 const Hero: React.FC = () => {
-    const { pinCode, setPinCode, isValid, maxLength, submit } = usePinCodeSearch();
+    const { pinCode, error, inputRef, setPinCode, maxLength, submit } = usePinCodeSearch();
+    // Was a hardcoded `pin-code`, which collided with the footer's copy of this
+    // same search on any page rendering both.
+    const inputId = useId();
+    const errorId = `${inputId}-error`;
 
     return (
         <section className={styles.hero}>
@@ -38,12 +42,13 @@ const Hero: React.FC = () => {
                             />
                             <label
                                 className="visually-hidden"
-                                htmlFor="pin-code"
+                                htmlFor={inputId}
                             >
                                 {HERO.search.label}
                             </label>
                             <input
-                                id="pin-code"
+                                ref={inputRef}
+                                id={inputId}
                                 name="pinCode"
                                 type="text"
                                 inputMode="numeric"
@@ -51,17 +56,27 @@ const Hero: React.FC = () => {
                                 maxLength={maxLength}
                                 placeholder={HERO.search.placeholder}
                                 value={pinCode}
+                                aria-invalid={Boolean(error)}
+                                aria-describedby={error ? errorId : undefined}
                                 onChange={(event) => setPinCode(event.target.value)}
                             />
                         </div>
                         <button
                             className="button button--primary button--lg"
                             type="submit"
-                            disabled={!isValid}
                         >
                             {HERO.search.submit}
                             <Icon name="arrow-right" />
                         </button>
+                        {error && (
+                            <span
+                                className={styles.heroSearchError}
+                                id={errorId}
+                                role="alert"
+                            >
+                                {error}
+                            </span>
+                        )}
                     </form>
 
                     <ul className={styles.heroStats}>

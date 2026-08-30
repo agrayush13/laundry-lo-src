@@ -49,7 +49,7 @@ const BookingsPage: React.FC = () => (
 
                             <ul className={styles.orderCardLines}>
                                 {order.lines.map((line) => (
-                                    <li key={line.name}>
+                                    <li key={line.itemId}>
                                         {line.name} ×{line.quantity}
                                     </li>
                                 ))}

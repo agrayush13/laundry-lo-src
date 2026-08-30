@@ -25,7 +25,7 @@ export const useSignInForm = () => {
         setPassword,
         submit: (event: React.FormEvent) => {
             event.preventDefault();
-            signIn(method === 'email' ? identifier : '');
+            signIn({ method, identifier });
             navigate(redirectTo, { replace: true });
         },
     };

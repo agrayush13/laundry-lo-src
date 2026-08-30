@@ -122,7 +122,7 @@ export const TESTIMONIALS_SECTION = {
         {
             quote:
                 'I send all my formal shirts for wash and iron. They come back crisp, and ' +
-                'the per-kg pricing is honest.',
+                'the per-item pricing is clear up front.',
             name: 'Meera Nair',
             role: 'Small business owner, Koramangala',
         },

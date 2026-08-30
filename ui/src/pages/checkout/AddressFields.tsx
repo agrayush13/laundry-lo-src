@@ -7,17 +7,20 @@ import styles from './checkout.module.scss';
 
 interface AddressFieldsProps {
     address: Address;
+    idPrefix: string;
     /** Field-level messages, populated once the customer tries to submit. */
     errors?: Partial<Record<string, string>>;
     onChange: (field: keyof Address, value: string) => void;
 }
 
-const AddressFields: React.FC<AddressFieldsProps> = ({ address, errors, onChange }) => (
+const AddressFields: React.FC<AddressFieldsProps> = ({ address, idPrefix, errors, onChange }) => (
     <fieldset className={styles.checkoutFieldset}>
         <legend className="visually-hidden">Pickup address</legend>
         <div className={styles.addressForm}>
             {ADDRESS_FIELDS.map(({ name, label, placeholder, half, inputMode, maxLength }) => {
                 const error = errors?.[name];
+                const inputId = `${idPrefix}-${name}`;
+                const errorId = `${inputId}-error`;
 
                 return (
                     <p
@@ -25,22 +28,30 @@ const AddressFields: React.FC<AddressFieldsProps> = ({ address, errors, onChange
                         className={styles.addressFormField}
                         data-half={Boolean(half)}
                     >
-                        <label htmlFor={name}>{label}</label>
+                        <label htmlFor={inputId}>{label}</label>
                         <input
-                            id={name}
+                            id={inputId}
                             name={name}
                             value={address[name]}
                             placeholder={placeholder}
                             inputMode={inputMode}
+                            type={name === 'phone' ? 'tel' : 'text'}
                             maxLength={maxLength}
                             aria-invalid={Boolean(error)}
-                            aria-describedby={error ? `${name}-error` : undefined}
-                            onChange={(event) => onChange(name, event.target.value)}
+                            aria-describedby={error ? errorId : undefined}
+                            onChange={(event) =>
+                                onChange(
+                                    name,
+                                    name === 'pincode'
+                                        ? event.target.value.replace(/\D/g, '')
+                                        : event.target.value
+                                )
+                            }
                         />
                         {error && (
                             <span
                                 className={styles.addressFormError}
-                                id={`${name}-error`}
+                                id={errorId}
                             >
                                 {error}
                             </span>

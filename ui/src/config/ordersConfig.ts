@@ -31,4 +31,5 @@ export const ORDER_STEPS: { type: OrderEventType; label: string }[] = [
 export const TIMELINE_COPY = {
     pending: 'Pending',
     inProgress: 'In progress',
+    cancelled: 'Order Cancelled',
 } as const;

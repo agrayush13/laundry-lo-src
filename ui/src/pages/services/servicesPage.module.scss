@@ -126,14 +126,22 @@
         text-align: center;
     }
 
+    &More {
+        display: grid;
+        justify-items: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    &MoreError {
+        margin: 0;
+        color: t.$color-danger;
+        font-size: t.$font-size-lg;
+    }
+
     @media (max-width: t.$breakpoint-md) {
         &Layout {
             grid-template-columns: 1fr;
-        }
-
-        .mapView {
-            position: static;
-            order: -1;
         }
     }
 }

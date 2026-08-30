@@ -1,9 +1,11 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import AsyncBoundary from '../../common-ui/async-boundary/AsyncBoundary';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Icon from '../../common-ui/icons/Icon';
 import Money from '../../common-ui/money/Money';
 import OrderTotals from '../../common-ui/order-totals/OrderTotals';
+import { API_COPY } from '../../config/apiConfig';
 import { CHECKOUT_COPY } from '../../config/bookingConfig';
 import { ICON_SIZE } from '../../config/brandConfig';
 import { ROUTES } from '../../config/navigationConfig';
@@ -16,6 +18,9 @@ import styles from './checkout.module.scss';
 const CheckoutPage: React.FC = () => {
     const {
         partner,
+        live,
+        slots,
+        days,
         lines,
         subtotal,
         taxes,
@@ -27,6 +32,7 @@ const CheckoutPage: React.FC = () => {
         delivery,
         errors,
         isEmpty,
+        isPartnerClosed,
         selectAddress,
         updateDraftAddress,
         setPickup,
@@ -57,6 +63,50 @@ const CheckoutPage: React.FC = () => {
                 <h1 className={styles.checkoutTitle}>{partner.name}</h1>
                 <p className={styles.checkoutSubtitle}>{CHECKOUT_COPY.subtitle}</p>
 
+                {live.isLoading && (
+                    <p
+                        className={styles.checkoutStatus}
+                        id="partner-availability"
+                        role="status"
+                    >
+                        {CHECKOUT_COPY.checkingPartner}
+                    </p>
+                )}
+
+                {live.error && (
+                    <div
+                        className={styles.checkoutBlocked}
+                        id="partner-availability"
+                        role="alert"
+                    >
+                        <p>{CHECKOUT_COPY.partnerCheckFailed}</p>
+                        <button
+                            className="button button--secondary"
+                            type="button"
+                            onClick={live.reload}
+                        >
+                            {API_COPY.retry}
+                        </button>
+                    </div>
+                )}
+
+                {/*
+                 * `id` matches the field name so the shared focusField helper
+                 * can bring it into view like any other problem. Rendered from
+                 * `errors` rather than from `isPartnerClosed` directly, so it
+                 * appears when the customer tries to confirm rather than
+                 * interrupting them as the request lands.
+                 */}
+                {errors.partnerClosed && (
+                    <p
+                        className={styles.checkoutBlocked}
+                        id="partnerClosed"
+                        role="alert"
+                    >
+                        {errors.partnerClosed}
+                    </p>
+                )}
+
                 <section className={styles.checkoutSection}>
                     <h2 className={styles.checkoutHeading}>{CHECKOUT_COPY.addressHeading}</h2>
                     <p className={styles.checkoutHint}>{CHECKOUT_COPY.addressSubtitle}</p>
@@ -84,22 +134,32 @@ const CheckoutPage: React.FC = () => {
                             {scheduleError}
                         </p>
                     )}
-                    <div className={styles.schedule}>
-                        <SlotPicker
-                            index={1}
-                            title={CHECKOUT_COPY.pickupLabel}
-                            value={pickup}
-                            onChange={setPickup}
-                        />
-                        <SlotPicker
-                            index={2}
-                            title={CHECKOUT_COPY.deliveryLabel}
-                            value={delivery}
-                            minDate={pickup.date}
-                            minSlot={pickup.slot}
-                            onChange={setDelivery}
-                        />
-                    </div>
+                    <AsyncBoundary
+                        state={slots}
+                        label={CHECKOUT_COPY.loadingSlots}
+                        isEmpty={() => days.length === 0}
+                        empty={<p className={styles.checkoutHint}>{CHECKOUT_COPY.noSlots}</p>}
+                    >
+                        {() => (
+                            <div className={styles.schedule}>
+                                <SlotPicker
+                                    index={1}
+                                    title={CHECKOUT_COPY.pickupLabel}
+                                    days={days}
+                                    value={pickup}
+                                    onChange={setPickup}
+                                />
+                                <SlotPicker
+                                    index={2}
+                                    title={CHECKOUT_COPY.deliveryLabel}
+                                    days={days}
+                                    value={delivery}
+                                    min={pickup}
+                                    onChange={setDelivery}
+                                />
+                            </div>
+                        )}
+                    </AsyncBoundary>
                 </section>
 
                 <section className={styles.checkoutSection}>
@@ -136,6 +196,14 @@ const CheckoutPage: React.FC = () => {
                 <button
                     className={`button button--primary ${styles.checkoutConfirm}`}
                     type="button"
+                    aria-describedby={
+                        live.isLoading || live.error
+                            ? 'partner-availability'
+                            : isPartnerClosed
+                              ? 'partnerClosed'
+                              : undefined
+                    }
+                    disabled={live.isLoading || Boolean(live.error)}
                     onClick={confirm}
                 >
                     {CHECKOUT_COPY.confirm}

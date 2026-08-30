@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { usePrefersReducedMotion } from './usePrefersReducedMotion';
 
 /**
  * Resets scroll position on navigation, as a new page load would, unless the
@@ -14,6 +15,7 @@ import { useLocation } from 'react-router-dom';
  */
 export const useScrollToTop = () => {
     const { pathname, hash } = useLocation();
+    const prefersReduced = usePrefersReducedMotion();
 
     useEffect(() => {
         if (!hash) {
@@ -23,10 +25,10 @@ export const useScrollToTop = () => {
 
         const frame = window.requestAnimationFrame(() => {
             document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView({
-                behavior: 'smooth',
+                behavior: prefersReduced ? 'auto' : 'smooth',
             });
         });
 
         return () => window.cancelAnimationFrame(frame);
-    }, [pathname, hash]);
+    }, [pathname, hash, prefersReduced]);
 };
