@@ -52,7 +52,7 @@ laundrylo is a laundry marketplace for Bengaluru, Zomato-shaped: compare local
 laundries, read reviews, book a pickup. The platform owns delivery, partner
 laundries clean. The app (listings, booking flow, My Bookings) lives behind
 "Find laundries"; the marketing homepage at `/` is the front door, and this
-journey is the design showcase reached from it.
+journey is the URL-only design showcase beside it.
 
 ## 2. Governing concept: the cycle
 
@@ -161,10 +161,9 @@ sixth of it.
 became a wind-swirl mark and moving it pushed a gust. Cut in v2.4; see decision 20.
 
 **5.4 Pin-code input.** One component, two placements (S1 hero, S6 footer):
-6-digit validation, then navigate to the listing. Serviceability (the friendly
-"not in your area yet" state) is **parked** until the backend lands; any valid
-6-digit pin navigates, which is the behaviour shipping today in
-`usePinCodeSearch`.
+6-digit validation, then navigate to the API-backed listing. Any valid 6-digit
+pin navigates; a pin with no matching partners resolves to the listing's empty
+state rather than being guessed at by the input.
 
 **5.5 Header.** Logo lockup (`laundrylo-logo.svg`, never typeset) plus the tour
 control (section 5.3). No dark-mode toggle, no cart, no sign-in: the cycle's
@@ -173,9 +172,8 @@ the hero. Mobile: logo left, the control collapses to a single text button, no
 hamburger.
 
 The shared app header and footer are **not rendered on `/journey`**. Every other
-route keeps the current chrome. The app header's own "Journey" link enters behind
-the same soft cut the cycle uses internally, and warms the route's chunk on the
-same click so the fade covers the fetch rather than a loading state.
+route keeps the current chrome. The route is deliberately absent from product
+navigation and remains available by direct URL.
 
 ---
 
@@ -370,21 +368,16 @@ Four services, 2x2 on desktop (the earlier "one row of four" is superseded).
 | Dry Cleaning | Delicate fabrics, handled with care.     | from ₹199/piece | pink  |
 | Premium Care | Suits, sarees, lehengas, luxury items.   | from ₹349/piece | amber |
 
-Prices are read from `SERVICE_TYPES` rather than typed into the section, so the
-cards and the booking flow cannot drift. The v2.1 per-kg figures (₹49/kg,
-₹69/kg) are gone with the per-kg model.
+Prices are read from `SERVICE_TYPES` rather than typed into the section. They are
+illustrative platform starting points; the API derives each partner's actual
+`startingPrice` from its active catalogue items. The v2.1 per-kg figures (₹49/kg,
+₹69/kg) are gone with the per-item model.
 
-Two data seams in the seed, both closed by the backend and both still present in
-the client until it reads from the API: Premium Care's `startingPrice` (₹349) is
-higher than the cheapest item in its nearest catalogue category, and the service
-ids do not match the catalogue category ids (`dry-cleaning` against `dry-clean`,
-`premium-care` against `special`). Server-side a category carries a canonical
-`service` slug next to the partner's own name, so the four slugs are the only
-vocabulary the filter knows, and `startingPrice` is derived as the cheapest
-active item rather than stored, so it cannot quote a price the catalogue does not
-offer. Ironing (from ₹15/piece) was a fifth catalogue category with no card,
-because the grid is 2x2; it is not in the seeded catalogues, and bringing it back
-means adding a fifth service slug rather than an orphan category.
+The service ids are the same four canonical slugs enforced by PostgreSQL:
+`wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`. The listing sends
+the selected slug to the API, while partner-specific category names remain free
+to differ. This closes the old `dry-clean`/`special` vocabulary seam without
+turning marketing cards into a second catalogue.
 
 **Anatomy, top to bottom:** outline garment icon, tight gap, service name
 (Fraunces), one-line description, hairline rule, price row with a small
@@ -839,8 +832,8 @@ Standing rule: interview-prep reps come first, this project is the reward. The
 app (listings and booking) is a parallel build sharing design tokens, the
 pin-input component and the service filter.
 
-What is verified and what is not: types, lint, stylelint, formatting, 47 tests
-and the production build run on every change. Motion is not covered by any of
+What is verified and what is not: types, lint, stylelint, formatting, the test
+suite and the production build run in CI. Motion is not covered by any of
 them, because happy-dom has no layout and the spine never boots there. Every
 test therefore sees the same static state that prefers-reduced-motion produces,
 which is worth knowing when reading them: they prove the page says everything it
@@ -853,8 +846,8 @@ has to say, not that it moves well. That part is a browser judgement.
 - The background tint whisper (section 3) is A/B'd at build.
 - The glyph fallback (both glyphs in "lost") is used only if the duplicate l
   reads as inconsistent.
-- The S2 price and id seams (section 7.3) are resolved when the catalogue moves
-  behind the API.
+- No data seam remains in S2: its canonical service ids match the API vocabulary,
+  while partner-specific prices are derived from each catalogue.
 
 Everything else that stood open in v2.1 is settled in section 19.
 
@@ -895,7 +888,7 @@ flaps read as separate planes, the sock is recognizable, tag, peg and string are
 connected, arrival plays once, the dial completes, every link resolves.
 
 **Global:** no separators anywhere, reduced-motion parity, 60fps, no real blur in
-motion, the mobile spec (section 14) satisfied per section, and the homepage
+motion, the mobile spec (section 14) satisfied per section, and the journey
 renders in the paper theme regardless of the OS dark preference.
 
 ---
@@ -904,9 +897,9 @@ renders in the paper theme regardless of the OS dark preference.
 
 Settled 2026-08-24, before implementation.
 
-1. **Built in this repo**, replacing `/` in the React 18 and Webpack SPA. No
-   Next.js rebuild. The token layer, the pin-input component and the app routes
-   already exist here, and SSR buys little for a page whose LCP is text.
+1. **Built in this repo** as the lazy `/journey` route in the React 18 and
+   Webpack SPA. No Next.js rebuild. The token layer, pin-input component and app
+   routes already exist here, and SSR buys little for a page whose LCP is text.
 2. **Per-item prices** on the S2 cards, read from `SERVICE_TYPES`. Per-kg was
    retired product wide (see [prd.md](./prd.md) section 5), and rule 4.6 requires
    the cards to match the booking flow.
@@ -914,23 +907,22 @@ Settled 2026-08-24, before implementation.
    Design intent over seed accuracy for a showcase. The disclaimer is the honesty
    rule's counterweight, which is why it is set unmissably rather than in fine
    print.
-4. **The homepage is light only.** The theme toggle is hidden on `/` while app
-   routes keep both themes. Rule 3 bans dark sections: the paper world is the
-   concept, not a preference.
-5. **The shared header and footer are not rendered on `/`.** The homepage carries
-   a minimal non-sticky header (logo plus "how it works"), and S6 is the footer.
-   A sticky header would eat a 100vh section.
-6. **Serviceability is parked.** Any valid 6-digit pin navigates. The friendly
-   "not in your area yet" state needs a real coverage list, which arrives with
-   the backend.
-7. **The service filter ships.** `Partner` gains `services[]`, the listing
-   filters on it and shows a removable chip, and cards fall back to a default pin
-   when the visitor has not entered one. Rule 7.3 requires the cards to land
-   somewhere filtered. See [api-contract.md](./api-contract.md) decision 8.
-8. **Fraunces self-hosted, four axes, homepage only.** Body stays Inter, and app
+4. **The journey is light only.** The theme toggle is absent on `/journey` while
+   product routes keep both themes. Rule 3 bans dark sections: the paper world
+   is the concept, not a preference.
+5. **The shared header and footer are not rendered on `/journey`.** The route
+   carries a minimal non-sticky header (logo plus tour), and S6 is the footer. A
+   sticky header would eat a 100vh section.
+6. **Serviceability resolves in the listing.** Any valid 6-digit pin navigates;
+   the API-backed listing renders an honest empty state when nobody serves it.
+7. **The service filter ships.** The listing sends the service slug to the API,
+   shows a removable chip, and cards fall back to a default seeded pin when the
+   visitor has not entered one. Rule 7.3 requires the cards to land somewhere
+   filtered. See [api-contract.md](./api-contract.md) decision 7.
+8. **Fraunces self-hosted, four axes, journey only.** Body stays Inter, and app
    routes keep Bricolage Grotesque. Section 6.4 needs SOFT and WONK, which
-   Google's CSS2 slice drops, and scoping the font to `/` keeps the app's payload
-   unchanged.
+   Google's CSS2 slice drops, and scoping the font to `/journey` keeps the app's
+   payload unchanged.
 9. **S4 wind: a verlet rope with path displacement.** Roughly 80% of a cloth sim
    at a fraction of the cost, and it degrades cleanly to CSS sway.
 10. **S5 fold: trigger based, about 800ms.** Three sequential folds inside one
@@ -939,9 +931,9 @@ Settled 2026-08-24, before implementation.
 11. **S3 keeps the drum at its centre**, and the corner dial hides while S3 is in
     view. The drum is the centrifuge's axis; two water circles at once read as a
     bug.
-12. **The app header's nav is repointed**: services to `/laundries`, how it works
-    to the S4 anchor, pricing to `/plus`. The old homepage anchors
-    (`#services`, `#how-it-works`, `#pricing`) disappear with the old sections.
+12. **Superseded after the route split:** the product header keeps the homepage
+    anchors (`#services`, `#how-it-works`, `#pricing`) and does not advertise the
+    journey. `/journey` owns its minimal two-item header.
 13. **Hinges and pivots live in the timelines, not the stylesheets.** GSAP
     computes its own transform origin for SVG and overrides `transform-origin`,
     so anything turning about a point other than its middle declares it as an

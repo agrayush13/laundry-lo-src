@@ -1,5 +1,5 @@
--- laundrylo seed data: the Bengaluru demo set the SPA currently ships in
--- ui/src/data/*.ts, restated as rows. Run by `supabase db reset`.
+-- laundrylo seed data: the Bengaluru demo set used by local and preview environments
+-- and API integration fixtures, represented as rows. Run by `supabase db reset`.
 --
 -- Prices are per partner: a base rate card scaled by a per-partner factor, so
 -- `startingPrice` in the API is min(active item) and cannot be set to a number

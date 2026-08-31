@@ -1,7 +1,9 @@
 # laundrylo API contract
 
-Status: **agreed, partly built**. The client's local seed data matches these
-shapes, so swapping in a real API is a transport change rather than a reshape.
+Status: **agreed and deployed incrementally**. Public partner, catalogue and slot
+reads are implemented and consumed by the client. Supabase Auth is the deployed
+identity provider; authenticated resource routes retain this contract as they
+are enabled.
 
 Built, serving in `api/`, and **consumed by the client**: `GET /partners`,
 `GET /partners/{id}`, `GET /partners/{id}/catalog`, `GET /partners/{id}/slots`,
@@ -9,9 +11,9 @@ over the schema in [schema.md](./schema.md). Token verification is wired; nothin
 in the read path requires a token. `sort` also accepts `price`, which the listing
 has always offered.
 
-Not yet built: `/me`, `/addresses`, `/cart`, `POST /orders`, `/membership`. Until
-the cart lands, totals are still computed client-side, and orders, the signed-in
-user and the homepage service cards still come from `ui/src/data/`.
+Staged after the read path: `/me`, `/addresses`, `/cart`, `POST /orders`, and
+`/membership`. Until each route lands, its corresponding demo screen uses a
+fixture; no partner, catalogue or slot request falls back to bundled data.
 
 Base URL: `/api/v1`
 
@@ -73,7 +75,7 @@ Cursor-based for anything unbounded:
 ### Auth
 
 `Authorization: Bearer <supabase access token>`. Issued and refreshed by Supabase
-Auth; the API verifies it against Supabase's JWKS. See section 2 and decision 4.
+Auth; the API verifies it against Supabase's JWKS. See section 2 and decision 5.
 
 ### Idempotency
 
@@ -85,8 +87,8 @@ one. Without this, a double-tap on Place Order creates two orders.
 
 ## 2. Auth - delegated to Supabase Auth
 
-We do **not** build our own auth. The client uses Supabase Auth directly
-(`@supabase/supabase-js`); our API only _verifies_ the incoming access token.
+We do **not** build our own auth. The production client uses Supabase Auth
+directly; our API only _verifies_ the incoming access token.
 
 ### Why
 
@@ -94,16 +96,16 @@ We do **not** build our own auth. The client uses Supabase Auth directly
   library. Revocation works at the refresh-token layer: sign-out (or "sign out
   everywhere") invalidates it, so the session cannot be renewed; the access JWT
   lives only until its short expiry.
-- Email/password **and OAuth** (Google, etc.) come built in, so the current
-  "coming soon" Google button becomes real with `signInWithOAuth`.
-- Token storage can be httpOnly cookies via `@supabase/ssr` instead of
-  `localStorage`, closing the XSS exposure the mock had.
+- Email/password **and OAuth** (Google, etc.) use the provider's supported
+  sign-in flows rather than application-owned credentials.
+- Session storage follows the Supabase client model. If the frontend later moves
+  to server-rendered delivery, `@supabase/ssr` can use httpOnly cookies.
 
 ### Client-side (no endpoints of ours)
 
 - Register: `supabase.auth.signUp({ email, password })`
-- Login: `supabase.auth.signInWithPassword({ email, password })` -
-  surfaces an invalid-credentials error the UI must handle (no such state today).
+- Login: `supabase.auth.signInWithPassword({ email, password })` and surface the
+  provider's invalid-credentials response without exposing account existence.
 - Google: `supabase.auth.signInWithOAuth({ provider: 'google' })`
 - Password reset: `supabase.auth.resetPasswordForEmail(email)` - always
   succeeds to the user regardless of account existence (no enumeration).
@@ -122,10 +124,10 @@ keyed by the Supabase user id for fields Supabase does not model:
 
 ```json
 {
-  "id": "usr_01J8",
-  "fullName": "Ayush Agrawal",
-  "email": "ayush.agrawal@gmail.com",
-  "phone": "+91 98765 43210",
+  "id": "018f7fd2-00d8-7c71-9b24-53f617ef0b66",
+  "fullName": "Demo Customer",
+  "email": "customer@example.com",
+  "phone": "+91 90000 00000",
   "memberSince": "2024-01-14T00:00:00Z",
   "preferences": { "sms": true, "email": false }
 }
@@ -175,7 +177,7 @@ adding one does not require re-fetching the profile.
 
 Changes from the original mock, all deliberate and now reflected in the client:
 
-| Today                              | Contract                | Why                                                                                 |
+| Previous fixture                   | Contract                | Why                                                                                 |
 | ---------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
 | `distanceKm: 0.8`                  | `distanceMeters: 800`   | Integer; and it is a property of _this search_, not of the partner                  |
 | `tags: ["Free Pickup"]`            | `tags: ["free-pickup"]` | Slugs are stable; display names are the client's business and are already in config |
@@ -186,9 +188,9 @@ Changes from the original mock, all deliberate and now reflected in the client:
 listing can be filtered by service without fetching every catalogue. `services=`
 takes one or more slugs and matches partners offering **all** of them, the same
 conjunctive rule as `tags=`. The homepage service cards are the first caller: each
-card links to `/laundries?pin=560103&service=wash-fold`. See decision 8.
+card links to `/laundries?pin=560103&service=wash-fold`. See decision 7.
 
-`isOpen` is stored server-side and toggleable from the admin panel. See decision 2.
+`isOpen` is stored server-side and controlled by partner operations. See decision 2.
 
 `sort=distance` requires either `pincode` or a latitude/longitude pair. Without
 an origin there is no meaningful distance to sort, so the API returns `422`
@@ -243,12 +245,11 @@ fixed-capacity branded bag, priced flat) and `kg` (needs weighing) stay in the
 enum so they can return later with no schema change, once operations support
 them honestly. See decision 5.
 
-`iconKey` replaces the emoji currently sitting in the data (`"👕"`). Emoji are
-presentation and render inconsistently across platforms; the client already has
-an icon registry to map a key onto a glyph.
+`iconKey` keeps presentation out of storage. The client maps the stable key onto
+its icon registry, avoiding platform-dependent emoji rendering.
 
-**Catalogue is per partner**, unlike today's mock where every partner shares one
-menu and one price list.
+**Catalogue is per partner**. The same garment can therefore have different
+prices and descriptions at different laundries.
 
 A category carries both `service` and `name`: `service` is the platform's slug,
 which is what `services=` filters on, and `name` is the partner's own wording.
@@ -266,7 +267,7 @@ starting price its catalogue does not actually offer.
 
 - `GET /addresses` → `{ "data": [SavedAddress] }`
 - `POST /addresses` → `201` `SavedAddress`
-- `PATCH /addresses/{id}` → `200` (the edit pencils in the profile are currently dead)
+- `PATCH /addresses/{id}` → `200`
 - `DELETE /addresses/{id}` → `204`
 
 ```json
@@ -316,16 +317,13 @@ necessarily the account holder.
 }
 ```
 
-Today the client hardcodes six slot strings and treats `"8:00 AM - 10:00 AM"` as
-the identity. Slots must come from the server: capacity, partner hours and
-holidays all live there, and `available: false` is the only way the UI can stop
-someone booking a full slot.
+Slots come from the server because capacity, partner hours and holidays live
+there. The client uses the opaque slot id as identity and renders
+`available: false` as unselectable.
 
 ---
 
-## 6. Cart
-
-Assumes a **server-side cart** per open question 1.
+## 6. Cart (staged write route)
 
 - `GET /cart` → `Cart`
 - `PUT /cart/items/{itemId}` `{ "quantity": 3 }` → `Cart` (quantity `0` removes)
@@ -369,7 +367,7 @@ CART_PARTNER_CONFLICT` and the UI asks before replacing.
 
 ---
 
-## 7. Orders
+## 7. Orders (staged write route)
 
 ### `POST /orders`
 
@@ -433,10 +431,7 @@ a real case the UI has no handling for.
 }
 ```
 
-**The timeline is the biggest reshape.** Today the mock sends
-`{ label: "Clothes Picked Up", detail: "Mar 20, 2:00 PM", state: "current" }` -
-three presentation decisions baked into data. The API should send _events that
-happened_; the client renders labels, formats times, and derives
+The API sends _events that happened_; the client renders labels, formats times, and derives
 done/current/pending from the last event plus the known sequence. That way
 copy changes and translations do not need a backend deploy.
 
@@ -458,12 +453,12 @@ cart totals**. Nothing in the UI should decide a discount.
 
 ## 9. Decisions
 
-Reviewed 2026-07-25.
+Reviewed 2026-08-31.
 
 ### Settled
 
 1. **Cart ownership → guest cart client-side, merged on login.** Cart stays in
-   `localStorage` and works signed-out (already implemented). On login, merge
+   `localStorage` and works signed-out. On login, merge
    into the account: **guest cart wins on partner conflict** (replace the server
    cart, warn via `CART_PARTNER_CONFLICT`); if the partner matches, union the
    line items and take the higher quantity per item.
@@ -477,13 +472,12 @@ Reviewed 2026-07-25.
    Never look up by `reference`. Closes order enumeration and removes the need
    for a global atomic counter on the hot path.
 
-5. **Token strategy → Supabase Auth.** Client uses Supabase Auth directly
+5. **Token strategy → Supabase Auth.** The production client uses Supabase Auth directly
    (email/password + OAuth); our API only verifies the access JWT and reads
    `auth.uid()`. Revocation via refresh-token invalidation on sign-out;
    short-lived access token; httpOnly-cookie storage available via
    `@supabase/ssr`. Section 2 is rewritten around this - our own `/auth/*` routes
-   are gone. Because OAuth ships with it, **Google sign-in is no longer
-   deferred** (it becomes `signInWithOAuth`).
+   are gone. Google sign-in uses `signInWithOAuth`.
 6. **Pricing model → per item.** Every catalog item has a fixed price and a
    `unit`, so the total is known at checkout and the estimate/reweigh/"final
    price pending"/pay-later flow is deleted. `unit` enum is `piece | bag | kg`;
@@ -496,12 +490,12 @@ Reviewed 2026-07-25.
    alternative, deriving it by joining every partner's catalogue at query time,
    makes the cheapest and most common query on the site pay for the rarest need.
    The array is derived from `catalog_categories.service` server-side, so it
-   cannot drift from what the partner actually sells. Consequence: the seed data
-   in `ui/src/data/partners.ts` gains the same field ahead of the API.
+   cannot drift from what the partner actually sells. This is implemented in
+   the `partner_details` view and consumed by the listing.
 
 ### Deferred (revisit later)
 
-7. **Reviews.** `rating`/`reviewCount` stay read-only for now; write endpoints
+8. **Reviews.** `rating`/`reviewCount` stay read-only for now; write endpoints
    designed later.
 
 - **Order chat** with the partner (placeholder today).
@@ -509,15 +503,20 @@ Reviewed 2026-07-25.
 
 ---
 
-## 10. What this changes in the UI
+## 10. Client rollout
 
-Not a small amount, and worth sizing before committing:
+Implemented for the read path:
 
-- Every list/detail screen gains loading, empty and error states
-- `CartContext` loses its tax maths and becomes a thin cache over the API
-- `useCheckoutForm` submits and handles `409 SLOT_UNAVAILABLE`
-- Sign-in gains a credentials-error state (does not exist today)
-- Timeline rendering moves from server labels to client-derived labels
-- `data/*.ts` seed files are deleted; `services/*Services.ts` take their place
+- List and detail screens render loading, empty and retryable error states.
+- `services/*Services.ts` is the only network boundary for partners, catalogues
+  and slots.
 - The listing reads its service filter from the query string, so a homepage card
-  and a filter chip are the same state
+  and a filter chip are the same state.
+- Timeline labels and state are derived by the client from domain events.
+
+Required as the authenticated write routes are enabled:
+
+- `CartContext` becomes a cache over server-computed totals.
+- `useCheckoutForm` submits `POST /orders` and handles `409 SLOT_UNAVAILABLE`.
+- Account, address, order and membership fixtures are removed when their
+  endpoints become the source of truth.

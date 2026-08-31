@@ -1,8 +1,6 @@
 import React from 'react';
-import { ICON_SIZE } from '../../config/brandConfig';
 import { TESTIMONIALS_SECTION } from '../../config/homeConfig';
 import Card from '../card/Card';
-import Icon from '../icons/Icon';
 import SectionHead from '../section-head/SectionHead';
 import styles from './testimonials.module.scss';
 
@@ -21,19 +19,7 @@ const Testimonials: React.FC = () => (
                         className={styles.testimonialsItem}
                         key={name}
                     >
-                        <p
-                            className={styles.testimonialsStars}
-                            aria-label={`${TESTIMONIALS_SECTION.rating} out of 5 stars`}
-                        >
-                            {Array.from({ length: TESTIMONIALS_SECTION.rating }, (_, index) => (
-                                <Icon
-                                    key={index}
-                                    name="star"
-                                    size={ICON_SIZE.md}
-                                    fill="currentColor"
-                                />
-                            ))}
-                        </p>
+                        <p className={styles.testimonialsStars}>{TESTIMONIALS_SECTION.itemLabel}</p>
                         <blockquote className={styles.testimonialsQuote}>
                             &ldquo;{quote}&rdquo;
                         </blockquote>

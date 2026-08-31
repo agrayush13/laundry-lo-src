@@ -23,8 +23,8 @@ export const TERMS_COPY = {
         'No orders are placed, no pickups happen, no payments are taken and no ' +
             'partner laundries are involved. Partner, catalogue and slot information ' +
             'comes from a seeded demo API.',
-        'A pin code is sent to that demo API to filter nearby laundries. Account and ' +
-            'address details remain in your browser while the real order API is not connected.',
+        'A pin code is sent to the API to filter nearby laundries. Use demo-only account ' +
+            'and address details; the browser may retain session, theme and cart state.',
     ],
 } as const;
 
