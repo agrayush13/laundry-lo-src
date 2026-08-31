@@ -16,7 +16,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 /**
  * Every in-app route is client-side, so any navigation resolves to the shell.
- * The denylist keeps real files and the future API off this route.
+ * The denylist keeps real files and the API off this route.
  */
 registerRoute(
     new NavigationRoute(createHandlerBoundToURL('/index.html'), {

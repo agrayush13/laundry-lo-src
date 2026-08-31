@@ -101,30 +101,30 @@ export const HOW_IT_WORKS_SECTION = {
 };
 
 export const TESTIMONIALS_SECTION = {
-    title: 'Loved by Thousands',
-    subtitle: 'Join 10,000+ happy customers who trust LaundryLo with their laundry.',
-    rating: 5,
+    title: 'Designed for everyday routines',
+    subtitle: 'Illustrative scenarios for this demo, not customer reviews or usage claims.',
+    itemLabel: 'Example scenario',
     items: [
         {
             quote:
                 'laundrylo saved me hours every week. The pickup is always on time and my ' +
                 'clothes come back perfectly folded.',
-            name: 'Sneha Iyer',
-            role: 'Busy professional, Indiranagar',
+            name: 'Busy professionals',
+            role: 'Example use case',
         },
         {
             quote:
                 'With two kids at home the laundry never ends. Booking a slot the night ' +
                 'before has been a genuine relief.',
-            name: 'Rohit Deshpande',
-            role: 'Parent of 2, HSR Layout',
+            name: 'Family households',
+            role: 'Example use case',
         },
         {
             quote:
                 'I send all my formal shirts for wash and iron. They come back crisp, and ' +
                 'the per-item pricing is clear up front.',
-            name: 'Meera Nair',
-            role: 'Small business owner, Koramangala',
+            name: 'Small business owners',
+            role: 'Example use case',
         },
     ] as Testimonial[],
 };

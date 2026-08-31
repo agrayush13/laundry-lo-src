@@ -53,7 +53,7 @@ describe('App', () => {
             'Our Services',
             'How It Works',
             'Upgrade to LaundryLo Plus',
-            'Loved by Thousands',
+            'Designed for everyday routines',
             'Ready to ditch laundry day?',
         ];
 

@@ -15,7 +15,7 @@ export interface User {
 }
 
 /**
- * Stand-in for the signed-in account until the auth API exists.
+ * Stand-in for app-level profile data until the `/me` route is enabled.
  *
  * The addresses are Bengaluru ones, in pincodes the seed actually serves. They
  * used to be in Gurugram, 2,000 km from every partner, which meant the demo
