@@ -1,6 +1,6 @@
 # laundrylo - product requirements
 
-Status: **living document**. Reflects decisions taken up to 2026-08-03.
+Status: **living document**. Reviewed against the application on 2026-08-31.
 
 ---
 
@@ -18,11 +18,11 @@ partners, order from one partner at a time, and track the order to their door.
 
 ## 3. Who it is for
 
-| Audience               | Needs                                                       | Status               |
-| ---------------------- | ----------------------------------------------------------- | -------------------- |
-| **Customer**           | Find a nearby laundry, know the price up front, book, track | Building now         |
-| **Partner (laundry)**  | Receive orders, set prices, mark open/closed, manage hours  | Admin panel, later   |
-| **Fleet / operations** | Pickup and delivery runs                                    | Out of scope for now |
+| Audience               | Needs                                                       | Status                |
+| ---------------------- | ----------------------------------------------------------- | --------------------- |
+| **Customer**           | Find a nearby laundry, know the price up front, book, track | Product surface built |
+| **Partner (laundry)**  | Receive orders, set prices, mark open/closed, manage hours  | Admin panel, later    |
+| **Fleet / operations** | Pickup and delivery runs                                    | Out of scope for now  |
 
 Only the customer surface is in the current build.
 
@@ -39,9 +39,10 @@ Deliberate properties of this flow:
 - **The cart is the single funnel.** An earlier four-step booking wizard was
   removed. Address and scheduling are collected _after_ Place Order, so the
   customer commits to items before being asked for details.
-- **The cart works signed out.** It lives in `localStorage` and merges into the
-  account on login (see [api-contract.md](./api-contract.md) decision 1). Sign-in
-  is required only to place an order and to view bookings.
+- **The cart works signed out.** The guest cart lives in `localStorage` and the
+  authenticated cart contract merges it on login (see
+  [api-contract.md](./api-contract.md) decision 1). Sign-in is required only to
+  place an order and to view bookings.
 - **One partner per cart.** Adding from a second partner prompts to replace.
 
 ## 5. Pricing model
@@ -70,10 +71,10 @@ per-item pricing actually gives the customer (see
 
 ## 6. Scope
 
-### In scope now
+### Product scope
 
-- The creative homepage, one wash cycle per scroll (see
-  [journey.md](./journey.md))
+- The marketing homepage and the URL-only wash-cycle showcase at `/journey`
+  (see [journey.md](./journey.md))
 - Pincode search and partner listing with filters and sorting, filterable by
   service so the homepage cards can link into a filtered listing
 - Partner detail with a per-partner catalog
@@ -93,6 +94,16 @@ per-item pricing actually gives the customer (see
 | Partner admin panel         | Needed before real partners can self-serve          |
 | Payments                    | Cash on pickup only at launch                       |
 
+### Implementation snapshot
+
+- **Deployed full-stack foundation:** React SPA, Hono API, Supabase Auth and
+  PostgreSQL with migrations and Row Level Security.
+- **API source of truth:** partner search, partner details, per-partner
+  catalogues and slot availability.
+- **Staged authenticated writes:** profiles, addresses, server cart, order
+  placement/history and membership. The schema and contract are present; their
+  demo screens keep fixtures until each route is enabled.
+
 ## 7. Product rules
 
 - **Prices are final at checkout.** No estimates, no post-hoc revision.
@@ -103,8 +114,8 @@ per-item pricing actually gives the customer (see
 - **Delivery cannot precede pickup.** Enforced in the client today by disabling
   invalid dates and slots, and by clearing a delivery selection that a changed
   pickup would invalidate.
-- **A closed partner cannot take orders.** `isOpen` is server-owned so partners
-  can toggle it from the admin panel, or automate it from opening hours.
+- **A closed partner cannot take orders.** `isOpen` is server-owned so partner
+  operations can toggle it manually or automate it from opening hours.
 - **Money is never computed on the client.** Tax, delivery and membership
   discounts are server-calculated and returned.
 - **Order ids are not guessable.** Customers see a friendly reference
@@ -114,8 +125,8 @@ per-item pricing actually gives the customer (see
 
 - Route-level code splitting; the homepage ships in the initial bundle
 - Works signed out for everything up to placing an order
-- Light and dark themes, both first-class, on every route except the homepage,
-  which is light only by design (see [journey.md](./journey.md) decision 4)
+- Light and dark themes, both first-class, on every product route; `/journey` is
+  light only by design (see [journey.md](./journey.md) decision 4)
 - Accessible forms: labelled inputs, `aria-invalid`, errors tied to fields
 - Validation explains itself - the confirm button stays enabled and scrolls to
   the first problem rather than silently disabling
@@ -128,18 +139,21 @@ per-item pricing actually gives the customer (see
 - Delivery fee: flat, distance-based, or free above a threshold?
 - Which city and pincodes launch first? (demo data is Bengaluru)
 
-## 10. The homepage
+## 10. The homepage and journey
 
-The homepage is a design showcase as much as a front door, and it has its own
-document: [journey.md](./journey.md). What matters at product level:
+The homepage at `/` is the product front door. The unlinked `/journey` route is
+the motion showcase documented in [journey.md](./journey.md). They share product
+facts but keep separate navigation and presentation.
 
-- **The product must be legible in second one.** The pin-code input sits in the
-  first viewport and the cycle is the container, never a gate.
+- **The product must be legible in second one.** Both surfaces put the pin-code
+  input in the first viewport; on `/journey` the cycle is the container, never a
+  gate.
 - **Claims trace to a real surface.** No invented testimonials or customer
   counts. The three figures in the spin section (52+ partners, 6 pin codes, 24h)
   are demo figures rather than counts of the seed data, which is why the footer
   carries "a demo project by ayush, not a real service." plainly and unmissably.
-- **Prices shown there are the prices in the booking flow.** The service cards
-  read from the same catalogue the cart uses, so the two cannot drift.
+- **Service vocabulary is shared.** Marketing cards and the journey use the same
+  canonical service slugs; the API derives each partner's real starting price
+  from its catalogue.
 - **Plus promises exactly three perks** (free pickup, 10% off, priority slots),
   the same three the booking summary honours.

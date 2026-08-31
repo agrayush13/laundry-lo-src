@@ -1,7 +1,8 @@
 # laundrylo - architecture
 
-Status: **living document**. Describes the frontend and backend read path as
-built, with the backend write path still planned. Pairs with
+Status: **living document**. Describes the deployed full-stack topology and the
+implemented backend read path, with authenticated writes staged behind the
+agreed contract. Pairs with
 [api-contract.md](./api-contract.md) and [schema.md](./schema.md).
 
 ---
@@ -10,25 +11,19 @@ built, with the backend write path still planned. Pairs with
 
 Production origin: **https://laundrylo.com**
 
-```
-                 ┌──────────────────────────────┐
-   Browser ────► │  React SPA (static hosting)  │
-                 │  laundrylo.com, SPA rewrites │
-                 └──────────┬───────────────────┘
-                            │  fetch, Bearer <supabase jwt>
-                 ┌──────────▼───────────────────┐
-                 │  API  /api/v1                │
-                 │  verifies JWT -> auth.uid()  │
-                 └──────────┬───────────────────┘
-                            │
-                 ┌──────────▼───────────────────┐
-                 │  Supabase                    │
-                 │  Postgres + Auth + Storage   │
-                 └──────────────────────────────┘
+```mermaid
+flowchart LR
+    Browser --> SPA[React SPA]
+    SPA -->|/api/v1| API[Hono API]
+    API -->|SQL with RLS role| DB[(Supabase PostgreSQL)]
+    SPA -->|sign in and refresh| Auth[Supabase Auth]
+    Auth -->|access JWT| SPA
+    SPA -->|Bearer JWT| API
 ```
 
-The frontend is a static bundle - no server rendering. Anything dynamic is an
-API call. Identity is delegated entirely to Supabase Auth.
+The frontend is a static bundle - no server rendering. Dynamic marketplace data
+comes through the API. Identity is delegated entirely to Supabase Auth; the API
+verifies sessions but never receives or stores a password.
 
 ## 2. Frontend
 
@@ -64,7 +59,7 @@ ui/src/
 
 Naming: components PascalCase, directories kebab-case, styles
 `<name>.module.scss` with camelCase class exports, helpers `xUtils.ts`, config
-`xConfig.ts`, and future API callers `xServices.ts`.
+`xConfig.ts`, and API clients `xServices.ts`.
 
 ### The rules that shape the code
 
@@ -88,12 +83,12 @@ Naming: components PascalCase, directories kebab-case, styles
 
 ### State
 
-| Concern         | Where it lives | Persistence                                                |
-| --------------- | -------------- | ---------------------------------------------------------- |
-| Cart            | `CartContext`  | `localStorage`, versioned, cleared on order placement      |
-| Auth            | `AuthContext`  | `localStorage` today; moves to Supabase's session handling |
-| Theme           | `ThemeContext` | `localStorage`                                             |
-| Partners, slots | the API        | Partner reads cached 5 min by the SW; slots never cached   |
+| Concern         | Where it lives     | Persistence                                              |
+| --------------- | ------------------ | -------------------------------------------------------- |
+| Guest cart      | `CartContext`      | Versioned `localStorage`, merged after authentication    |
+| Auth            | Supabase Auth      | Short-lived access token plus rotated refresh session    |
+| Theme           | `ThemeContext`     | `localStorage`                                           |
+| Partners, slots | the API/PostgreSQL | Partner reads cached 5 min by the SW; slots never cached |
 
 The cart carries the partner's id **and name**, and each line carries the
 category it was added from. Both are copied at add time because the catalogue
@@ -105,8 +100,8 @@ The cart is versioned (`STORAGE_VERSION`) so a shape change discards stale data
 rather than letting it reach components, and all reads are wrapped in try/catch
 because private browsing can reject storage.
 
-Once the API lands, `CartContext` loses its tax arithmetic and becomes a thin
-cache over server-computed totals.
+When the cart write route is enabled, `CartContext` loses its tax arithmetic and
+becomes a thin cache over server-computed totals.
 
 ### Routing and loading
 
@@ -118,7 +113,8 @@ wrapper.
 `Layout` renders the shared header and footer for every route except
 `/journey`. The journey carries its own minimal header and its own footer, which
 is the last phase of the cycle rather than a component bolted underneath it. The
-homepage keeps the usual chrome and links to the journey from it.
+route is intentionally absent from the product navigation and remains available
+only by direct URL.
 
 Because it is an SPA on static hosting, deep links need rewrite rules -
 `_redirects` sends everything to `index.html`, without which `/cart` 404s on
@@ -193,10 +189,9 @@ Long moves happen behind a fade. `motion/softCut.ts` fades the page out, moves i
 while nobody can see it, and fades it back: scrolled smoothly, a dozen screens is
 every phase scrubbing backwards at a speed nobody can read. It is what "back to
 the start" uses, what an anchor more than two viewports away uses, and what the
-tour uses to reach the top before it plays. `common-ui/soft-link` is the same
-idea across a route boundary, for entering the cycle from the app header; it
-warms the target chunk on the same click, so the fade covers the fetch instead of
-a loading state.
+tour uses to reach the top before it plays. `common-ui/soft-link` preserves the
+same route-transition treatment for a future mounted entry point, but no current
+navigation renders it.
 
 `useCycleTour` plays the cycle for a visitor who would rather watch it: a
 constant scroll from the top, paced in viewports a second because the holds are
@@ -291,16 +286,16 @@ look like a site that simply says two different things. See
 
 ## 3. Backend
 
-Partly built. The read path - partners, catalogue, slots - is serving from
-[`api/`](../api/) over a real Postgres schema; the cart, orders and profile
-routes are not written yet.
+The deployed Hono service in [`api/`](../api/) serves partners, catalogues and
+slots from PostgreSQL. The cart, orders and profile routes remain staged behind
+the contract and reuse the same authentication and RLS boundary when enabled.
 
 ### Why Supabase
 
-Postgres, auth, storage and a free tier in one place. Auth is the deciding
+Postgres and auth in one managed platform. Auth is the deciding
 factor: it gives short-lived access JWTs, automatic refresh rotation, OAuth
 providers, and revocation at the refresh-token layer, none of which we want to
-build. See [api-contract.md](./api-contract.md) decision 4.
+build. See [api-contract.md](./api-contract.md) decision 5.
 
 ### Why a Node service in front of it
 
@@ -346,18 +341,21 @@ partner does not actually sell.
 
 ### Request path
 
-1. Client attaches `Authorization: Bearer <supabase access token>`.
-2. API verifies the token against Supabase's JWKS, or against a shared HS256
+1. Supabase Auth issues and refreshes the browser session.
+2. The client attaches `Authorization: Bearer <supabase access token>` when a
+   route needs identity. Public read routes may remain anonymous.
+3. API verifies the token against Supabase's JWKS, or against a shared HS256
    secret when running the local stack. A malformed or expired token is a `401`,
    never a silent downgrade to anonymous: the user believes they are signed in,
    and quietly showing them a signed-out view is the harder failure to diagnose.
-3. `auth.uid()` identifies the caller; Row Level Security enforces ownership at
+4. `auth.uid()` identifies the caller; Row Level Security enforces ownership at
    the database rather than trusting application code.
 
 ### Row Level Security is not bypassed
 
-The service holds a privileged connection and could ignore RLS entirely. It does
-not. `db/pool.ts` exposes `asCaller`, which opens a transaction, sets
+The local development connection is privileged enough to assume the API roles;
+the production connection is a dedicated login that can assume only `anon` and
+`authenticated`. `db/pool.ts` exposes `asCaller`, which opens a transaction, sets
 `request.jwt.claims`, and assumes the `anon` or `authenticated` role before
 running the query. A handler that forgets an ownership check returns nothing
 rather than someone else's rows, and because `set local` is scoped to the
@@ -368,7 +366,11 @@ cannot write directly, the write path must choose an explicit privileged
 transaction or a narrow security-definer function rather than accidentally
 bypassing RLS through the pool login.
 
-### What the server owns, non-negotiably
+### What the server owns
+
+The read path already owns partner availability, catalogues and slots. The
+remaining bullets are invariants for the staged write routes, not calculations
+the browser may implement independently.
 
 - **Money.** Subtotals, tax, delivery fees and membership discounts are computed
   server-side and returned. The client renders what it is given.
@@ -389,14 +391,14 @@ bypassing RLS through the pool login.
 
 ### Idempotency
 
-`POST /orders` carries a client-generated `Idempotency-Key`, unique per user in
+The `POST /orders` contract carries a client-generated `Idempotency-Key`, unique per user in
 the database. A replay returns the original order, so a double-tapped Place Order
 cannot create two orders.
 
 ## 4. Migration path
 
-The UI currently runs on seed data in `ui/src/data/`. The route to a real
-backend, in order:
+The migration from local feature fixtures to the deployed backend proceeds per
+resource rather than as one large transport rewrite:
 
 1. **Agree the contract.** Done - see [api-contract.md](./api-contract.md).
 2. **Build the schema and the read path.** Done - `supabase/` and `api/` serve
@@ -409,11 +411,31 @@ backend, in order:
 5. **Delete the rest of `data/*.ts`** - orders, the user, and the homepage
    service cards, once there is an endpoint behind each.
 
-Step 4 is the leverage point now. Until it lands the cart still does its own tax
-arithmetic and a confirmed order is still a client-side id, which is the last
-place the app tells the customer something the server has not agreed to.
+Step 4 is the remaining leverage point. Until each write route lands, its
+matching screen keeps a local fixture; the read path never falls back to bundled
+partner, catalogue or slot data.
 
-## 5. Known gaps
+## 5. Deployment
+
+The production system has three deployable parts:
+
+1. **Frontend:** build `ui/` and publish `ui/dist` to Netlify. The generated
+   `_redirects` contains the SPA fallback; the edge configuration must forward
+   `/api/*` to the Node service before that fallback runs.
+2. **API:** run the compiled `api/dist/index.js` as a long-lived Node 22 service.
+   Set `DATABASE_URL`, `SUPABASE_URL`, `NODE_ENV=production`, the platform's
+   `PORT`, and the permitted `CORS_ORIGINS`. Hosted Supabase uses JWKS, so
+   `SUPABASE_JWT_SECRET` stays unset.
+3. **Supabase:** apply migrations before the API version that requires them,
+   configure the production site and redirect URLs, enable the chosen auth
+   providers, and keep provider secrets in Supabase rather than the repository.
+
+The API database login is not the schema owner. It is granted only the ability
+to assume `anon` and `authenticated`, so every request must pass through
+`asCaller`. PostgreSQL connections require TLS in production. `/health` is the
+readiness probe and returns `503` when the database cannot be reached.
+
+## 6. Known gaps
 
 - No analytics, no error reporting service.
 - No partner admin panel, so `is_open`, hours and catalogs have no editor.

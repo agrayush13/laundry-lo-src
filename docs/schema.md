@@ -13,8 +13,8 @@ Status: **implemented**. Postgres on Supabase, built by
   integers, never guessable from a URL.
 - **Money** is stored as `integer` minor units (paise) alongside a `currency`
   text column. No floats anywhere in the schema.
-- **Timestamps** are `timestamptz`, always UTC. `created_at` / `updated_at` on
-  every table.
+- **Timestamps** are `timestamptz`, always UTC. Mutable entity tables carry
+  `created_at` / `updated_at`; join and event tables keep only the time they need.
 - **Enums** are Postgres enum types, lowercase snake case.
 - **Identity** lives in Supabase's `auth.users`. Our tables reference it by
   `auth.uid()`; we never store passwords.
@@ -81,15 +81,14 @@ Created on first login by a trigger on `auth.users`.
 | `latitude`         | numeric | for distance and the future map view     |
 | `longitude`        | numeric |                                          |
 | `turnaround_hours` | integer |                                          |
-| `is_open`          | boolean | manual override from the admin panel     |
+| `is_open`          | boolean | manual override for partner operations   |
 | `auto_schedule`    | boolean | when true, opening hours drive `is_open` |
 | `image_url`        | text    |                                          |
 | `image_alt`        | text    |                                          |
 
-`rating` and `review_count` are **not columns** - they are derived from
-`reviews` (below) via a view or materialized aggregate, so they cannot drift.
-
-Until reviews ship, they can be denormalized columns seeded from demo data.
+`rating` and `review_count` are currently denormalized columns seeded for the
+demo catalogue. The `partner_details` view is the API boundary, so they can move
+to an aggregate over `reviews` later without changing the route shape.
 
 ### partner_hours
 
@@ -160,14 +159,14 @@ Server-owned availability. The client must never invent these.
 | `booked`     | integer     | default 0              |
 | `state`      | slot_state  | `blocked` for holidays |
 
-Availability is `state = 'open' and booked < capacity`. Booking increments
-`booked` inside the order transaction, which is what makes
+Availability is `state = 'open' and booked < capacity`. The staged order write
+transaction increments `booked` atomically, which is what makes
 `409 SLOT_UNAVAILABLE` truthful under concurrency.
 
 ### carts / cart_items
 
-Server cart for signed-in users. Guests hold the same shape in `localStorage`
-and merge on login.
+Schema for the authenticated server cart. Guests hold the same shape in
+`localStorage` and merge on login when the cart write route is enabled.
 
 **carts**
 
@@ -200,11 +199,13 @@ so a price change is reflected before checkout. Totals are computed server-side.
 | `status`           | order_status |                                             |
 | `subtotal`         | integer      | minor units                                 |
 | `delivery_fee`     | integer      |                                             |
+| `discount`         | integer      | server-computed discount                    |
 | `tax`              | integer      |                                             |
 | `total`            | integer      |                                             |
 | `currency`         | text         |                                             |
 | `pickup_slot_id`   | text FK      |                                             |
-| `delivery_slot_id` | text FK      | check: strictly after pickup                |
+| `delivery_slot_id` | text FK      | write service validates it follows pickup   |
+| `payment_method`   | text         | defaults to `cash_on_pickup`                |
 | `idempotency_key`  | text unique  | per user; replays return the original order |
 | `placed_at`        | timestamptz  |                                             |
 
@@ -307,7 +308,7 @@ partners 1--* partner_hours
 - `addresses (user_id)`
 - unique `orders (user_id, idempotency_key)` - double-tap protection
 
-## 6. Questions answered by the first migration
+## 6. Implementation notes
 
 Status of this document is now **implemented** for everything above:
 `supabase/migrations/` builds it and `supabase/seed.sql` fills it with the
