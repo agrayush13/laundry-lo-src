@@ -1,114 +1,241 @@
 # laundrylo 🧺
 
-Laundry pickup & delivery, marketplace-style. Think Zomato, but for laundry.
+laundrylo is a full-stack laundry marketplace demo for discovering nearby
+partners, comparing per-item services, scheduling pickup and delivery, and
+tracking an order. The repository contains a React client, a Hono API, and a
+PostgreSQL schema managed with Supabase migrations.
 
 **Live → [laundrylo.com](https://laundrylo.com)**
 
-## What it is
+## Product tour
 
-Local laundries are fragmented and offline. laundrylo puts them on one platform:
+The tour follows discovery, a partner catalogue, cart, pickup scheduling,
+bookings and order tracking on both desktop and mobile.
 
-1. **Book** a pickup slot from a partner laundry near you
-2. **Pickup** - the platform's delivery fleet collects from your door
-3. **Clean** - the partnered laundry handles the wash
-4. **Deliver** - clothes come back to your door
+### Desktop
 
-This repo is seeded with demo data for Bengaluru.
+[![laundrylo desktop booking flow](docs/assets/laundrylo-desktop-tour.gif)](https://laundrylo.com)
 
-## Features
+### Mobile
 
-- Browse partner laundries with filters
-- Cart-led booking flow (items → address → slots → confirm)
-- My Bookings, order status tracking
-- Auth & profile
-- laundrylo Plus membership
+<p align="center">
+  <a href="https://laundrylo.com">
+    <img src="docs/assets/laundrylo-mobile-tour.gif" width="320" alt="laundrylo mobile booking flow" />
+  </a>
+</p>
+
+## What is implemented
+
+- Responsive marketplace, partner listing, filters and sorting
+- Per-partner catalogues and a one-partner cart
+- Pickup and delivery slot selection
+- Profile, bookings, tracking and Plus membership demo screens
+- Installable PWA shell with offline caching for safe public reads
+- Hono read API for partners, catalogues and slots
+- PostgreSQL migrations, seed data, Row Level Security and API integration tests
+- CI gates for frontend and backend types, lint, tests and production builds
+
+Partner reads and slot availability come from PostgreSQL through the API. The
+same production topology supports Supabase Auth and the authenticated write
+contract for profiles, addresses, carts, orders and memberships. The current
+repository release implements the read routes; the write-route rollout is
+tracked explicitly in [docs/api-contract.md](docs/api-contract.md).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Browser[Browser] --> UI[React SPA]
+    UI -->|GET /api/v1| API[Hono API]
+    API -->|SQL in anon/authenticated role| DB[(Supabase PostgreSQL)]
+    UI -->|sign in and refresh| Auth[Supabase Auth]
+    Auth -->|access JWT| UI
+    UI -->|Bearer JWT| API
+```
+
+The browser uses same-origin `/api` requests. In development Webpack proxies
+them to port `8787`; in production the host or edge layer must forward `/api/*`
+to the API without rewriting the path. The API verifies Supabase access tokens
+when present and executes database work in the matching Postgres RLS role.
+
+See [docs/architecture.md](docs/architecture.md) for the detailed design and
+[docs/api-contract.md](docs/api-contract.md) for implemented and planned routes.
 
 ## Stack
 
-**Frontend**
+| Layer          | Technology                                                           |
+| -------------- | -------------------------------------------------------------------- |
+| Frontend       | React 18, TypeScript 5.6, React Router 7, Webpack 5                  |
+| UI             | SCSS Modules, Lucide icons, GSAP + Lenis on `/journey`               |
+| Client state   | React context and versioned `localStorage`                           |
+| PWA            | Workbox service worker and web app manifest                          |
+| API            | Node.js 22, Hono 4, TypeScript, Zod, `pg`, `jose`                    |
+| Data           | PostgreSQL 17, Supabase migrations and seed data                     |
+| Authentication | Supabase Auth, OAuth, rotating JWKS and API JWT verification         |
+| Quality        | ESLint, Stylelint, Prettier, Vitest, Testing Library, GitHub Actions |
+| Hosting        | Netlify frontend behind Cloudflare, Node API, hosted Supabase        |
 
-- **React 18 + TypeScript**, bundled with **Webpack 5**
-- Routing: react-router-dom v7; styling: SCSS Modules; icons: lucide-react
-- State: React context, no state library
-- Tooling: ESLint, Prettier, Stylelint, Vitest
-- Deployed on Netlify
-- Orders and the signed-in user are still seeded client-side, so no real orders are placed
+## Repository layout
 
-**Backend**
-
-- **Node + TypeScript** on Hono, in [`api/`](api/), serving `/api/v1`
-- **Postgres on Supabase**, migrations and seed in [`supabase/`](supabase/)
-- Auth delegated to Supabase; the API only verifies the access token
-- Row Level Security on every table, and the API assumes the caller's role
-  rather than bypassing it
-
-## Roadmap
-
-- **The cycle**, at `/journey`: scroll position drives
-  wash → rinse → spin → dry → fold → deliver, one pinned phase at a time. Built,
-  and deliberately not linked from the app, so it is reachable by URL only. The
-  marketing homepage stays the product surface and the two read their shared
-  figures from one source. Design and build decisions live in
-  [docs/journey.md](docs/journey.md).
-- **Backend, in progress.** Schema and the read path (partners, catalogue, slots)
-  are built against [docs/api-contract.md](docs/api-contract.md), and the app
-  reads them: the listing, partner pages and checkout slots all come from the
-  API. Cart, orders and profile are next.
-- Payments, partner admin panel, written reviews
-
-## Docs
-
-Start at [docs/](docs/). The PRD says what we are building, the journey doc
-covers the cycle, the architecture doc explains how it is put together, and the
-worklog records what was done and what was learned doing it.
-
-## Running locally
-
-### Frontend
-
-The frontend lives in the [`ui/`](ui/) folder. Marketing content, account data
-and demo orders are local fixtures; partner listings, catalogues and slots use
-the API.
-
-```bash
-cd ui
-npm install
-npm run dev      # dev server at http://localhost:3000
+```text
+api/                  Hono API and integration tests
+docs/                 product, architecture, contract and schema documentation
+supabase/migrations/  versioned PostgreSQL schema
+supabase/seed.sql     Bengaluru demo data
+ui/                   React SPA and frontend tests
 ```
 
-Browsing laundries, opening one and picking a slot all call the API, so the
-database and API below need to be running too. The dev server proxies `/api` to
-`http://localhost:8787`, which keeps the browser out of CORS.
+## Local setup
 
-### Database and API
+### Prerequisites
 
-The database needs Docker running. From the repo root:
+- Node.js `22.13.0` or newer in the Node 22 line
+- npm
+- Docker Desktop or another Docker-compatible container runtime
+
+### 1. Database
+
+From the repository root:
 
 ```bash
-npm install
-npm run db:start      # supabase start
-npm run db:reset      # migrations, then seed data
+npm ci
+npm run db:start
+npm run db:reset
 ```
 
-Then the API:
+This starts the local Supabase stack, applies every migration and loads the demo
+data. `npm run db:status` prints the local service URLs and keys. Supabase Studio
+is available at [http://localhost:54323](http://localhost:54323).
+
+If Docker is unavailable, use the plain-Postgres fallback in
+[supabase/local/README.md](supabase/local/README.md).
+
+### 2. Backend
+
+In a second terminal:
 
 ```bash
 cd api
-npm install
-cp .env.example .env  # defaults match the local Supabase stack
-npm run dev           # http://localhost:8787
-npm test              # integration tests against the seeded database
+npm ci
+cp .env.example .env
+npm run dev
 ```
 
-`npm run db:status` prints the local stack's URLs and keys. Supabase Studio runs
-at http://localhost:54323.
+The checked-in example is safe and points at the local Supabase ports. The API
+runs at [http://localhost:8787](http://localhost:8787); its database-aware health
+check is [http://localhost:8787/health](http://localhost:8787/health).
 
-Other scripts:
+### 3. Frontend
+
+In a third terminal:
 
 ```bash
-npm run build         # production bundle → ui/dist
-npm run check         # typecheck, lint, styles, format, tests, build
-npm run lint          # ESLint
-npm run format        # Prettier (write)
-npm run typecheck     # tsc --noEmit
+cd ui
+npm ci
+npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000). The development server
+proxies `/api` to the backend, so the browser needs no frontend environment
+variable and does not need a separate CORS configuration.
+
+## Checks
+
+Run each package independently:
+
+```bash
+# Frontend
+npm --prefix ui run typecheck
+npm --prefix ui run lint
+npm --prefix ui run lint:styles
+npm --prefix ui run format:check
+npm --prefix ui test
+npm --prefix ui run build
+
+# Backend (database must be running and seeded)
+npm --prefix api run typecheck
+npm --prefix api run lint
+npm --prefix api run format:check
+npm --prefix api test
+npm --prefix api run build
+```
+
+`npm --prefix ui run check` and `npm --prefix api run check` run the respective
+complete gate. GitHub Actions runs the same gates in separate frontend and
+backend jobs; the backend job creates a clean PostgreSQL 17 database first.
+
+## Deployment
+
+### Frontend
+
+Build from `ui/` with `npm ci && npm run build` and publish `ui/dist`. The build
+includes the SPA `_redirects` rule. Serve `service-worker.js` with revalidation
+rather than a long immutable cache policy, and keep generated source maps out of
+the public directory.
+
+### Backend and PostgreSQL
+
+1. Create a hosted Supabase project, link the repository and apply the reviewed
+   migrations. Do not load `supabase/seed.sql` into production; it is demo data.
+
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <project-ref>
+   npx supabase db push --dry-run
+   npx supabase db push
+   ```
+
+2. Create a dedicated API database login that can assume only `anon` and
+   `authenticated`; do not run the API as a schema owner.
+3. Build the API from `api/` with `npm ci && npm run build`, then run `npm start`
+   with the variables documented in [`api/.env.example`](api/.env.example).
+4. Point `DATABASE_URL` at hosted PostgreSQL with TLS required, set
+   `SUPABASE_URL`, leave `SUPABASE_JWT_SECRET` unset so hosted JWKS is used, and
+   set `NODE_ENV=production`.
+5. Route public `/api/*` traffic to the API and monitor `/health`. Configure
+   `CORS_ORIGINS` if the API is also exposed on a different browser origin.
+
+For a persistent Node service, use the direct Supabase connection when the host
+supports IPv6, or the session pooler when it needs IPv4. Store the connection
+string and database password only in the API host's secret manager.
+
+### Authentication
+
+1. Set the Supabase Auth Site URL to `https://laundrylo.com` and allow only the
+   exact production redirect URLs used by the sign-in and password-reset flow.
+   Keep the localhost redirect on the local project, not the production project.
+2. Enable email/password authentication and configure production SMTP before
+   relying on verification or password-reset email delivery.
+3. For Google sign-in, create a Web OAuth client, add
+   `https://laundrylo.com` as an authorised JavaScript origin, add the callback
+   URL shown by Supabase as an authorised redirect URI, then store the client ID
+   and secret in the Supabase Google provider settings.
+4. Expose only the Supabase project URL and publishable key to the browser. Keep
+   the database password, provider secret and any service-role key server-side.
+5. Verify email sign-up, password reset, Google sign-in, token refresh and
+   sign-out on the production origin. Then call one API route with the access
+   token and confirm the API accepts its issuer and audience.
+
+### Production routing
+
+The API proxy must run before the SPA fallback. A Netlify configuration can use
+this ordering (replace the API hostname):
+
+```text
+/api/*  https://api.example.com/api/:splat  200
+/*      /index.html                          200
+```
+
+The `/api` prefix is deliberately preserved because the server routes live
+under `/api/v1`.
+
+## Documentation
+
+Start with the [documentation index](docs/README.md). The PRD defines the
+product, the architecture document describes the implemented system and gaps,
+the API contract separates live routes from planned writes, and the schema
+documents PostgreSQL and RLS.
+
+The experimental wash-cycle journey remains available at `/journey` by direct
+URL. It is intentionally not linked from the product navigation; its design and
+motion decisions are preserved in [docs/journey.md](docs/journey.md).
