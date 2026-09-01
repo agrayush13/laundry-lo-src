@@ -16,15 +16,22 @@ export const PROFILE_COPY = {
     edit: 'Edit',
     cancel: 'Cancel',
     save: 'Save Changes',
+    saving: 'Saving...',
+    emailConfirmation:
+        'Check both your current and new inboxes to confirm the email address change.',
     addAddress: 'Add New',
     noAddresses: 'No saved addresses yet.',
     comingSoon: 'Coming soon',
     backToProfile: 'Back to profile',
     addAddressTitle: 'Add an address',
+    editAddressTitle: 'Edit address',
     addAddressSubtitle: 'Saved addresses appear as options when you check out.',
     labelField: 'Label',
     labelPlaceholder: 'e.g. Home',
     saveAddress: 'Save address',
+    updateAddress: 'Update address',
+    savingAddress: 'Saving...',
+    saveAddressError: "We couldn't save that address. Try again.",
     labelRequired: 'Name this address, so you can pick it at checkout.',
 } as const;
 
