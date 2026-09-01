@@ -1,5 +1,7 @@
 import '@testing-library/jest-dom';
+import { setAuthAccessToken } from './services/authToken';
 import { installApiFixture } from './__mocks__/apiFixtures';
+import { fakeAuthService } from './__mocks__/authService';
 
 // happy-dom has no layout engine, so its IntersectionObserver never fires and
 // anything gated on visibility would stay unmounted for the whole suite. Report
@@ -39,6 +41,8 @@ vi.mock('./motion/spine', () => ({
 // start from a clean slate or state leaks between them.
 beforeEach(() => {
     window.localStorage.clear();
+    fakeAuthService.reset();
+    setAuthAccessToken(null);
 
     // Partners, catalogues and slots come from the API now. The fixture serves
     // the same demo set as the database seed, so the journeys these tests drive

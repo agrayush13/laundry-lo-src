@@ -2,22 +2,27 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { MOCK_USER } from '../data/user';
-import { STORAGE_KEYS } from '../config/commonConfig';
 import { AuthProvider } from '../context/AuthContext';
 import { CartProvider } from '../context/CartContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import AppRoutes from '../AppRoutes';
+import { fakeAuthService } from './authService';
 
-/** Starts an integration test with the same mock account the sign-in form creates. */
+/** Starts an integration test with the same account the fake auth provider creates. */
 export const authenticateTestUser = () => {
-    window.localStorage.setItem(STORAGE_KEYS.user, JSON.stringify({ version: 1, user: MOCK_USER }));
+    fakeAuthService.authenticate(MOCK_USER);
+};
+
+/** Starts an integration test as a user who arrived through a recovery link. */
+export const recoverTestUser = () => {
+    fakeAuthService.recover(MOCK_USER);
 };
 
 /** Mounts the whole app at `path` with every provider the routes expect. */
 export const renderApp = (path = '/') =>
     render(
         <ThemeProvider>
-            <AuthProvider>
+            <AuthProvider service={fakeAuthService}>
                 <CartProvider>
                     <MemoryRouter initialEntries={[path]}>
                         <AppRoutes />
