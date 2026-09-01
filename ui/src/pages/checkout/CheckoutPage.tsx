@@ -31,6 +31,8 @@ const CheckoutPage: React.FC = () => {
         pickup,
         delivery,
         errors,
+        isSubmitting,
+        submitError,
         isEmpty,
         isPartnerClosed,
         selectAddress,
@@ -203,15 +205,16 @@ const CheckoutPage: React.FC = () => {
                               ? 'partnerClosed'
                               : undefined
                     }
-                    disabled={live.isLoading || Boolean(live.error)}
-                    onClick={confirm}
+                    disabled={live.isLoading || Boolean(live.error) || isSubmitting}
+                    onClick={() => void confirm()}
                 >
-                    {CHECKOUT_COPY.confirm}
+                    {isSubmitting ? CHECKOUT_COPY.confirming : CHECKOUT_COPY.confirm}
                     <Icon
                         name="arrow-right"
                         size={ICON_SIZE.md}
                     />
                 </button>
+                {submitError && <p role="alert">{submitError}</p>}
             </div>
         </div>
     );

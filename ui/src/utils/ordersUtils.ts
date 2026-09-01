@@ -9,8 +9,8 @@ import { formatEventTime } from './datesUtils';
  * customer reads out on the phone, and is allowed to be short and friendly
  * precisely because nothing is fetched by it.
  *
- * Minted here only until `POST /orders` exists; the server owns both then, and
- * `orders.id` / `orders.reference` are already separate columns waiting for it.
+ * Minted only by the isolated browser-test auth adapter. Production receives
+ * both values from `POST /orders`.
  */
 export interface OrderIdentifiers {
     orderId: string;

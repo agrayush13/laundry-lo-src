@@ -8,6 +8,8 @@ export const CART_COPY = {
     browse: 'Browse laundry services',
     summaryTitle: 'Order Summary',
     subtotal: 'Subtotal',
+    membership: 'Plus membership',
+    discount: 'Plus discount',
     delivery: 'Pickup & Delivery',
     deliveryFree: 'Free',
     taxes: 'Taxes',
@@ -44,6 +46,6 @@ export const PLUS_COPY = {
     cartLabel: 'LaundryLo Plus',
     cartSublabel: 'Monthly membership',
     remove: 'Remove LaundryLo Plus',
-    needsServices: 'Add laundry services to place this order.',
+    needsServices: 'Add laundry services to activate Plus with your first order.',
     browse: 'Browse laundry services',
 } as const;

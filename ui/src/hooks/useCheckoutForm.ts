@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Address, EMPTY_SLOT, SlotSelection, emptyAddress } from '../models/bookingModels';
+import { ApiError } from '../services/apiClient';
+import { createAddress } from '../services/customerServices';
+import { createOrder } from '../services/orderServices';
 import { getPartner, getPartnerSlots } from '../services/partnerServices';
 import {
     CHECKOUT_ADDRESS_ID_PREFIX,
@@ -78,6 +81,9 @@ export const useCheckoutForm = () => {
     const [pickup, setPickupSlot] = useState<SlotSelection>(EMPTY_SLOT);
     const [delivery, setDeliverySlot] = useState<SlotSelection>(EMPTY_SLOT);
     const [errors, setErrors] = useState<Partial<Record<CheckoutField, string>>>({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const idempotencyKey = useRef(crypto.randomUUID());
 
     const selectedSaved = savedAddresses.find((address) => address.id === selectedAddressId);
     const address = selectedSaved ?? draftAddress;
@@ -132,6 +138,8 @@ export const useCheckoutForm = () => {
         pickup,
         delivery,
         errors,
+        isSubmitting,
+        submitError,
         isEmpty: cart.lines.length === 0 || partner === null,
         selectAddress: (id: string) => {
             setSelectedAddressId(id);
@@ -161,8 +169,9 @@ export const useCheckoutForm = () => {
             clearError('delivery');
             clearError('deliveryBeforePickup');
         },
-        confirm: () => {
+        confirm: async () => {
             const problems = findProblems();
+            setSubmitError(null);
 
             // Rather than sit disabled, the button explains what is missing and
             // takes the customer to it.
@@ -174,10 +183,56 @@ export const useCheckoutForm = () => {
                 return;
             }
 
-            navigate(ROUTES.orderConfirmed, {
-                replace: true,
-                state: createOrderIdentifiers(),
-            });
+            if (!cart.isApiBacked) {
+                navigate(ROUTES.orderConfirmed, {
+                    replace: true,
+                    state: createOrderIdentifiers(),
+                });
+                return;
+            }
+
+            if (!cart.cartId || cart.syncError) {
+                setSubmitError(
+                    cart.syncError ??
+                        "Your cart hasn't finished syncing. Wait a moment and try again."
+                );
+                return;
+            }
+
+            setIsSubmitting(true);
+            try {
+                const addressId = selectedSaved
+                    ? selectedSaved.id
+                    : (
+                          await createAddress({
+                              ...address,
+                              label: 'Other',
+                              isDefault: false,
+                          })
+                      ).id;
+                const order = await createOrder(
+                    {
+                        cartId: cart.cartId,
+                        addressId,
+                        pickupSlotId: pickup.slotId,
+                        deliverySlotId: delivery.slotId,
+                        paymentMethod: 'cash_on_pickup',
+                    },
+                    idempotencyKey.current
+                );
+                navigate(ROUTES.orderConfirmed, {
+                    replace: true,
+                    state: { orderId: order.id, orderReference: order.reference },
+                });
+            } catch (error) {
+                setSubmitError(
+                    error instanceof ApiError
+                        ? error.message
+                        : "We couldn't place your order. Try again."
+                );
+            } finally {
+                setIsSubmitting(false);
+            }
         },
     };
 };
