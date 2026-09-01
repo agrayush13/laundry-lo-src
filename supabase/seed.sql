@@ -9,7 +9,8 @@
 -- entire affected graph so adding a new foreign key makes this fail visibly
 -- rather than letting CASCADE erase a table nobody knew was in scope.
 truncate table public.order_events, public.order_addresses, public.order_items,
-               public.reviews, public.orders, public.cart_items, public.carts,
+               public.reviews, public.orders, public.memberships,
+               public.cart_items, public.carts,
                public.slots, public.catalog_items, public.catalog_categories,
                public.partner_tags, public.partner_hours, public.partners,
                public.pincode_centroids restart identity;
