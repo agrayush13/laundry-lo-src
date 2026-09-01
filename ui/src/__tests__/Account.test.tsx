@@ -2,7 +2,8 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { STORAGE_KEYS } from '../config/commonConfig';
 import { upcomingDates } from '../utils/datesUtils';
-import { renderApp } from '../__mocks__/renderWithProviders';
+import { fakeAuthService } from '../__mocks__/authService';
+import { authenticateTestUser, recoverTestUser, renderApp } from '../__mocks__/renderWithProviders';
 import { pickSlot } from '../__mocks__/scheduleQueries';
 
 const signIn = async () => {
@@ -17,14 +18,14 @@ const [today, tomorrow] = upcomingDates(2);
 beforeEach(() => window.localStorage.clear());
 
 describe('auth', () => {
-    it('discards an incompatible stored user instead of crashing the app', async () => {
-        window.localStorage.setItem(STORAGE_KEYS.user, JSON.stringify({ fullName: 'Legacy User' }));
+    it('does not trust a legacy local user record as an authenticated session', async () => {
+        window.localStorage.setItem('laundrylo.user', JSON.stringify({ fullName: 'Legacy User' }));
         renderApp();
 
         expect(await screen.findByRole('link', { name: /sign in/i })).toBeInTheDocument();
     });
 
-    it('keeps the in-memory session working when storage rejects writes', async () => {
+    it('keeps the Supabase-managed session working when app storage rejects writes', async () => {
         const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
             throw new DOMException('Storage unavailable', 'QuotaExceededError');
         });
@@ -57,17 +58,21 @@ describe('auth', () => {
         expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull();
     });
 
-    it('keeps the phone number used for phone sign-in', async () => {
-        const user = userEvent.setup();
+    it('does not show sign-in or sign-up forms to an existing session', async () => {
+        authenticateTestUser();
         renderApp('/signin');
 
-        await user.click(await screen.findByRole('tab', { name: 'Phone' }));
-        await user.type(screen.getByLabelText('Phone Number'), '9988776655');
-        await user.type(screen.getByLabelText('Password'), 'hunter2');
-        await user.click(screen.getByRole('button', { name: 'Sign In' }));
-        await user.click(await screen.findByRole('link', { name: /ayush/i }));
+        expect(await screen.findByText('How It Works')).toBeInTheDocument();
+        expect(screen.queryByRole('heading', { name: 'Welcome back' })).toBeNull();
+    });
 
-        expect(await screen.findByText('9988776655')).toBeInTheDocument();
+    it('starts Google OAuth and preserves the protected destination', async () => {
+        const user = userEvent.setup();
+        renderApp('/bookings');
+
+        await user.click(await screen.findByRole('button', { name: 'Continue with Google' }));
+
+        expect(fakeAuthService.googleRedirectTo).toContain('/auth/callback?next=%2Fbookings');
     });
 
     it('sends a signed-out visitor to sign in, then back where they were headed', async () => {
@@ -86,10 +91,81 @@ describe('auth', () => {
         await user.type(await screen.findByLabelText('Full Name'), 'Asha Menon');
         await user.type(screen.getByLabelText('Email'), 'asha@example.com');
         await user.type(screen.getByLabelText('Phone Number'), '9876500000');
-        await user.type(screen.getByLabelText('Password'), 'hunter2');
+        await user.type(screen.getByLabelText('Password'), 'hunter22');
         await user.click(screen.getByRole('button', { name: 'Create Account' }));
 
         expect(await screen.findByRole('link', { name: /asha/i })).toBeInTheDocument();
+    });
+
+    it('waits for email confirmation when Supabase does not issue a session', async () => {
+        const user = userEvent.setup();
+        fakeAuthService.confirmationRequired = true;
+        renderApp('/signup');
+
+        await user.type(await screen.findByLabelText('Full Name'), 'Asha Menon');
+        await user.type(screen.getByLabelText('Email'), 'asha@example.com');
+        await user.type(screen.getByLabelText('Phone Number'), '9876500000');
+        await user.type(screen.getByLabelText('Password'), 'hunter22');
+        await user.click(screen.getByRole('button', { name: 'Create Account' }));
+
+        expect(
+            await screen.findByRole('heading', { name: 'Confirm your email' })
+        ).toBeInTheDocument();
+        expect(screen.getByText(/asha@example.com/)).toBeInTheDocument();
+    });
+
+    it('requests a password reset without revealing whether the account exists', async () => {
+        const user = userEvent.setup();
+        renderApp('/forgot-password');
+
+        await user.type(await screen.findByLabelText('Email'), 'unknown@example.com');
+        await user.click(screen.getByRole('button', { name: 'Send reset link' }));
+
+        expect(
+            await screen.findByRole('heading', { name: 'Check your inbox' })
+        ).toBeInTheDocument();
+        expect(fakeAuthService.passwordReset).toEqual({
+            email: 'unknown@example.com',
+            redirectTo: 'http://localhost:3000/update-password',
+        });
+        expect(screen.getByText(/If an account exists/)).toBeInTheDocument();
+    });
+
+    it('validates and updates a recovered account password', async () => {
+        const user = userEvent.setup();
+        recoverTestUser();
+        renderApp('/update-password');
+
+        await user.type(await screen.findByLabelText('New Password'), 'newpass1');
+        await user.type(screen.getByLabelText('Confirm New Password'), 'newpass2');
+        await user.click(screen.getByRole('button', { name: 'Update password' }));
+        expect(screen.getByRole('alert')).toHaveTextContent('The passwords do not match.');
+
+        await user.clear(screen.getByLabelText('Confirm New Password'));
+        await user.type(screen.getByLabelText('Confirm New Password'), 'newpass1');
+        await user.click(screen.getByRole('button', { name: 'Update password' }));
+
+        expect(
+            await screen.findByRole('heading', { name: 'Password updated' })
+        ).toBeInTheDocument();
+        expect(fakeAuthService.updatedPassword).toBe('newpass1');
+    });
+
+    it('does not expose password update to an ordinary signed-in session', async () => {
+        authenticateTestUser();
+        renderApp('/update-password');
+
+        expect(
+            await screen.findByRole('heading', { name: 'That reset link is not valid' })
+        ).toBeInTheDocument();
+        expect(screen.queryByLabelText('New Password')).toBeNull();
+    });
+
+    it('completes an OAuth callback at the preserved protected destination', async () => {
+        authenticateTestUser();
+        renderApp('/auth/callback?next=%2Fbookings');
+
+        expect(await screen.findByRole('heading', { name: 'My Bookings' })).toBeInTheDocument();
     });
 
     it('returns a new account to the protected page it originally requested', async () => {
@@ -100,7 +176,7 @@ describe('auth', () => {
         await user.type(screen.getByLabelText('Full Name'), 'Asha Menon');
         await user.type(screen.getByLabelText('Email'), 'asha@example.com');
         await user.type(screen.getByLabelText('Phone Number'), '9876500000');
-        await user.type(screen.getByLabelText('Password'), 'hunter2');
+        await user.type(screen.getByLabelText('Password'), 'hunter22');
         await user.click(screen.getByRole('button', { name: 'Create Account' }));
 
         expect(await screen.findByRole('heading', { name: 'My Bookings' })).toBeInTheDocument();
@@ -117,9 +193,10 @@ describe('auth', () => {
 
 describe('profile', () => {
     const openProfile = async () => {
-        renderApp('/signin');
+        const app = renderApp('/signin');
         await signIn();
         await userEvent.setup().click(await screen.findByRole('link', { name: /ayush/i }));
+        return app;
     };
 
     it('edits personal information and persists it', async () => {
@@ -151,13 +228,20 @@ describe('profile', () => {
 
     it('toggles a notification preference', async () => {
         const user = userEvent.setup();
-        await openProfile();
+        const app = await openProfile();
 
         const emailToggle = await screen.findByRole('switch', { name: 'Email Notifications' });
         expect(emailToggle).toHaveAttribute('aria-checked', 'false');
 
         await user.click(emailToggle);
         expect(emailToggle).toHaveAttribute('aria-checked', 'true');
+
+        app.unmount();
+        renderApp('/profile');
+        expect(await screen.findByRole('switch', { name: 'Email Notifications' })).toHaveAttribute(
+            'aria-checked',
+            'true'
+        );
     });
 });
 
