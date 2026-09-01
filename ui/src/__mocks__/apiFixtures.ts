@@ -2,7 +2,9 @@ import { Page } from '../models/apiModels';
 import { CatalogCategory } from '../models/catalogModels';
 import { Partner, PartnerDetail } from '../models/partnerModels';
 import { Slot, SlotDay } from '../models/slotModels';
+import { ORDERS, getOrder } from '../data/orders';
 import { upcomingDates } from '../utils/datesUtils';
+import partnerFixtures from '../../../fixtures/partners.json';
 
 /**
  * A stand-in for the API, serving the same Bengaluru demo set as
@@ -30,100 +32,10 @@ interface Seed {
     isOpen: boolean;
     /** The per-partner multiplier the seed applies to one base rate card. */
     factor: number;
+    startingPriceAmount: number;
 }
 
-const SEEDS: Seed[] = [
-    {
-        id: '1001',
-        name: 'SparkleWash Express',
-        rating: 4.9,
-        reviewCount: 234,
-        line1: '12, MG Road',
-        line2: 'Sector 5',
-        pincode: '560103',
-        distanceMeters: 800,
-        tags: ['eco-friendly', 'free-pickup'],
-        services: ['wash-fold', 'wash-iron', 'dry-cleaning'],
-        turnaroundHours: 24,
-        isOpen: true,
-        factor: 1,
-    },
-    {
-        id: '1002',
-        name: 'CleanFold Laundry',
-        rating: 4.7,
-        reviewCount: 189,
-        line1: '45, Park Street',
-        line2: 'Block B',
-        pincode: '560103',
-        distanceMeters: 1200,
-        tags: ['budget-friendly'],
-        services: ['wash-fold', 'wash-iron'],
-        turnaroundHours: 48,
-        isOpen: true,
-        factor: 0.75,
-    },
-    {
-        id: '1003',
-        name: 'Royal Dry Cleaners',
-        rating: 4.8,
-        reviewCount: 312,
-        line1: '8, Civil Lines',
-        line2: 'Main Market',
-        pincode: '560102',
-        distanceMeters: 1500,
-        tags: ['premium', 'same-day'],
-        services: ['dry-cleaning', 'premium-care'],
-        turnaroundHours: 24,
-        isOpen: true,
-        factor: 1.2,
-    },
-    {
-        id: '1004',
-        name: 'FreshPress Studio',
-        rating: 4.6,
-        reviewCount: 98,
-        line1: '22, Station Road',
-        line2: '',
-        pincode: '560102',
-        distanceMeters: 2100,
-        tags: ['free-pickup', 'iron-fold'],
-        services: ['wash-fold', 'wash-iron'],
-        turnaroundHours: 36,
-        isOpen: false,
-        factor: 0.9,
-    },
-    {
-        id: '1005',
-        name: 'AquaClean Services',
-        rating: 4.5,
-        reviewCount: 156,
-        line1: '67, Green Avenue',
-        line2: 'Phase 2',
-        pincode: '560103',
-        distanceMeters: 2800,
-        tags: ['eco-friendly', 'premium'],
-        services: ['wash-fold', 'dry-cleaning', 'premium-care'],
-        turnaroundHours: 24,
-        isOpen: true,
-        factor: 1.25,
-    },
-    {
-        id: '1006',
-        name: 'QuickWash Hub',
-        rating: 4.4,
-        reviewCount: 73,
-        line1: '101, Industrial Area',
-        line2: '',
-        pincode: '560104',
-        distanceMeters: 3200,
-        tags: ['budget-friendly', 'bulk-discount'],
-        services: ['wash-fold'],
-        turnaroundHours: 48,
-        isOpen: true,
-        factor: 0.6,
-    },
-];
+const SEEDS: Seed[] = partnerFixtures;
 
 const BASE_CATALOG: Record<string, { name: string; items: [string, string, number, string][] }> = {
     'wash-fold': {
@@ -189,9 +101,16 @@ const startingPrice = (seed: Seed) => {
         category.items.map((item) => item.price.amount)
     );
     // Derived from the catalogue, exactly as the server derives it.
-    return prices.length === 0
-        ? null
-        : { amount: Math.min(...prices), currency: 'INR' as const, unit: 'piece' as const };
+    if (prices.length === 0) return null;
+
+    const amount = Math.min(...prices);
+    if (amount !== seed.startingPriceAmount) {
+        throw new Error(
+            `Partner fixture ${seed.id} advertises ${seed.startingPriceAmount} but its catalogue starts at ${amount}.`
+        );
+    }
+
+    return { amount, currency: 'INR' as const, unit: 'piece' as const };
 };
 
 const toPartner = (seed: Seed, withDistance: boolean): Partner => ({
@@ -312,6 +231,16 @@ export const fixtureFetch = (input: RequestInfo | URL): Response => {
 
     if (path === '/partners') {
         return listResponse(url);
+    }
+
+    if (path === '/orders') {
+        return json({ data: ORDERS, nextCursor: null });
+    }
+
+    const orderMatch = /^\/orders\/([^/]+)$/.exec(path);
+    if (orderMatch) {
+        const order = getOrder(decodeURIComponent(orderMatch[1]!));
+        return order ? json(order) : errorResponse('NOT_FOUND', 'That order was not found.', 404);
     }
 
     const match = /^\/partners\/([^/]+)(\/catalog|\/slots)?$/.exec(path);

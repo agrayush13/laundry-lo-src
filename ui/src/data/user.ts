@@ -3,9 +3,11 @@ import { Address } from '../models/bookingModels';
 export interface SavedAddress extends Address {
     id: string;
     label: string;
+    isDefault?: boolean;
 }
 
 export interface User {
+    id: string;
     fullName: string;
     email: string;
     phone: string;
@@ -14,16 +16,9 @@ export interface User {
     preferences: { sms: boolean; email: boolean };
 }
 
-/**
- * Stand-in for app-level profile data until the `/me` route is enabled.
- *
- * The addresses are Bengaluru ones, in pincodes the seed actually serves. They
- * used to be in Gurugram, 2,000 km from every partner, which meant the demo
- * modelled a laundry collecting from another state and nothing objected -
- * serviceability is not checked anywhere yet, so the mock data was the only
- * thing saying whether an order made sense.
- */
+/** Test-only identity data. Production profiles and addresses come from the API. */
 export const MOCK_USER: User = {
+    id: '00000000-0000-4000-8000-000000000001',
     fullName: 'Ayush Agrawal',
     email: 'ayush.agrawal@gmail.com',
     phone: '+91 98765 43210',

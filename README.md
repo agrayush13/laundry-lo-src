@@ -29,24 +29,27 @@ bookings and order tracking on both desktop and mobile.
 - Responsive marketplace, partner listing, filters and sorting
 - Per-partner catalogues and a one-partner cart
 - Pickup and delivery slot selection
-- Profile, bookings, tracking and Plus membership demo screens
+- Persistent profiles and saved addresses, server-backed carts and order tracking
+- Plus membership selection with server-computed pricing and discounts
+- Supabase email/password authentication, email confirmation, password recovery,
+  Google OAuth with PKCE, session restoration and current-session sign-out
 - Installable PWA shell with offline caching for safe public reads
-- Hono read API for partners, catalogues and slots
+- Hono API for partners, catalogues, slots, profiles, addresses, carts, orders and membership
 - PostgreSQL migrations, seed data, Row Level Security and API integration tests
 - CI gates for frontend and backend types, lint, tests and production builds
 
-Partner reads and slot availability come from PostgreSQL through the API. The
-same production topology supports Supabase Auth and the authenticated write
-contract for profiles, addresses, carts, orders and memberships. The current
-repository release implements the read routes; the write-route rollout is
-tracked explicitly in [docs/api-contract.md](docs/api-contract.md).
+Marketplace data, account resources, cart totals and orders come from PostgreSQL
+through the API. Authentication runs through Supabase Auth, and signed-in API
+calls carry the current access token for server verification. Order placement
+reprices the cart, reserves both slots, snapshots the address and catalogue,
+activates a selected membership and clears the cart in one transaction.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     Browser[Browser] --> UI[React SPA]
-    UI -->|GET /api/v1| API[Hono API]
+    UI -->|/api/v1 reads and writes| API[Hono API]
     API -->|SQL in anon/authenticated role| DB[(Supabase PostgreSQL)]
     UI -->|sign in and refresh| Auth[Supabase Auth]
     Auth -->|access JWT| UI
@@ -59,7 +62,7 @@ to the API without rewriting the path. The API verifies Supabase access tokens
 when present and executes database work in the matching Postgres RLS role.
 
 See [docs/architecture.md](docs/architecture.md) for the detailed design and
-[docs/api-contract.md](docs/api-contract.md) for implemented and planned routes.
+[docs/api-contract.md](docs/api-contract.md) for the implemented route contract.
 
 ## Stack
 
@@ -67,11 +70,11 @@ See [docs/architecture.md](docs/architecture.md) for the detailed design and
 | -------------- | -------------------------------------------------------------------- |
 | Frontend       | React 18, TypeScript 5.6, React Router 7, Webpack 5                  |
 | UI             | SCSS Modules, Lucide icons, GSAP + Lenis on `/journey`               |
-| Client state   | React context and versioned `localStorage`                           |
+| Client state   | React context, guest-cart `localStorage`, server cart after sign-in  |
 | PWA            | Workbox service worker and web app manifest                          |
 | API            | Node.js 22, Hono 4, TypeScript, Zod, `pg`, `jose`                    |
 | Data           | PostgreSQL 17, Supabase migrations and seed data                     |
-| Authentication | Supabase Auth, OAuth, rotating JWKS and API JWT verification         |
+| Authentication | Supabase Auth JS, email/password, Google OAuth and JWT verification  |
 | Quality        | ESLint, Stylelint, Prettier, Vitest, Testing Library, GitHub Actions |
 | Hosting        | Netlify frontend behind Cloudflare, Node API, hosted Supabase        |
 
@@ -105,7 +108,9 @@ npm run db:reset
 
 This starts the local Supabase stack, applies every migration and loads the demo
 data. `npm run db:status` prints the local service URLs and keys. Supabase Studio
-is available at [http://localhost:54323](http://localhost:54323).
+is available at [http://localhost:54323](http://localhost:54323), and local
+confirmation and recovery emails appear in Mailpit at
+[http://localhost:54324](http://localhost:54324).
 
 If Docker is unavailable, use the plain-Postgres fallback in
 [supabase/local/README.md](supabase/local/README.md).
@@ -132,12 +137,21 @@ In a third terminal:
 ```bash
 cd ui
 npm ci
+cp .env.example .env
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The development server
-proxies `/api` to the backend, so the browser needs no frontend environment
-variable and does not need a separate CORS configuration.
+Paste the local project URL and publishable key from `npm run db:status` into
+`ui/.env`, then open [http://localhost:3000](http://localhost:3000). The
+development server proxies `/api` to the backend, so it does not need an API
+base URL or separate CORS configuration.
+
+Email/password auth works entirely against the local stack. To test Google
+locally, copy the repository-root `.env.example` to `.env`, add a Google Web
+OAuth client ID and secret, and set `auth.external.google.enabled = true` in
+`supabase/config.toml`. Register `http://localhost:3000` as an authorised
+JavaScript origin and `http://127.0.0.1:54321/auth/v1/callback` as an authorised
+redirect URI, then restart the Supabase stack.
 
 ## Checks
 
@@ -169,8 +183,9 @@ backend jobs; the backend job creates a clean PostgreSQL 17 database first.
 ### Frontend
 
 Build from `ui/` with `npm ci && npm run build` and publish `ui/dist`. The build
-includes the SPA `_redirects` rule. Serve `service-worker.js` with revalidation
-rather than a long immutable cache policy, and keep generated source maps out of
+requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`; both are browser-safe
+project settings. It includes the SPA `_redirects` rule and a `_headers` rule
+that forces `service-worker.js` revalidation. Keep generated source maps out of
 the public directory.
 
 ### Backend and PostgreSQL
@@ -201,15 +216,18 @@ string and database password only in the API host's secret manager.
 
 ### Authentication
 
-1. Set the Supabase Auth Site URL to `https://laundrylo.com` and allow only the
-   exact production redirect URLs used by the sign-in and password-reset flow.
-   Keep the localhost redirect on the local project, not the production project.
-2. Enable email/password authentication and configure production SMTP before
-   relying on verification or password-reset email delivery.
-3. For Google sign-in, create a Web OAuth client, add
-   `https://laundrylo.com` as an authorised JavaScript origin, add the callback
-   URL shown by Supabase as an authorised redirect URI, then store the client ID
-   and secret in the Supabase Google provider settings.
+1. Set the Supabase Auth Site URL to `https://laundrylo.com`. Add
+   `https://laundrylo.com/auth/callback` and
+   `https://laundrylo.com/update-password` to the redirect allow list. Keep
+   localhost redirects on the local project, not the production project.
+2. Enable email/password authentication, email confirmation and secure password
+   changes. Configure production SMTP before relying on verification or
+   password-reset email delivery.
+3. For Google sign-in, create a Web OAuth client and add
+   `https://laundrylo.com` as an authorised JavaScript origin. Add
+   `https://<project-ref>.supabase.co/auth/v1/callback` as an authorised redirect
+   URI, then store the client ID and secret in the Supabase Google provider
+   settings and enable the provider.
 4. Expose only the Supabase project URL and publishable key to the browser. Keep
    the database password, provider secret and any service-role key server-side.
 5. Verify email sign-up, password reset, Google sign-in, token refresh and
@@ -233,8 +251,8 @@ under `/api/v1`.
 
 Start with the [documentation index](docs/README.md). The PRD defines the
 product, the architecture document describes the implemented system and gaps,
-the API contract separates live routes from planned writes, and the schema
-documents PostgreSQL and RLS.
+the API contract documents the live routes, and the schema documents PostgreSQL
+and RLS.
 
 The experimental wash-cycle journey remains available at `/journey` by direct
 URL. It is intentionally not linked from the product navigation; its design and

@@ -28,3 +28,21 @@ export const get = async (path: string, headers: Record<string, string> = {}) =>
     const body: unknown = await response.json();
     return { status: response.status, body };
 };
+
+export const request = async (
+    method: string,
+    path: string,
+    body?: unknown,
+    headers: Record<string, string> = {}
+) => {
+    const response = await app.request(`http://localhost${path}`, {
+        method,
+        headers: {
+            ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+            ...headers,
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    const responseBody: unknown = response.status === 204 ? null : await response.json();
+    return { status: response.status, body: responseBody };
+};

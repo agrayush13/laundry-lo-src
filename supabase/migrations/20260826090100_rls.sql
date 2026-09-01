@@ -119,9 +119,9 @@ create policy slots_write_own on public.slots
 create policy orders_read on public.orders
     for select to authenticated
     using (user_id = auth.uid() or public.owns_partner(partner_id));
--- There is deliberately no insert policy yet: order placement is not built.
--- Its transaction must atomically reprice the cart and reserve both slots, then
--- use an explicitly privileged database path rather than an accidental bypass.
+-- There is deliberately no direct insert policy. Order placement goes through
+-- the narrow place_order security-definer function added by the customer-write
+-- migration, which reprices the cart and reserves both slots atomically.
 create policy orders_update_partner on public.orders
     for update to authenticated using (public.owns_partner(partner_id))
     with check (public.owns_partner(partner_id));

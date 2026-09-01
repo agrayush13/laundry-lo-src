@@ -9,7 +9,6 @@ import OrderTotals from '../../common-ui/order-totals/OrderTotals';
 import QuantityStepper from '../../common-ui/quantity-stepper/QuantityStepper';
 import { ICON_SIZE } from '../../config/brandConfig';
 import { CART_COPY, PLUS_COPY } from '../../config/cartConfig';
-import { MEMBERSHIP_SECTION } from '../../config/membershipConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { useCheckout } from '../../hooks/useCheckout';
 import { multiplyMoney } from '../../models/moneyModels';
@@ -21,6 +20,8 @@ const CartPage: React.FC = () => {
         lines,
         itemCount,
         subtotal,
+        membershipFee,
+        discount,
         taxes,
         total,
         isEmpty,
@@ -30,6 +31,7 @@ const CartPage: React.FC = () => {
         setPlus,
         setQuantity,
         clear,
+        syncError,
         placeOrder,
     } = useCheckout();
 
@@ -136,7 +138,7 @@ const CartPage: React.FC = () => {
                                 <p className={styles.cartLinePrice}>{PLUS_COPY.cartSublabel}</p>
                             </div>
                             <p className={styles.cartLineAmount}>
-                                <Money value={MEMBERSHIP_SECTION.card.price} />
+                                <Money value={membershipFee} />
                             </p>
                             <button
                                 className={styles.cartLineRemove}
@@ -157,9 +159,13 @@ const CartPage: React.FC = () => {
                     <h2 className={styles.cartSummaryTitle}>{CART_COPY.summaryTitle}</h2>
                     <OrderTotals
                         subtotal={subtotal}
+                        membership={membershipFee}
+                        discount={discount}
                         taxes={taxes}
                         total={total}
                     />
+
+                    {syncError && <p role="alert">{syncError}</p>}
 
                     <button
                         className={`button button--primary ${styles.cartPlace}`}

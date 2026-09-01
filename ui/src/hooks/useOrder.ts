@@ -1,8 +1,13 @@
 import { useParams } from 'react-router-dom';
-import { getOrder } from '../data/orders';
+import { getOrder } from '../services/customerServices';
+import { useAsync } from './useAsync';
 
-/** Looks up the order named in the route. */
+/** Loads only the signed-in customer's order named in the route. */
 export const useOrder = () => {
     const { orderId } = useParams();
-    return orderId ? getOrder(orderId) : undefined;
+    return useAsync(
+        (signal) =>
+            orderId ? getOrder(orderId, signal) : Promise.reject(new Error('Missing order id')),
+        [orderId]
+    );
 };

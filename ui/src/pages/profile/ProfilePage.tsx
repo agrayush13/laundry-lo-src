@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Icon from '../../common-ui/icons/Icon';
 import { ICON_SIZE } from '../../config/brandConfig';
-import { COMMON_COPY } from '../../config/commonConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { PREFERENCES, PROFILE_COPY, PROFILE_FIELDS } from '../../config/profileConfig';
 import { useAuth } from '../../context/AuthContext';
@@ -18,8 +17,18 @@ const ProfilePage: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const account = user as User; // ProtectedRoute guarantees a signed-in user
-    const { isEditing, draft, startEditing, cancel, updateDraft, save, togglePreference } =
-        useProfileEditor(account);
+    const {
+        isEditing,
+        isSaving,
+        error,
+        emailConfirmationRequired,
+        draft,
+        startEditing,
+        cancel,
+        updateDraft,
+        save,
+        togglePreference,
+    } = useProfileEditor(account);
 
     return (
         <div>
@@ -63,6 +72,7 @@ const ProfilePage: React.FC = () => {
                             type="button"
                             data-active={isEditing}
                             onClick={isEditing ? cancel : startEditing}
+                            disabled={isSaving}
                         >
                             <Icon
                                 name="pencil"
@@ -96,43 +106,74 @@ const ProfilePage: React.FC = () => {
                                         type={type ?? 'text'}
                                         value={draft[name]}
                                         onChange={(event) => updateDraft(name, event.target.value)}
+                                        disabled={isSaving}
                                         required
                                     />
                                 </p>
                             ))}
+                            {error && (
+                                <p
+                                    className={styles.profileMessage}
+                                    data-kind="error"
+                                    role="alert"
+                                >
+                                    {error}
+                                </p>
+                            )}
                             <div className={styles.profileFormActions}>
                                 <button
                                     className="button button--primary"
                                     type="submit"
+                                    disabled={isSaving}
                                 >
-                                    {PROFILE_COPY.save}
+                                    {isSaving ? PROFILE_COPY.saving : PROFILE_COPY.save}
                                 </button>
                                 <button
                                     className={`button ${styles.profileCancel}`}
                                     type="button"
                                     onClick={cancel}
+                                    disabled={isSaving}
                                 >
                                     {PROFILE_COPY.cancel}
                                 </button>
                             </div>
                         </form>
                     ) : (
-                        <dl className={styles.profileDetails}>
-                            {PROFILE_FIELDS.map(({ name, label, icon }) => (
-                                <div key={name}>
-                                    <dt>
-                                        {icon && (
-                                            <Icon
-                                                name={icon}
-                                                size={ICON_SIZE.sm}
-                                            />
-                                        )}
-                                        {label}
-                                    </dt>
-                                    <dd>{account[name]}</dd>
-                                </div>
-                            ))}
-                        </dl>
+                        <>
+                            {emailConfirmationRequired && (
+                                <p
+                                    className={styles.profileMessage}
+                                    role="status"
+                                >
+                                    {PROFILE_COPY.emailConfirmation}
+                                </p>
+                            )}
+                            {error && (
+                                <p
+                                    className={styles.profileMessage}
+                                    data-kind="error"
+                                    role="alert"
+                                >
+                                    {error}
+                                </p>
+                            )}
+                            <dl className={styles.profileDetails}>
+                                {PROFILE_FIELDS.map(({ name, label, icon }) => (
+                                    <div key={name}>
+                                        <dt>
+                                            {icon && (
+                                                <Icon
+                                                    name={icon}
+                                                    size={ICON_SIZE.sm}
+                                                />
+                                            )}
+                                            {label}
+                                        </dt>
+                                        <dd>{account[name]}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </>
                     )}
                 </section>
 
@@ -163,17 +204,15 @@ const ProfilePage: React.FC = () => {
                                             {formatAddress(savedAddress)}
                                         </p>
                                     </div>
-                                    <button
-                                        type="button"
+                                    <Link
+                                        to={ROUTES.editAddress(savedAddress.id)}
                                         aria-label={`Edit ${savedAddress.label} address`}
-                                        disabled
-                                        title={COMMON_COPY.comingSoon}
                                     >
                                         <Icon
                                             name="pencil"
                                             size={ICON_SIZE.sm}
                                         />
-                                    </button>
+                                    </Link>
                                 </li>
                             ))}
                         </ul>
@@ -201,7 +240,7 @@ const ProfilePage: React.FC = () => {
                                     role="switch"
                                     aria-checked={account.preferences[key]}
                                     aria-label={title}
-                                    onClick={() => togglePreference(key)}
+                                    onClick={() => void togglePreference(key)}
                                 >
                                     <span />
                                 </button>

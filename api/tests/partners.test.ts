@@ -1,6 +1,26 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { get, pool, requireDatabase } from './helpers.js';
 import type { Page, Partner, PartnerDetail } from '../src/models.js';
+
+interface PartnerFixture {
+    id: string;
+    name: string;
+    rating: number;
+    reviewCount: number;
+    line1: string;
+    line2: string;
+    pincode: string;
+    tags: string[];
+    services: string[];
+    turnaroundHours: number;
+    isOpen: boolean;
+    startingPriceAmount: number;
+}
+
+const partnerFixtures = JSON.parse(
+    readFileSync(new URL('../../fixtures/partners.json', import.meta.url), 'utf8')
+) as PartnerFixture[];
 
 beforeAll(requireDatabase);
 afterAll(async () => {
@@ -28,6 +48,40 @@ describe('GET /api/v1/partners', () => {
         expect(Number.isInteger(partner.startingPrice?.amount)).toBe(true);
         expect(partner.startingPrice?.currency).toBe('INR');
         expect(partner.startingPrice?.unit).toBe('piece');
+    });
+
+    it('keeps the UI fixture aligned with the database seed', async () => {
+        const { body } = await get('/api/v1/partners?limit=20');
+        const actual = new Map(
+            (body as Page<Partner>).data.map((partner) => [partner.id, partner])
+        );
+
+        expect([...actual.keys()].sort()).toEqual(partnerFixtures.map(({ id }) => id).sort());
+        for (const expected of partnerFixtures) {
+            const partner = actual.get(expected.id);
+            expect(partner).toMatchObject({
+                id: expected.id,
+                name: expected.name,
+                rating: expected.rating,
+                reviewCount: expected.reviewCount,
+                address: {
+                    line1: expected.line1,
+                    line2: expected.line2,
+                    city: 'Bengaluru',
+                    pincode: expected.pincode,
+                },
+                tags: [...expected.tags].sort(),
+                services: expect.arrayContaining(expected.services),
+                turnaroundHours: expected.turnaroundHours,
+                isOpen: expected.isOpen,
+                startingPrice: {
+                    amount: expected.startingPriceAmount,
+                    currency: 'INR',
+                    unit: 'piece',
+                },
+            });
+            expect([...(partner?.services ?? [])].sort()).toEqual([...expected.services].sort());
+        }
     });
 
     it('sorts by rating by default', async () => {

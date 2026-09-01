@@ -80,6 +80,7 @@ const totalsFor = (subtotal: Money): OrderTotals => {
     };
 };
 
+/** Browser-test fixtures. Production order screens load `/orders`. */
 export const ORDERS: Order[] = [
     {
         id: 'ord_01J8XR3K2WQ4',
@@ -174,4 +175,5 @@ export const ORDERS: Order[] = [
 export const itemCount = (order: Order) =>
     order.lines.reduce((sum, line) => sum + line.quantity, 0);
 
+/** Used only by the fixture API in browser tests. */
 export const getOrder = (id: string) => ORDERS.find((order) => order.id === id);

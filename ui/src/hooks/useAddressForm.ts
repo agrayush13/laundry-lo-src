@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Address, emptyAddress } from '../models/bookingModels';
-import { SavedAddress, User } from '../data/user';
+import { User } from '../data/user';
 import { VALIDATION_COPY } from '../config/bookingConfig';
 import { ROUTES } from '../config/navigationConfig';
 import { LABEL_FIELD_ID, PROFILE_COPY, SAVED_ADDRESS_ID_PREFIX } from '../config/profileConfig';
@@ -11,8 +11,6 @@ import { focusField } from '../utils/formUtils';
 
 /** `label` is this form's own; the rest are the shared address fields. */
 export type AddressFormField = 'label' | keyof Omit<Address, 'landmark'>;
-
-const toId = (label: string) => `${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`;
 
 /**
  * Collects a new saved address and appends it to the account.
@@ -37,18 +35,25 @@ const messageFor = (field: AddressFormField) =>
     field === 'label' ? PROFILE_COPY.labelRequired : VALIDATION_COPY[field];
 
 export const useAddressForm = () => {
-    const { user, updateUser } = useAuth();
+    const { user, addAddress, editAddress } = useAuth();
     const navigate = useNavigate();
+    const { addressId } = useParams();
     const account = user as User;
+    const existing = addressId
+        ? account.addresses.find((savedAddress) => savedAddress.id === addressId)
+        : undefined;
+    const isEditing = Boolean(addressId);
 
-    const [label, setLabel] = useState('');
+    const [label, setLabel] = useState(existing?.label ?? '');
     const [address, setAddress] = useState<Address>(() => ({
-        ...emptyAddress(''),
+        ...(existing ?? emptyAddress('')),
         // The account holder is the usual recipient, so prefill their details.
-        recipientName: account.fullName,
-        phone: account.phone,
+        recipientName: existing?.recipientName ?? account.fullName,
+        phone: existing?.phone ?? account.phone,
     }));
     const [errors, setErrors] = useState<Partial<Record<AddressFormField, string>>>({});
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const clearError = (field: AddressFormField) =>
         setErrors((current) => {
@@ -65,6 +70,10 @@ export const useAddressForm = () => {
         label,
         address,
         errors,
+        isSaving,
+        saveError,
+        isEditing,
+        isMissing: isEditing && !existing,
         setLabel: (value: string) => {
             setLabel(value);
             clearError('label');
@@ -73,8 +82,9 @@ export const useAddressForm = () => {
             setAddress((current) => ({ ...current, [field]: value }));
             clearError(field as AddressFormField);
         },
-        save: (event: React.FormEvent) => {
+        save: async (event: React.FormEvent) => {
             event.preventDefault();
+            setSaveError(null);
             const problems = findProblems(label, address);
 
             if (problems.length > 0) {
@@ -89,9 +99,20 @@ export const useAddressForm = () => {
                 return;
             }
 
-            const saved: SavedAddress = { ...address, id: toId(label), label: label.trim() };
-            updateUser({ addresses: [...account.addresses, saved] });
-            navigate(ROUTES.profile);
+            setIsSaving(true);
+            try {
+                const changes = { ...address, label: label.trim() };
+                if (existing) {
+                    await editAddress(existing.id, changes);
+                } else {
+                    await addAddress({ ...changes, isDefault: false });
+                }
+                navigate(ROUTES.profile);
+            } catch {
+                setSaveError(PROFILE_COPY.saveAddressError);
+            } finally {
+                setIsSaving(false);
+            }
         },
         cancel: () => navigate(ROUTES.profile),
     };

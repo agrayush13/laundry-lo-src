@@ -1,6 +1,6 @@
 # laundrylo - product requirements
 
-Status: **living document**. Reviewed against the application on 2026-08-31.
+Status: **living document**. Reviewed against the application on 2026-09-01.
 
 ---
 
@@ -98,11 +98,12 @@ per-item pricing actually gives the customer (see
 
 - **Deployed full-stack foundation:** React SPA, Hono API, Supabase Auth and
   PostgreSQL with migrations and Row Level Security.
-- **API source of truth:** partner search, partner details, per-partner
-  catalogues and slot availability.
-- **Staged authenticated writes:** profiles, addresses, server cart, order
-  placement/history and membership. The schema and contract are present; their
-  demo screens keep fixtures until each route is enabled.
+- **Production auth flows:** email registration and confirmation, password
+  sign-in and recovery, Google OAuth, session restoration, token refresh and
+  sign-out.
+- **API source of truth:** partner search/details, per-partner catalogues, slot
+  availability, profiles, addresses, server carts and totals, order
+  placement/history, and membership status.
 
 ## 7. Product rules
 
@@ -111,13 +112,14 @@ per-item pricing actually gives the customer (see
   hours, so the client cannot invent slot lists. A full slot must be
   unselectable, and a slot that fills between selection and submit must fail
   loudly (`409 SLOT_UNAVAILABLE`).
-- **Delivery cannot precede pickup.** Enforced in the client today by disabling
-  invalid dates and slots, and by clearing a delivery selection that a changed
-  pickup would invalidate.
+- **Delivery cannot precede pickup.** The client disables invalid choices and
+  clears a delivery selection that a changed pickup invalidates; the order
+  transaction verifies the slot ordering again.
 - **A closed partner cannot take orders.** `isOpen` is server-owned so partner
   operations can toggle it manually or automate it from opening hours.
-- **Money is never computed on the client.** Tax, delivery and membership
-  discounts are server-calculated and returned.
+- **Checkout money is server-owned.** A signed-out guest cart can display a
+  local preview from catalogue prices, but tax, delivery, discounts and the
+  final total are recalculated and returned by the server before placement.
 - **Order ids are not guessable.** Customers see a friendly reference
   (`LL-2026-001`); the system uses an opaque id.
 
@@ -155,5 +157,6 @@ facts but keep separate navigation and presentation.
 - **Service vocabulary is shared.** Marketing cards and the journey use the same
   canonical service slugs; the API derives each partner's real starting price
   from its catalogue.
-- **Plus promises exactly three perks** (free pickup, 10% off, priority slots),
-  the same three the booking summary honours.
+- **Plus presents three plan benefits** (free pickup, 10% off, priority slots).
+  The discount is enforced in server totals; the operational meaning of free
+  pickup and priority capacity must be settled before taking paid memberships.

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import BackLink from '../../common-ui/back-link/BackLink';
 import Card from '../../common-ui/card/Card';
 import { ROUTES } from '../../config/navigationConfig';
@@ -13,8 +14,28 @@ import AddressFields from '../checkout/AddressFields';
 import styles from './addAddressPage.module.scss';
 
 const AddAddressPage: React.FC = () => {
-    const { label, address, errors, setLabel, updateAddress, save, cancel } = useAddressForm();
+    const {
+        label,
+        address,
+        errors,
+        isSaving,
+        saveError,
+        isEditing,
+        isMissing,
+        setLabel,
+        updateAddress,
+        save,
+        cancel,
+    } = useAddressForm();
     const labelErrorId = `${LABEL_FIELD_ID}-error`;
+
+    if (isMissing)
+        return (
+            <Navigate
+                to={ROUTES.profile}
+                replace
+            />
+        );
 
     return (
         <div className={styles.addAddress}>
@@ -24,7 +45,9 @@ const AddAddressPage: React.FC = () => {
                     to={ROUTES.profile}
                 />
 
-                <h1 className={styles.addAddressTitle}>{PROFILE_COPY.addAddressTitle}</h1>
+                <h1 className={styles.addAddressTitle}>
+                    {isEditing ? PROFILE_COPY.editAddressTitle : PROFILE_COPY.addAddressTitle}
+                </h1>
                 <p className={styles.addAddressSubtitle}>{PROFILE_COPY.addAddressSubtitle}</p>
 
                 <Card className={styles.addAddressCard}>
@@ -72,11 +95,17 @@ const AddAddressPage: React.FC = () => {
                         />
 
                         <div className={styles.addAddressActions}>
+                            {saveError && <p role="alert">{saveError}</p>}
                             <button
                                 className="button button--primary"
                                 type="submit"
+                                disabled={isSaving}
                             >
-                                {PROFILE_COPY.saveAddress}
+                                {isSaving
+                                    ? PROFILE_COPY.savingAddress
+                                    : isEditing
+                                      ? PROFILE_COPY.updateAddress
+                                      : PROFILE_COPY.saveAddress}
                             </button>
                             <button
                                 className={`button ${styles.addAddressCancel}`}

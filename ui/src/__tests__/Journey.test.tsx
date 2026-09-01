@@ -99,6 +99,7 @@ describe('the wash', () => {
         // rendering, so the spin ran with a drum that never turned and nothing
         // anywhere reported a problem.
         await screen.findByRole('region', { name: /the spin/i });
+        await screen.findByRole('region', { name: /the dry/i });
 
         SPIN_PARTS.forEach((part) => {
             expect(document.querySelector(`[data-spin="${part}"]`)).not.toBeNull();

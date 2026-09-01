@@ -1,32 +1,40 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ROUTES } from '../config/navigationConfig';
+import { authFailureMessage } from '../services/authServices';
 import { useAuth } from '../context/AuthContext';
+import { destinationFromState } from '../utils/authUtils';
 
-export type SignInMethod = 'email' | 'phone';
-
-/** Credential state for the mock sign-in, returning the user to their target. */
+/** Email/password sign-in, returning the user to their protected destination. */
 export const useSignInForm = () => {
     const { signIn } = useAuth();
     const navigate = useNavigate();
     const { state } = useLocation();
-    const redirectTo = (state as { from?: string } | null)?.from ?? ROUTES.home;
+    const redirectTo = destinationFromState(state);
 
-    const [method, setMethod] = useState<SignInMethod>('email');
-    const [identifier, setIdentifier] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     return {
-        method,
-        setMethod,
-        identifier,
-        setIdentifier,
+        email,
+        setEmail,
         password,
         setPassword,
-        submit: (event: React.FormEvent) => {
+        isSubmitting,
+        error,
+        submit: async (event: React.FormEvent) => {
             event.preventDefault();
-            signIn({ method, identifier });
-            navigate(redirectTo, { replace: true });
+            setError(null);
+            setIsSubmitting(true);
+            try {
+                await signIn({ email, password });
+                navigate(redirectTo, { replace: true });
+            } catch (submitError) {
+                setError(authFailureMessage(submitError));
+            } finally {
+                setIsSubmitting(false);
+            }
         },
     };
 };

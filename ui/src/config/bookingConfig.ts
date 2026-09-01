@@ -87,6 +87,7 @@ export const CHECKOUT_COPY = {
     selectDate: 'Select Date',
     selectSlot: 'Select Time Slot',
     confirm: 'Confirm Booking',
+    confirming: 'Placing order...',
 } as const;
 
 /** Shown beneath a field once the customer has tried to submit without it. */
@@ -106,9 +107,7 @@ export const VALIDATION_COPY = {
 
 export const CONFIRMATION_COPY = {
     title: 'Booking Confirmed!',
-    body:
-        'This demo shows how confirmation would look. No real order, pickup, payment ' +
-        'or SMS has been created.',
+    body: 'Your order is confirmed. Track every step from pickup through delivery.',
     orderPrefix: 'Order #',
     primary: 'Back to Home',
     secondary: 'Book Another Service',

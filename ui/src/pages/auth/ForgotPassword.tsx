@@ -12,7 +12,7 @@ const { forgotPassword: copy, fields } = AUTH_COPY;
 
 const ForgotPassword: React.FC = () => {
     const { state } = useLocation();
-    const { email, setEmail, isSent, submit } = useForgotPasswordForm();
+    const { email, setEmail, isSent, isSubmitting, error, submit } = useForgotPasswordForm();
 
     if (isSent) {
         return (
@@ -57,15 +57,26 @@ const ForgotPassword: React.FC = () => {
                         placeholder={fields.email.placeholder}
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
+                        disabled={isSubmitting}
                         required
                     />
                 </p>
 
+                {error && (
+                    <p
+                        className={styles.authError}
+                        role="alert"
+                    >
+                        {error}
+                    </p>
+                )}
+
                 <button
                     className={`button button--primary ${styles.authSubmit}`}
                     type="submit"
+                    disabled={isSubmitting}
                 >
-                    {copy.submit}
+                    {isSubmitting ? copy.submitting : copy.submit}
                 </button>
             </form>
 

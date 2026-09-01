@@ -1,8 +1,15 @@
 const fs = require('fs');
 const path = require('path');
+const { DefinePlugin } = require('webpack');
+const dotenv = require('dotenv');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { InjectManifest } = require('workbox-webpack-plugin');
+
+// Only the browser-safe Supabase URL and publishable key are injected. The
+// local file is optional so CI can build without credentials; auth attempts in
+// an unconfigured build fail with a user-facing configuration error.
+dotenv.config({ path: path.resolve(__dirname, '.env'), quiet: true });
 
 /**
  * The app uses client-side routing, so a static host must serve index.html for
@@ -25,6 +32,15 @@ class EmitHostRewrites {
                     compilation.emitAsset(
                         '_redirects',
                         new sources.RawSource('/*    /index.html    200\n')
+                    );
+                    // Netlify must revalidate the worker on every visit. Hashed
+                    // bundles stay immutable, but caching this stable filename
+                    // delays every future deployment.
+                    compilation.emitAsset(
+                        '_headers',
+                        new sources.RawSource(
+                            '/service-worker.js\n  Cache-Control: no-cache, max-age=0, must-revalidate\n'
+                        )
                     );
                 }
             );
@@ -154,6 +170,12 @@ module.exports = (env, argv) => {
             ],
         },
         plugins: [
+            new DefinePlugin({
+                __SUPABASE_URL__: JSON.stringify(process.env.SUPABASE_URL ?? ''),
+                __SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(
+                    process.env.SUPABASE_PUBLISHABLE_KEY ?? ''
+                ),
+            }),
             new EmitHostRewrites(),
             new EmitPublicAssets(),
             new HtmlWebpackPlugin({
@@ -177,7 +199,7 @@ module.exports = (env, argv) => {
                           swDest: 'service-worker.js',
                           // Source maps are emitted outside dist and must never
                           // be precached; nor should the host rewrite files.
-                          exclude: [/\.map$/, /^_redirects$/, /^og-image\.png$/],
+                          exclude: [/\.map$/, /^_(redirects|headers)$/, /^og-image\.png$/],
                           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
                       }),
                   ]
@@ -222,6 +244,15 @@ module.exports = (env, argv) => {
                     motion: {
                         test: /[\\/]node_modules[\\/](gsap|lenis)[\\/]/,
                         name: 'motion',
+                        chunks: 'async',
+                        priority: 25,
+                    },
+                    // Session restoration starts immediately, but it does not
+                    // need to delay the visible shell. Keep Supabase in the
+                    // async auth chunk created by authServices' dynamic import.
+                    auth: {
+                        test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+                        name: 'auth',
                         chunks: 'async',
                         priority: 25,
                     },

@@ -12,7 +12,28 @@ const { signUp: copy, divider, fields } = AUTH_COPY;
 
 const SignUp: React.FC = () => {
     const { state } = useLocation();
-    const { fields: values, setField, submit } = useSignUpForm();
+    const {
+        fields: values,
+        setField,
+        isSubmitting,
+        error,
+        confirmationEmail,
+        submit,
+    } = useSignUpForm();
+
+    if (confirmationEmail) {
+        return (
+            <AuthCard
+                title={copy.sentTitle}
+                subtitle={copy.sentBody.replace('{email}', confirmationEmail)}
+            >
+                <p className={styles.authSent}>{copy.sentNote}</p>
+                <p className={styles.authSwitch}>
+                    <Link to={ROUTES.signIn}>{copy.switchAction}</Link>
+                </p>
+            </AuthCard>
+        );
+    }
 
     return (
         <AuthCard
@@ -40,6 +61,7 @@ const SignUp: React.FC = () => {
                             placeholder={fields[name].placeholder}
                             value={values[name]}
                             onChange={(event) => setField(name, event.target.value)}
+                            disabled={isSubmitting}
                             required
                         />
                     </p>
@@ -51,13 +73,25 @@ const SignUp: React.FC = () => {
                     autoComplete="new-password"
                     value={values.password}
                     onChange={(value) => setField('password', value)}
+                    minLength={8}
+                    disabled={isSubmitting}
                 />
+
+                {error && (
+                    <p
+                        className={styles.authError}
+                        role="alert"
+                    >
+                        {error}
+                    </p>
+                )}
 
                 <button
                     className={`button button--primary ${styles.authSubmit}`}
                     type="submit"
+                    disabled={isSubmitting}
                 >
-                    {copy.submit}
+                    {isSubmitting ? copy.submitting : copy.submit}
                 </button>
             </form>
 

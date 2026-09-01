@@ -4,7 +4,7 @@
 | ------------------------------------ | ----------------------------------------------------------------- |
 | [prd.md](./prd.md)                   | What the full-stack product is, for whom, and what remains demo   |
 | [architecture.md](./architecture.md) | How the frontend, API, authentication and PostgreSQL fit together |
-| [api-contract.md](./api-contract.md) | Which HTTP routes exist and which write routes are planned        |
+| [api-contract.md](./api-contract.md) | The live HTTP routes and their wire contract                      |
 | [schema.md](./schema.md)             | The implemented PostgreSQL tables, policies and derived data      |
 | [journey.md](./journey.md)           | The URL-only cycle experience at `/journey`, phase by phase       |
 
@@ -36,10 +36,10 @@ No em dashes. Use a spaced hyphen, a comma, or parentheses.
 
 ## Status
 
-| Document     | Status                                                           |
-| ------------ | ---------------------------------------------------------------- |
-| prd          | living; implemented and demo-only surfaces identified            |
-| journey      | living; implemented at `/journey` and intentionally unlinked     |
-| architecture | living; deployed full-stack topology, write path staged          |
-| schema       | implemented and verified against PostgreSQL 17                   |
-| api-contract | read path implemented and consumed; authenticated writes planned |
+| Document     | Status                                                       |
+| ------------ | ------------------------------------------------------------ |
+| prd          | living; implemented and demo-only surfaces identified        |
+| journey      | living; implemented at `/journey` and intentionally unlinked |
+| architecture | living; deployed full-stack topology and customer write path |
+| schema       | implemented and verified against PostgreSQL 17               |
+| api-contract | public and authenticated routes implemented and consumed     |

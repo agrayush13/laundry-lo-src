@@ -157,6 +157,20 @@
         gap: 0.75rem;
     }
 
+    &Message {
+        grid-column: 1 / -1;
+        margin: 0 0 1rem;
+        padding: 0.75rem 0.875rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-primary-soft;
+        color: t.$color-primary;
+
+        &[data-kind='error'] {
+            background: color-mix(in srgb, t.$color-danger 12%, transparent);
+            color: t.$color-danger;
+        }
+    }
+
     &Cancel {
         border: 1px solid t.$color-border;
         background: t.$color-surface;
@@ -180,7 +194,7 @@
             border-radius: t.$radius-sm;
             background: t.$color-surface-muted;
 
-            button {
+            > a {
                 flex-shrink: 0;
                 padding: 0.375rem;
                 border: 0;
@@ -188,9 +202,9 @@
                 color: t.$color-text-muted;
                 cursor: pointer;
 
-                &:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
+                &:hover,
+                &:focus-visible {
+                    color: t.$color-primary;
                 }
             }
         }
