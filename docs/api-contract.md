@@ -1,19 +1,13 @@
 # laundrylo API contract
 
-Status: **agreed and deployed incrementally**. Public partner, catalogue and slot
-reads are implemented and consumed by the client. Supabase Auth is the deployed
-identity provider; authenticated resource routes retain this contract as they
-are enabled.
+Status: **implemented and consumed**. Supabase Auth is the deployed identity
+provider; the API serves the public marketplace and authenticated customer
+resources described here.
 
-Built, serving in `api/`, and **consumed by the client**: `GET /partners`,
-`GET /partners/{id}`, `GET /partners/{id}/catalog`, `GET /partners/{id}/slots`,
-over the schema in [schema.md](./schema.md). Token verification is wired; nothing
-in the read path requires a token. `sort` also accepts `price`, which the listing
-has always offered.
-
-Staged after the read path: `/me`, `/addresses`, `/cart`, `POST /orders`, and
-`/membership`. Until each route lands, its corresponding demo screen uses a
-fixture; no partner, catalogue or slot request falls back to bundled data.
+Public partner, catalogue, slot and membership-plan reads need no token.
+Profiles, addresses, carts, order placement/history and current membership use
+the verified Supabase caller. No production resource falls back to bundled
+data; local order/user arrays exist only behind the browser-test fixture.
 
 Base URL: `/api/v1`
 
@@ -74,8 +68,9 @@ Cursor-based for anything unbounded:
 
 ### Auth
 
-`Authorization: Bearer <supabase access token>`. Issued and refreshed by Supabase
-Auth; the API verifies it against Supabase's JWKS. See section 2 and decision 5.
+Authenticated calls use `Authorization: Bearer <supabase access token>`. The
+token is issued and refreshed by Supabase Auth; the API verifies it against
+Supabase's JWKS. See section 2 and decision 5.
 
 ### Idempotency
 
@@ -96,7 +91,7 @@ directly; our API only _verifies_ the incoming access token.
   library. Revocation works at the refresh-token layer: sign-out (or "sign out
   everywhere") invalidates it, so the session cannot be renewed; the access JWT
   lives only until its short expiry.
-- Email/password **and OAuth** (Google, etc.) use the provider's supported
+- Email/password **and Google OAuth** use the provider's supported
   sign-in flows rather than application-owned credentials.
 - Session storage follows the Supabase client model. If the frontend later moves
   to server-rendered delivery, `@supabase/ssr` can use httpOnly cookies.
@@ -109,13 +104,22 @@ directly; our API only _verifies_ the incoming access token.
 - Google: `supabase.auth.signInWithOAuth({ provider: 'google' })`
 - Password reset: `supabase.auth.resetPasswordForEmail(email)` - always
   succeeds to the user regardless of account existence (no enumeration).
-- Session restore on boot and sign-out are library calls.
+- Email confirmation and OAuth return through `/auth/callback`; password
+  recovery returns through `/update-password` and calls `updateUser` only for a
+  recovery session.
+- Redirects use PKCE, so the browser receives a short-lived authorization code
+  rather than access and refresh tokens in the callback URL.
+- Session restore, automatic access-token refresh and sign-out are library
+  calls. Normal sign-out is scoped to the current browser session. The client
+  forwards the current access token to the API without storing a second
+  application-owned session.
 
 ### Server-side (our API)
 
-Every request carries `Authorization: Bearer <supabase access token>`. The API
-verifies it against Supabase's JWKS and reads the caller as `auth.uid()`. No
-`/auth/*` routes of our own.
+Every authenticated request carries `Authorization: Bearer <supabase access
+token>`. The API verifies its signature, issuer, audience, authenticated role
+and UUID subject against Supabase's JWKS, then reads the caller as `auth.uid()`.
+No `/auth/*` routes of our own.
 
 ### Profile
 
@@ -134,7 +138,9 @@ keyed by the Supabase user id for fields Supabase does not model:
 ```
 
 - `GET /me` → `200` this profile (created on first login if absent).
-- `PATCH /me` → `200` updates the app-level fields.
+- `PATCH /me` → `200` updates app-level name, phone and preferences. Email
+  changes continue through Supabase Auth so confirmation policy stays with the
+  identity provider.
 
 Note: **addresses are no longer embedded**. They are their own resource, so
 adding one does not require re-fetching the profile.
@@ -323,7 +329,7 @@ there. The client uses the opaque slot id as identity and renders
 
 ---
 
-## 6. Cart (staged write route)
+## 6. Cart
 
 - `GET /cart` → `Cart`
 - `PUT /cart/items/{itemId}` `{ "quantity": 3 }` → `Cart` (quantity `0` removes)
@@ -338,6 +344,9 @@ there. The client uses the opaque slot id as identity and renders
     {
       "itemId": "wf-shirt",
       "name": "Shirt / T-shirt",
+      "description": "Machine washed with premium detergent, neatly folded",
+      "categoryName": "Wash & Fold",
+      "iconKey": "shirt",
       "quantity": 3,
       "unit": "piece",
       "unitPrice": { "amount": 2000, "currency": "INR" },
@@ -352,22 +361,24 @@ there. The client uses the opaque slot id as identity and renders
   "totals": {
     "subtotal": { "amount": 6000, "currency": "INR" },
     "delivery": { "amount": 0, "currency": "INR" },
-    "tax": { "amount": 1080, "currency": "INR" },
-    "total": { "amount": 7080, "currency": "INR" }
+    "membership": { "amount": 9900, "currency": "INR" },
+    "discount": { "amount": 600, "currency": "INR" },
+    "tax": { "amount": 2754, "currency": "INR" },
+    "total": { "amount": 18054, "currency": "INR" }
   }
 }
 ```
 
-**Totals are computed server-side and returned.** The client must not calculate
-tax - it currently applies a hardcoded 18% in `CartContext`, which will drift
-from the real rules the moment discounts or Plus benefits exist.
+**Totals are computed server-side and returned.** The authenticated client uses
+these values directly; guest carts show an estimate until they are merged into
+the server cart at sign-in.
 
 A cart holds one partner's items. Adding from another partner returns `409
 CART_PARTNER_CONFLICT` and the UI asks before replacing.
 
 ---
 
-## 7. Orders (staged write route)
+## 7. Orders
 
 ### `POST /orders`
 
@@ -378,16 +389,17 @@ Header: `Idempotency-Key: <uuid>`
   "cartId": "crt_01J8",
   "addressId": "adr_01J8",
   "pickupSlotId": "slt_0800",
-  "pickupDate": "2026-07-19",
   "deliverySlotId": "slt_1800",
-  "deliveryDate": "2026-07-21",
   "paymentMethod": "cash_on_pickup"
 }
 ```
 
 → `201` `Order`
-→ `409` `SLOT_UNAVAILABLE` if the slot filled between selection and submit -
-a real case the UI has no handling for.
+→ `200` the original `Order` when the same idempotency key is replayed
+→ `409` `SLOT_UNAVAILABLE` if a slot filled between selection and submit
+→ `409` `CART_CHANGED` if a cart line became inactive or no longer belongs
+to the selected laundry. The cart is preserved so the UI can refresh it and ask
+the customer to review the change.
 
 ### `GET /orders?limit=20&cursor=...` → `{ "data": [OrderSummary], "nextCursor": ... }`
 
@@ -412,6 +424,8 @@ a real case the UI has no handling for.
   "totals": {
     "subtotal": { "amount": 10000, "currency": "INR" },
     "delivery": { "amount": 0, "currency": "INR" },
+    "membership": { "amount": 0, "currency": "INR" },
+    "discount": { "amount": 0, "currency": "INR" },
     "tax": { "amount": 1800, "currency": "INR" },
     "total": { "amount": 11800, "currency": "INR" }
   },
@@ -444,10 +458,13 @@ copy changes and translations do not need a backend deploy.
 
 - `GET /membership/plans` → plan, price, benefits
 - `GET /me/membership` → current status, renewal date
-- Purchase happens through the cart, so no separate purchase endpoint.
+- Purchase happens with the first service order carrying Plus in the cart, so
+  no separate purchase endpoint or unfulfillable membership-only order exists.
 
-Benefits (free pickup, 10% off, priority slots) must be applied **server-side in
-cart totals**. Nothing in the UI should decide a discount.
+The 10% discount is applied server-side in cart totals and snapshotted on the
+order. Free-pickup and priority-capacity rules also belong server-side once
+their operating policy is settled; UI copy must not invent an entitlement the
+placement transaction does not enforce.
 
 ---
 
@@ -505,7 +522,7 @@ Reviewed 2026-08-31.
 
 ## 10. Client rollout
 
-Implemented for the read path:
+Implemented:
 
 - List and detail screens render loading, empty and retryable error states.
 - `services/*Services.ts` is the only network boundary for partners, catalogues
@@ -513,10 +530,9 @@ Implemented for the read path:
 - The listing reads its service filter from the query string, so a homepage card
   and a filter chip are the same state.
 - Timeline labels and state are derived by the client from domain events.
-
-Required as the authenticated write routes are enabled:
-
-- `CartContext` becomes a cache over server-computed totals.
-- `useCheckoutForm` submits `POST /orders` and handles `409 SLOT_UNAVAILABLE`.
-- Account, address, order and membership fixtures are removed when their
-  endpoints become the source of truth.
+- `CartContext` keeps a versioned guest cart, merges it at sign-in and then
+  caches server-computed totals.
+- `useCheckoutForm` submits `POST /orders` with a stable idempotency key and
+  surfaces `409 SLOT_UNAVAILABLE` without losing the cart.
+- Profile, address, order and membership screens use authenticated endpoints;
+  local arrays are browser-test fixtures only.

@@ -159,14 +159,14 @@ Server-owned availability. The client must never invent these.
 | `booked`     | integer     | default 0              |
 | `state`      | slot_state  | `blocked` for holidays |
 
-Availability is `state = 'open' and booked < capacity`. The staged order write
-transaction increments `booked` atomically, which is what makes
+Availability is `state = 'open' and booked < capacity`. The order transaction
+increments `booked` atomically, which is what makes
 `409 SLOT_UNAVAILABLE` truthful under concurrency.
 
 ### carts / cart_items
 
 Schema for the authenticated server cart. Guests hold the same shape in
-`localStorage` and merge on login when the cart write route is enabled.
+`localStorage` and merge on login.
 
 **carts**
 
@@ -199,6 +199,7 @@ so a price change is reflected before checkout. Totals are computed server-side.
 | `status`           | order_status |                                             |
 | `subtotal`         | integer      | minor units                                 |
 | `delivery_fee`     | integer      |                                             |
+| `membership_fee`   | integer      | snapshotted Plus purchase                   |
 | `discount`         | integer      | server-computed discount                    |
 | `tax`              | integer      |                                             |
 | `total`            | integer      |                                             |
@@ -262,8 +263,9 @@ from the event sequence.
 | `renews_at`  | timestamptz     |       |
 | `is_active`  | boolean         |       |
 
-Benefits are applied **server-side in cart totals**. Nothing in the UI decides a
-discount.
+The implemented 10% benefit is applied server-side in cart totals and order
+placement. Future pickup-fee or priority-capacity benefits belong at the same
+boundary; nothing in the UI decides a discount.
 
 ### reviews (deferred)
 
@@ -338,9 +340,8 @@ Bengaluru demo set.
   `reviews` when reviews ship, and the API already reads them through the
   `partner_details` view, so that swap does not touch a route.
 
-Still open:
+Slot generation rolls forward daily through `refresh_scheduled_slots(14)` and a
+`pg_cron` job where that Supabase extension is available. The seed invokes the
+same underlying generator for local and preview data.
 
-- Who generates slots in production, and how far ahead? The seed calls
-  `generate_slots` directly through the privileged `service_role`; a scheduled
-  job needs to roll the window forward and decide how far out a customer may book.
-- Pruning. `slots` and `order_events` both grow without bound.
+Still open: pruning. `slots` and `order_events` both grow without bound.
