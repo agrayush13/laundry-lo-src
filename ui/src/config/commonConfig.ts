@@ -1,7 +1,7 @@
 export const STORAGE_KEYS = {
     theme: 'laundrylo.theme',
-    user: 'laundrylo.user',
     cart: 'laundrylo.cart',
+    profile: 'laundrylo.profile',
 } as const;
 
 export const COMMON_COPY = {
@@ -18,13 +18,12 @@ export const TERMS_COPY = {
     back: 'Back to home',
     title: 'Terms',
     body: [
-        'laundrylo is a demo project built by Ayush Agrawal to show how a laundry ' +
-            'marketplace could work. It is not a real service.',
-        'No orders are placed, no pickups happen, no payments are taken and no ' +
-            'partner laundries are involved. Partner, catalogue and slot information ' +
-            'comes from a seeded demo API.',
-        'A pin code is sent to the API to filter nearby laundries. Use demo-only account ' +
-            'and address details; the browser may retain session, theme and cart state.',
+        'laundrylo is a deployed full-stack product demonstration built by Ayush Agrawal. ' +
+            'It is not yet an operational laundry or delivery service.',
+        'A booking creates an application order and reserves demo availability, but no ' +
+            'physical pickup, laundry service, payment or partner fulfilment takes place.',
+        'Account, address and order details are stored through Supabase and PostgreSQL. ' +
+            'Use demonstration details rather than sensitive personal information.',
     ],
 } as const;
 

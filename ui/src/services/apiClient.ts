@@ -1,5 +1,6 @@
 import { ApiErrorBody, ApiErrorCode } from '../models/apiModels';
 import { API_BASE_URL, API_COPY, API_TIMEOUT_MS } from '../config/apiConfig';
+import { getAuthAccessToken } from './authToken';
 
 const API_ERROR_CODES = new Set<ApiErrorCode>([
     'VALIDATION_FAILED',
@@ -92,7 +93,16 @@ export interface RequestOptions {
     signal?: AbortSignal;
 }
 
-export const apiGet = async <T>(path: string, { params, signal }: RequestOptions = {}) => {
+interface MutationOptions extends RequestOptions {
+    body?: unknown;
+    headers?: Record<string, string>;
+}
+
+const apiRequest = async <T>(
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
+    path: string,
+    { params, signal, body: requestBody, headers = {} }: MutationOptions = {}
+) => {
     // A request the caller abandoned and one that timed out are both aborts, so
     // the two signals are combined and the caller's reason wins.
     const timeout = new AbortController();
@@ -104,17 +114,28 @@ export const apiGet = async <T>(path: string, { params, signal }: RequestOptions
     let body: unknown;
     let hasMalformedBody = false;
     try {
+        const accessToken = getAuthAccessToken();
         response = await fetch(`${API_BASE_URL}${path}${toQueryString(params)}`, {
-            headers: { Accept: 'application/json' },
+            method,
+            headers: {
+                Accept: 'application/json',
+                ...(requestBody === undefined ? {} : { 'Content-Type': 'application/json' }),
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                ...headers,
+            },
+            ...(requestBody === undefined ? {} : { body: JSON.stringify(requestBody) }),
             signal: timeout.signal,
         });
-        body = await response.json().catch((error: unknown) => {
-            // Malformed JSON is handled as an unexpected response below. An
-            // abort while streaming the body must still end as a timeout.
-            if (timeout.signal.aborted) throw error;
-            hasMalformedBody = true;
-            return null;
-        });
+        body =
+            response.status === 204
+                ? undefined
+                : await response.json().catch((error: unknown) => {
+                      // Malformed JSON is handled as an unexpected response below. An
+                      // abort while streaming the body must still end as a timeout.
+                      if (timeout.signal.aborted) throw error;
+                      hasMalformedBody = true;
+                      return null;
+                  });
     } catch (error) {
         // An abort the caller asked for is not a failure to report; it is the
         // caller having moved on, and it must not become an error state.
@@ -145,3 +166,18 @@ export const apiGet = async <T>(path: string, { params, signal }: RequestOptions
 
     return body as T;
 };
+
+export const apiGet = <T>(path: string, options: RequestOptions = {}) =>
+    apiRequest<T>('GET', path, options);
+
+export const apiPost = <T>(path: string, body?: unknown, options: MutationOptions = {}) =>
+    apiRequest<T>('POST', path, { ...options, body });
+
+export const apiPatch = <T>(path: string, body: unknown, options: MutationOptions = {}) =>
+    apiRequest<T>('PATCH', path, { ...options, body });
+
+export const apiPut = <T>(path: string, body: unknown, options: MutationOptions = {}) =>
+    apiRequest<T>('PUT', path, { ...options, body });
+
+export const apiDelete = <T = void>(path: string, options: MutationOptions = {}) =>
+    apiRequest<T>('DELETE', path, options);
