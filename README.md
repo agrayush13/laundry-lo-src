@@ -1,5 +1,7 @@
 # laundrylo 🧺
 
+[![CI](https://github.com/agrayush13/laundry-lo-src/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/agrayush13/laundry-lo-src/actions/workflows/ci.yml)
+
 laundrylo is a full-stack laundry marketplace demo for discovering nearby
 partners, comparing per-item services, scheduling pickup and delivery, and
 tracking an order. The repository contains a React client, a Hono API, and a
@@ -257,3 +259,7 @@ and RLS.
 The experimental wash-cycle journey remains available at `/journey` by direct
 URL. It is intentionally not linked from the product navigation; its design and
 motion decisions are preserved in [docs/journey.md](docs/journey.md).
+
+## License
+
+This project is available under the [MIT License](LICENSE).
