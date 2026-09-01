@@ -78,3 +78,115 @@ export interface Page<T> {
     data: T[];
     nextCursor: string | null;
 }
+
+export interface Preferences {
+    sms: boolean;
+    email: boolean;
+}
+
+export interface Profile {
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    memberSince: string;
+    preferences: Preferences;
+}
+
+export interface SavedAddress {
+    id: string;
+    label: string;
+    recipientName: string;
+    phone: string;
+    building: string;
+    street: string;
+    landmark: string;
+    pincode: string;
+    isDefault: boolean;
+}
+
+export interface CartLine {
+    itemId: string;
+    name: string;
+    description: string | null;
+    categoryName: string;
+    iconKey: string;
+    quantity: number;
+    unit: PriceUnit;
+    unitPrice: Money;
+    lineTotal: Money;
+}
+
+export interface CartTotals {
+    subtotal: Money;
+    delivery: Money;
+    membership: Money;
+    discount: Money;
+    tax: Money;
+    total: Money;
+}
+
+export interface Cart {
+    id: string | null;
+    partner: { id: string; name: string } | null;
+    items: CartLine[];
+    membership: {
+        plan: 'plus';
+        price: Money;
+        period: 'month';
+    } | null;
+    totals: CartTotals;
+}
+
+export interface MembershipPlan {
+    id: 'plus';
+    name: string;
+    price: Money;
+    period: 'month';
+    benefits: string[];
+}
+
+export interface MembershipStatus {
+    plan: 'plus';
+    startedAt: string;
+    renewsAt: string;
+    isActive: boolean;
+}
+
+export type OrderStatus = 'processing' | 'out_for_delivery' | 'delivered' | 'cancelled';
+export type OrderEventType =
+    | 'placed'
+    | 'confirmed'
+    | 'picked_up'
+    | 'in_progress'
+    | 'out_for_delivery'
+    | 'delivered'
+    | 'cancelled';
+
+export interface Order {
+    id: string;
+    reference: string;
+    status: OrderStatus;
+    placedAt: string;
+    partner: { id: string; name: string };
+    lines: Array<{
+        itemId: string;
+        name: string;
+        quantity: number;
+        unit: PriceUnit;
+        amount: Money;
+    }>;
+    totals: CartTotals;
+    deliveryAddress: {
+        label: string;
+        recipientName: string;
+        phone: string;
+        building: string;
+        street: string;
+        landmark: string;
+        pincode: string;
+    };
+    pickup: { date: string; startsAt: string; endsAt: string };
+    delivery: { date: string; startsAt: string; endsAt: string };
+    events: Array<{ type: OrderEventType; occurredAt: string }>;
+}

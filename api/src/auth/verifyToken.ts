@@ -13,6 +13,13 @@ import { ApiError } from '../http/errors.js';
  */
 export type TokenVerifier = (token: string) => Promise<JWTPayload>;
 
+export interface VerifiedCaller {
+    id: string;
+    email: string;
+}
+
+const UUID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
 export const createVerifier = (config: Config): TokenVerifier => {
     if (!config.supabaseUrl) {
         throw new Error('Set SUPABASE_URL so token issuer and signing keys can be verified.');
@@ -43,10 +50,10 @@ const bearer = (header: string | undefined): string | null => {
  * user believes they are signed in, and quietly showing them a signed-out view
  * is the harder failure to diagnose.
  */
-export const resolveCaller = async (
+export const resolveIdentity = async (
     verify: TokenVerifier,
     authorization: string | undefined
-): Promise<string | null> => {
+): Promise<VerifiedCaller | null> => {
     if (authorization === undefined) return null;
 
     const token = bearer(authorization);
@@ -56,15 +63,24 @@ export const resolveCaller = async (
 
     try {
         const payload = await verify(token);
-        if (!payload.sub) {
+        if (!payload.sub || !UUID.test(payload.sub) || payload.role !== 'authenticated') {
             throw new ApiError(
                 'UNAUTHENTICATED',
                 'That session is not valid. Please sign in again.'
             );
         }
-        return payload.sub;
+        return {
+            id: payload.sub,
+            email: typeof payload.email === 'string' ? payload.email : '',
+        };
     } catch (error) {
         if (error instanceof ApiError) throw error;
         throw new ApiError('UNAUTHENTICATED', 'Your session has expired. Please sign in again.');
     }
 };
+
+/** Backwards-compatible id-only form used by focused auth tests and helpers. */
+export const resolveCaller = async (
+    verify: TokenVerifier,
+    authorization: string | undefined
+): Promise<string | null> => (await resolveIdentity(verify, authorization))?.id ?? null;

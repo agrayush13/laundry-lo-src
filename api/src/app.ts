@@ -3,13 +3,17 @@ import { cors } from 'hono/cors';
 import type { Config } from './config.js';
 import type { Pool } from './db/pool.js';
 import { ApiError, toErrorBody } from './http/errors.js';
-import { resolveCaller, type TokenVerifier } from './auth/verifyToken.js';
+import { resolveIdentity, type TokenVerifier } from './auth/verifyToken.js';
 import { partnerRoutes } from './routes/partners.js';
+import { accountRoutes, addressRoutes, membershipRoutes } from './routes/account.js';
+import { cartRoutes } from './routes/cart.js';
+import { orderRoutes } from './routes/orders.js';
 
 export interface AppEnv {
     Variables: {
         pool: Pool;
         userId: string | null;
+        userEmail: string;
         requestId: string;
     };
 }
@@ -49,7 +53,9 @@ export const createApp = ({ pool, config, verify }: AppDeps) => {
     });
 
     app.use('/api/*', async (c, next) => {
-        c.set('userId', await resolveCaller(verify, c.req.header('Authorization')));
+        const caller = await resolveIdentity(verify, c.req.header('Authorization'));
+        c.set('userId', caller?.id ?? null);
+        c.set('userEmail', caller?.email ?? '');
         await next();
     });
 
@@ -65,6 +71,11 @@ export const createApp = ({ pool, config, verify }: AppDeps) => {
     });
 
     app.route('/api/v1/partners', partnerRoutes);
+    app.route('/api/v1/me', accountRoutes);
+    app.route('/api/v1/addresses', addressRoutes);
+    app.route('/api/v1/cart', cartRoutes);
+    app.route('/api/v1/orders', orderRoutes);
+    app.route('/api/v1/membership', membershipRoutes);
 
     app.notFound((c) => {
         const error = new ApiError('NOT_FOUND', 'No such endpoint.');
