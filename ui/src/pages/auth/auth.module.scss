@@ -155,6 +155,14 @@
         padding: 0.9375rem;
     }
 
+    &Error {
+        margin: 0 0 1rem;
+        color: t.$color-danger;
+        font-size: t.$font-size-md;
+        font-weight: t.$font-weight-semibold;
+        text-align: left;
+    }
+
     &Sent {
         display: flex;
         align-items: center;

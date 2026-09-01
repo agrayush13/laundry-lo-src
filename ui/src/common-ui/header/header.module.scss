@@ -41,9 +41,14 @@
     }
 
     &Actions {
+        position: relative;
         display: flex;
         align-items: center;
         gap: 1.25rem;
+    }
+
+    &Theme {
+        display: flex;
     }
 
     &Signin,
@@ -128,10 +133,30 @@
         color: t.$color-text-muted;
         cursor: pointer;
 
-        &:hover {
+        &:hover:not(:disabled) {
             background: t.$color-surface-muted;
             color: t.$color-text;
         }
+
+        &:disabled {
+            opacity: 0.55;
+            cursor: wait;
+        }
+    }
+
+    &AuthError {
+        position: absolute;
+        top: calc(100% + 1rem);
+        right: 0;
+        width: max-content;
+        max-width: min(20rem, calc(100vw - 2rem));
+        padding: 0.75rem 0.875rem;
+        border: 1px solid color-mix(in srgb, t.$color-danger 35%, transparent);
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-danger;
+        box-shadow: t.$shadow-md;
+        font-size: t.$font-size-md;
     }
 
     @media (max-width: t.$breakpoint-md) {
@@ -144,7 +169,8 @@
         }
     }
 
-    // Below this the account controls collapse to icons so they all survive.
+    // Below this the account controls collapse to icons so the core booking
+    // actions all survive.
     @media (max-width: t.$breakpoint-sm) {
         &Inner {
             gap: 0.5rem;
@@ -166,6 +192,20 @@
 
         &Bookings {
             padding-right: 0.75rem;
+        }
+    }
+
+    @media (width <= 25rem) {
+        &Actions {
+            gap: 0.5rem;
+        }
+
+        &Theme {
+            display: none;
+        }
+
+        &Cta {
+            padding-inline: 0.625rem;
         }
     }
 }

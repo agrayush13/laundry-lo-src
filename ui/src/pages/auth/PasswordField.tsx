@@ -11,6 +11,8 @@ interface PasswordFieldProps {
     value: string;
     autoComplete: string;
     onChange: (value: string) => void;
+    minLength?: number;
+    disabled?: boolean;
 }
 
 const PasswordField: React.FC<PasswordFieldProps> = ({
@@ -19,6 +21,8 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
     value,
     autoComplete,
     onChange,
+    minLength,
+    disabled = false,
 }) => {
     const { isOn: isVisible, toggle } = useToggle();
 
@@ -32,6 +36,8 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
                 placeholder={AUTH_COPY.fields.password.placeholder}
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
+                minLength={minLength}
+                disabled={disabled}
                 required
             />
             <button
@@ -41,6 +47,7 @@ const PasswordField: React.FC<PasswordFieldProps> = ({
                     isVisible ? AUTH_COPY.passwordToggle.hide : AUTH_COPY.passwordToggle.show
                 }
                 onClick={toggle}
+                disabled={disabled}
             >
                 <Icon
                     name={isVisible ? 'eye-off' : 'eye'}

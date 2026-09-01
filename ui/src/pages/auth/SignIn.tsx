@@ -1,23 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import Icon from '../../common-ui/icons/Icon';
-import { IconName } from '../../common-ui/icons/registry';
 import { AUTH_COPY } from '../../config/authConfig';
-import { ICON_SIZE } from '../../config/brandConfig';
 import { ROUTES } from '../../config/navigationConfig';
-import { SignInMethod, useSignInForm } from '../../hooks/useSignInForm';
+import { useSignInForm } from '../../hooks/useSignInForm';
 import AuthCard from './AuthCard';
 import OAuthButton from './OAuthButton';
 import PasswordField from './PasswordField';
 import styles from './auth.module.scss';
 
-const { signIn: copy, divider, fields, methods } = AUTH_COPY;
+const { signIn: copy, divider, fields } = AUTH_COPY;
 
 const SignIn: React.FC = () => {
     const { state } = useLocation();
-    const { method, setMethod, identifier, setIdentifier, password, setPassword, submit } =
-        useSignInForm();
-    const field = method === 'email' ? fields.email : fields.phone;
+    const { email, setEmail, password, setPassword, isSubmitting, error, submit } = useSignInForm();
 
     return (
         <AuthCard
@@ -28,42 +23,20 @@ const SignIn: React.FC = () => {
 
             <p className={styles.authDivider}>{divider}</p>
 
-            <div
-                className={styles.authMethods}
-                role="tablist"
-                aria-label="Sign in method"
-            >
-                {methods.map(({ value, label, icon }) => (
-                    <button
-                        key={value}
-                        type="button"
-                        role="tab"
-                        aria-selected={method === value}
-                        className={styles.authMethod}
-                        onClick={() => setMethod(value as SignInMethod)}
-                    >
-                        <Icon
-                            name={icon as IconName}
-                            size={ICON_SIZE.sm}
-                        />
-                        {label}
-                    </button>
-                ))}
-            </div>
-
             <form
                 className={styles.authForm}
                 onSubmit={submit}
             >
                 <p className={styles.authField}>
-                    <label htmlFor="identifier">{field.label}</label>
+                    <label htmlFor="email">{fields.email.label}</label>
                     <input
-                        id="identifier"
-                        type={method === 'email' ? 'email' : 'tel'}
-                        autoComplete={field.autoComplete}
-                        placeholder={field.placeholder}
-                        value={identifier}
-                        onChange={(event) => setIdentifier(event.target.value)}
+                        id="email"
+                        type="email"
+                        autoComplete={fields.email.autoComplete}
+                        placeholder={fields.email.placeholder}
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        disabled={isSubmitting}
                         required
                     />
                 </p>
@@ -74,7 +47,17 @@ const SignIn: React.FC = () => {
                     autoComplete="current-password"
                     value={password}
                     onChange={setPassword}
+                    disabled={isSubmitting}
                 />
+
+                {error && (
+                    <p
+                        className={styles.authError}
+                        role="alert"
+                    >
+                        {error}
+                    </p>
+                )}
 
                 <p className={styles.authForgot}>
                     <Link
@@ -88,8 +71,9 @@ const SignIn: React.FC = () => {
                 <button
                     className={`button button--primary ${styles.authSubmit}`}
                     type="submit"
+                    disabled={isSubmitting}
                 >
-                    {copy.submit}
+                    {isSubmitting ? copy.submitting : copy.submit}
                 </button>
             </form>
 

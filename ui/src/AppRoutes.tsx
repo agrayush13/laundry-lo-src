@@ -1,5 +1,6 @@
 import React, { lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
+import GuestRoute from './common-ui/guest-route/GuestRoute';
 import Layout from './common-ui/layout/Layout';
 import ProtectedRoute from './common-ui/protected-route/ProtectedRoute';
 import Home from './pages/home/Home';
@@ -9,6 +10,8 @@ import Home from './pages/home/Home';
 const SignIn = lazy(() => import('./pages/auth/SignIn'));
 const SignUp = lazy(() => import('./pages/auth/SignUp'));
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const AuthCallback = lazy(() => import('./pages/auth/AuthCallback'));
+const UpdatePassword = lazy(() => import('./pages/auth/UpdatePassword'));
 const PlusPage = lazy(() => import('./pages/plus/PlusPage'));
 const JourneyPage = lazy(() => import('./pages/journey/JourneyPage'));
 const TermsPage = lazy(() => import('./pages/terms/TermsPage'));
@@ -30,17 +33,27 @@ const AppRoutes: React.FC = () => (
                 index
                 element={<Home />}
             />
-            <Route
-                path="signin"
-                element={<SignIn />}
-            />
-            <Route
-                path="signup"
-                element={<SignUp />}
-            />
+            <Route element={<GuestRoute />}>
+                <Route
+                    path="signin"
+                    element={<SignIn />}
+                />
+                <Route
+                    path="signup"
+                    element={<SignUp />}
+                />
+            </Route>
             <Route
                 path="forgot-password"
                 element={<ForgotPassword />}
+            />
+            <Route
+                path="auth/callback"
+                element={<AuthCallback />}
+            />
+            <Route
+                path="update-password"
+                element={<UpdatePassword />}
             />
             <Route
                 path="plus"
@@ -81,6 +94,10 @@ const AppRoutes: React.FC = () => (
                 />
                 <Route
                     path="profile/addresses/new"
+                    element={<AddAddressPage />}
+                />
+                <Route
+                    path="profile/addresses/:addressId/edit"
                     element={<AddAddressPage />}
                 />
                 <Route

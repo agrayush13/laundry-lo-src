@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BRAND } from '../../config/brandConfig';
 import { HEADER_ACTIONS, PRIMARY_NAV, ROUTES } from '../../config/navigationConfig';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { toInitials } from '../../hooks/useInitials';
+import { authFailureMessage } from '../../services/authServices';
 import Icon from '../icons/Icon';
 import Logo from '../logo/Logo';
 import ThemeToggle from '../theme-toggle/ThemeToggle';
@@ -13,15 +14,24 @@ import styles from './header.module.scss';
 const { guest, authenticated, cart } = HEADER_ACTIONS;
 
 const Header: React.FC = () => {
-    const { user, signOut } = useAuth();
+    const { user, isLoading, signOut } = useAuth();
     const { itemCount, hasPlus } = useCart();
     // Plus counts as a line so the badge matches what the cart shows.
     const cartCount = itemCount + (hasPlus ? 1 : 0);
     const navigate = useNavigate();
+    const [isSigningOut, setIsSigningOut] = useState(false);
+    const [signOutError, setSignOutError] = useState<string | null>(null);
 
-    const handleSignOut = () => {
-        signOut();
-        navigate(ROUTES.home);
+    const handleSignOut = async () => {
+        setSignOutError(null);
+        setIsSigningOut(true);
+        try {
+            await signOut();
+            navigate(ROUTES.home);
+        } catch (error) {
+            setSignOutError(authFailureMessage(error));
+            setIsSigningOut(false);
+        }
     };
 
     return (
@@ -56,7 +66,9 @@ const Header: React.FC = () => {
                 </nav>
 
                 <div className={styles.headerActions}>
-                    <ThemeToggle />
+                    <span className={styles.headerTheme}>
+                        <ThemeToggle />
+                    </span>
                     <Link
                         className={styles.headerCart}
                         to={cart.href}
@@ -72,7 +84,7 @@ const Header: React.FC = () => {
                             </span>
                         )}
                     </Link>
-                    {user ? (
+                    {isLoading ? null : user ? (
                         <>
                             <Link
                                 className={styles.headerBookings}
@@ -103,10 +115,19 @@ const Header: React.FC = () => {
                                 className={styles.headerSignout}
                                 type="button"
                                 aria-label={authenticated.signOut.label}
-                                onClick={handleSignOut}
+                                onClick={() => void handleSignOut()}
+                                disabled={isSigningOut}
                             >
                                 <Icon name={authenticated.signOut.icon} />
                             </button>
+                            {signOutError && (
+                                <span
+                                    className={styles.headerAuthError}
+                                    role="alert"
+                                >
+                                    {signOutError}
+                                </span>
+                            )}
                         </>
                     ) : (
                         <>
