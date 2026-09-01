@@ -70,6 +70,20 @@ describe('token verification', () => {
         expect(status).toBe(401);
     });
 
+    it('rejects a signed token that does not carry the authenticated role', async () => {
+        const { status } = await get('/api/v1/partners', {
+            Authorization: `Bearer ${await token({ sub: ALICE, role: 'anon' })}`,
+        });
+        expect(status).toBe(401);
+    });
+
+    it('rejects a non-UUID subject before it can reach auth.uid()', async () => {
+        const { status } = await get('/api/v1/partners', {
+            Authorization: `Bearer ${await token({ sub: 'not-a-user-id', role: 'authenticated' })}`,
+        });
+        expect(status).toBe(401);
+    });
+
     it('rejects a correctly signed token issued for another project', async () => {
         const foreign = await new SignJWT({ sub: ALICE })
             .setProtectedHeader({ alg: 'HS256' })
@@ -157,6 +171,28 @@ describe('row level security', () => {
             { role: 'anon', allowed: false },
             { role: 'authenticated', allowed: false },
         ]);
+    });
+
+    it('keeps the rolling slot scheduler privileged and idempotent', async () => {
+        const { rows } = await pool.query<{ role: string; allowed: boolean }>(
+            `select role,
+                    has_function_privilege(
+                        role,
+                        'public.refresh_scheduled_slots(integer)',
+                        'execute'
+                    ) as allowed
+             from unnest(array['anon', 'authenticated', 'service_role']) as role`
+        );
+        expect(rows).toEqual([
+            { role: 'anon', allowed: false },
+            { role: 'authenticated', allowed: false },
+            { role: 'service_role', allowed: true },
+        ]);
+
+        const refreshed = await pool.query<{ created: number }>(
+            'select public.refresh_scheduled_slots(14) as created'
+        );
+        expect(Number(refreshed.rows[0]?.created)).toBeGreaterThanOrEqual(0);
     });
 
     it('rejects unsafe slot-generation arguments before doing any work', async () => {
