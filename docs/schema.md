@@ -252,6 +252,11 @@ from the event sequence.
 | `note`        | text        |
 
 `orders.status` is a denormalized convenience derived from the latest event.
+Each event type is unique per order. Laundry-owner progression goes through the
+`advance_order` security-definer function, which locks the order and permits
+only `placed → confirmed → picked_up → in_progress → out_for_delivery →
+delivered`. Authenticated roles cannot update `orders` or insert
+`order_events` directly.
 
 ### memberships
 
@@ -266,6 +271,12 @@ from the event sequence.
 The implemented 10% benefit is applied server-side in cart totals and order
 placement. Future pickup-fee or priority-capacity benefits belong at the same
 boundary; nothing in the UI decides a discount.
+
+Order placement currently uses exact-pincode serviceability, matching the
+marketplace search rule. A trigger checks the snapshotted order address against
+the selected partner's pincode, so an unsupported address rolls back the order,
+slot reservations and cart deletion together. A future service-area model can
+replace this rule without trusting the browser.
 
 ### reviews (deferred)
 
@@ -306,7 +317,11 @@ partners 1--* partner_hours
 - `catalog_categories (service, partner_id)` - filtering the listing by service
 - `slots (partner_id, starts_at)` - the slot picker
 - `orders (user_id, placed_at desc)` - order history pagination
+- `partners (owner_id) where owner_id is not null` and
+  `orders (partner_id, status, placed_at desc, id desc)` - owner lookup and
+  filtered fulfilment queues
 - `order_events (order_id, occurred_at)` - timeline
+- unique `order_events (order_id, type)` - one fact per lifecycle stage
 - `addresses (user_id)`
 - unique `orders (user_id, idempotency_key)` - double-tap protection
 

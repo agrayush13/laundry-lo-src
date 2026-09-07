@@ -311,7 +311,8 @@ look like a site that simply says two different things. See
 ## 3. Backend
 
 The deployed Hono service in [`api/`](../api/) serves partners, catalogues,
-slots, profiles, addresses, carts, orders and membership from PostgreSQL.
+slots, profiles, addresses, carts, orders, laundry-owner order queues and
+fulfilment events, and membership from PostgreSQL.
 
 ### Why Supabase
 
@@ -350,13 +351,10 @@ mapping lives beside its transactional reads in `customerQueries.ts`.
 ### Database
 
 Built by `supabase/migrations/`, filled by `supabase/seed.sql`, documented in
-[schema.md](./schema.md). Six migrations: tables and enums, then RLS, then the
-derived pieces the listing needs - `pincode_centroids` and a haversine function
-for distance, the `partner_details` view deriving `services` and `startingPrice`
-from the catalogue, and `generate_slots`, which turns a partner's opening hours
-into bookable rows - followed by the constraints and grants that harden slot
-generation, followed by the catalogue vocabulary and opaque-id hardening, and
-finally the atomic customer write path and slot-rollover schedule.
+[schema.md](./schema.md). The migrations build tables and RLS first, then the
+derived listing and slot functions, catalogue and id hardening, the atomic
+customer write path, exact-pincode serviceability and the partner order
+lifecycle.
 
 Two things are derived rather than stored, and that is the point of them:
 `Partner.services` is the distinct set of `catalog_categories.service`, and
@@ -393,6 +391,18 @@ both slots, snapshots the address and catalogue lines, records the first event,
 activates Plus when selected and clears the cart in one transaction. Direct
 order inserts remain unavailable to API roles.
 
+Fulfilment uses the equally narrow `advance_order` function. It verifies that
+the caller owns the order's laundry, locks the order, permits only the next event
+in the defined sequence, updates the denormalized status and appends the
+customer-visible tracking event atomically. Direct order updates and event
+inserts are unavailable to authenticated roles, so a browser cannot skip the
+workflow by bypassing the API.
+
+Laundry-owner order reads use the same caller-scoped transaction and RLS. The
+queue can span all laundries owned by the caller or filter by laundry and
+status, and uses opaque keyset cursors. It returns only the recipient name and
+pincode; phone and street details stay on the owner-checked detail endpoint.
+
 ### What the server owns
 
 The server owns the following business invariants; the browser renders their
@@ -408,6 +418,11 @@ results rather than reimplementing them.
   resolved by `is_partner_open` at query time.
 - **Order history.** Item names, prices and addresses are snapshotted onto the
   order at placement so later edits never rewrite the past.
+- **Order progression.** Laundry owners can advance only their own orders and
+  only one lifecycle step at a time; concurrent repeats create one event.
+- **Fulfilment access.** Partner queues and order details are resolved against
+  `owns_partner`; another partner and the customer-facing session cannot use
+  those operational reads.
 
 ### What the client owns
 
@@ -467,7 +482,8 @@ readiness probe and returns `503` when the database cannot be reached.
 - No partner admin panel, so `is_open`, hours and catalogs have no editor.
 - Images are Unsplash URLs rather than owned assets.
 - Cash on pickup only; no payment integration.
-- Serviceability still needs the operational choice between exact-pincode and
-  distance-radius coverage before checkout can enforce it.
+- Serviceability currently uses exact partner pincodes in search and order
+  placement. A future partner service-area model can replace this with radius
+  or multi-pincode coverage when operations require it.
 - The API has a per-instance order-write limiter; production should also keep a
   shared edge limiter across instances.

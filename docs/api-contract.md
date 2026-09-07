@@ -396,6 +396,8 @@ Header: `Idempotency-Key: <uuid>`
 
 → `201` `Order`
 → `200` the original `Order` when the same idempotency key is replayed
+→ `409` `ADDRESS_NOT_SERVICEABLE` when the saved address pincode differs from
+the selected laundry's service pincode. The cart and slot capacity are preserved.
 → `409` `SLOT_UNAVAILABLE` if a slot filled between selection and submit
 → `409` `CART_CHANGED` if a cart line became inactive or no longer belongs
 to the selected laundry. The cart is preserved so the UI can refresh it and ask
@@ -452,6 +454,65 @@ copy changes and translations do not need a backend deploy.
 `status` values: `processing | out_for_delivery | delivered | cancelled`
 (lowercase snake, not display strings).
 
+### `GET /partner/orders?partnerId=1001&status=processing&limit=20&cursor=...`
+
+Authenticated laundry-owner queue. `partnerId` and `status` are optional; when
+omitted, the queue covers every laundry owned by the caller and every status.
+An account that owns no laundry receives `403`. Filtering by a laundry owned by
+someone else returns `404`.
+
+→ `{ "data": [PartnerOrderSummary], "nextCursor": ... }`
+
+```json
+{
+  "id": "ord_01J8XR3K2W",
+  "reference": "LL-2026-001",
+  "status": "processing",
+  "placedAt": "2024-03-20T10:30:00Z",
+  "partner": { "id": "1001", "name": "SparkleWash Express" },
+  "recipient": { "name": "Customer One", "pincode": "560103" },
+  "itemCount": 5,
+  "total": { "amount": 11800, "currency": "INR" },
+  "pickup": { "startsAt": "...", "endsAt": "..." },
+  "delivery": { "startsAt": "...", "endsAt": "..." },
+  "latestEvent": { "type": "confirmed", "occurredAt": "..." }
+}
+```
+
+The queue deliberately omits the phone and street address. Those operational
+details are returned only from `GET /partner/orders/{id}` after the same
+ownership check. Detail uses the existing `Order` shape, including snapshotted
+lines, totals, delivery address, slots and tracking events. A customer or a
+different laundry owner receives `404`.
+
+### `POST /partner/orders/{id}/events`
+
+Authenticated laundry-owner operation. The body names the next event:
+
+```json
+{ "type": "confirmed" }
+```
+
+→ `201`
+
+```json
+{
+  "orderId": "ord_01J8XR3K2W",
+  "status": "processing",
+  "event": { "type": "confirmed", "occurredAt": "2024-03-20T10:45:00Z" }
+}
+```
+
+The only accepted sequence is `placed → confirmed → picked_up → in_progress →
+out_for_delivery → delivered`. `orders.status` remains `processing` through
+`in_progress`, then follows `out_for_delivery` and `delivered`. A skipped,
+repeated or post-terminal event returns `409 INVALID_ORDER_TRANSITION`. An order
+outside the caller's laundry returns the same `404` as a missing order.
+
+The database locks the order and appends the event plus status change in one
+transaction. Direct `orders` updates and `order_events` inserts remain denied to
+authenticated sessions; cancellation is a separate policy and API decision.
+
 ---
 
 ## 8. Membership
@@ -462,9 +523,10 @@ copy changes and translations do not need a backend deploy.
   no separate purchase endpoint or unfulfillable membership-only order exists.
 
 The 10% discount is applied server-side in cart totals and snapshotted on the
-order. Free-pickup and priority-capacity rules also belong server-side once
-their operating policy is settled; UI copy must not invent an entitlement the
-placement transaction does not enforce.
+order. The published benefits are `ten-percent-off`, `one-month-access` and
+`itemized-checkout`. Free-pickup and priority-capacity rules can be added only
+after their operating policy is settled and the placement transaction enforces
+them.
 
 ---
 
