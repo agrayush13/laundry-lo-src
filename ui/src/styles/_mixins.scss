@@ -81,7 +81,7 @@
     }
 }
 
-/// Row of icon + label facts (turnaround, free pickup, verified partner).
+/// Row of icon + label facts (turnaround, scheduled pickup, marketplace listing).
 @mixin meta-row($gap: 0.5rem 1.25rem) {
     @include bare-list;
 

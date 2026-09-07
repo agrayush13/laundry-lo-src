@@ -9,43 +9,40 @@ export interface BenefitItem {
 
 /**
  * laundrylo Plus. The perks live here rather than on any of the pages that sell
- * them, because five surfaces promise them and one applies them: the homepage
- * membership section, the journey's fold phase, the Plus page, the cart, and the
- * booking summary's discount line. A perk added here reaches all of them, which
- * is the only way the price on the folded shirt can be trusted to be the price
- * the cart charges.
+ * them, because several surfaces explain them and checkout applies them: the
+ * homepage membership section, the journey's fold phase, the Plus page, the
+ * cart, and the booking summary's discount line. Keep this list limited to
+ * behavior the server currently enforces.
  */
 export const MEMBERSHIP_SECTION = {
     id: 'pricing',
     eyebrow: 'Membership',
     planName: 'LaundryLo Plus',
     title: { before: 'Upgrade to ' },
-    subtitle:
-        'One membership that makes every order feel premium. Free pickups, instant ' +
-        'discounts, and priority scheduling.',
+    subtitle: 'One month of 10% service savings, calculated and applied at checkout.',
     card: {
         heading: { before: 'Join ' },
-        tagline: 'Upgrade every order with premium perks',
+        tagline: 'Save 10% on service items for one active month',
         price: rupees(99),
-        period: '/month',
-        cta: 'Get LaundryLo Plus',
+        period: 'for one month',
+        cta: 'Add LaundryLo Plus',
     },
     benefitsLabel: 'Plus Benefits',
     benefits: [
         {
-            icon: 'truck',
-            title: 'Free Pickup',
-            description: 'On every single order, no minimum cart value',
-        },
-        {
             icon: 'percent',
-            title: '10% Off Everything',
-            description: 'Instant savings across wash, dry clean & more',
+            title: '10% Off Services',
+            description: 'Applied to eligible service items in every checkout total',
         },
         {
-            icon: 'clock',
-            title: 'Priority Slots',
-            description: 'Skip the queue with first-in-line scheduling',
+            icon: 'calendar',
+            title: 'One-Month Access',
+            description: 'Benefits remain active for one month after your first service order',
+        },
+        {
+            icon: 'receipt',
+            title: 'Clear Checkout Pricing',
+            description: 'The membership fee and discount are itemized before you order',
         },
     ] as BenefitItem[],
 };

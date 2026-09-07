@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SERVICE_TYPES } from '../data/services';
-import { DRY, SPIN } from '../config/cycleConfig';
+import { DRY } from '../config/cycleConfig';
 import { HERO, HOW_IT_WORKS_SECTION } from '../config/homeConfig';
 import { MEMBERSHIP_SECTION } from '../config/membershipConfig';
 import { PRIMARY_NAV, ROUTES } from '../config/navigationConfig';
@@ -100,21 +100,13 @@ describe('App', () => {
     });
 });
 
-/**
- * The homepage and the journey tell the same story twice. Every figure below is
- * asserted against the one source it comes from, because the two drifting apart
- * is not a rendering bug anybody would notice: it is simply the site quoting two
- * different numbers for the same thing, on two pages, forever. This page claimed
- * five hundred partner laundries while the journey counted fifty two.
- */
-describe('the homepage and the journey agree', () => {
-    it('quotes the same three figures', () => {
+describe('the homepage product contract', () => {
+    it('presents implemented capabilities instead of the journey demo figures', () => {
         renderApp();
 
-        SPIN.stats.forEach((stat) => {
-            expect(screen.getByText(`${stat.value}${stat.suffix ?? ''}`)).toBeInTheDocument();
+        HERO.stats.forEach((stat) => {
+            expect(screen.getByText(stat.value)).toBeInTheDocument();
         });
-        expect(HERO.stats).toHaveLength(SPIN.stats.length);
     });
 
     it('names the same four steps, in the same order', () => {

@@ -1,11 +1,10 @@
 export const BRAND = {
     name: 'laundrylo',
     blurb:
-        'laundrylo brings your neighbourhood laundries online. Compare prices and ' +
-        'ratings, pick a pickup slot that suits you, and get fresh, neatly folded ' +
-        'clothes back at your door within 24 hours.',
+        'laundrylo brings neighbourhood laundry catalogues online. Compare service ' +
+        'prices, choose pickup and delivery slots, and track each order in one place.',
     blurbSecondary:
-        'Free pickup and delivery on every order, and you see the full price ' + 'before you book.',
+        'Save addresses, keep a synced cart and review the complete price before you book.',
     supportPhone: '+911800000000',
     copyrightFrom: 2026,
 } as const;

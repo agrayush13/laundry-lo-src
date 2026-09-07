@@ -283,7 +283,7 @@ export const membershipRoutes = new Hono<AppEnv>().get('/plans', (c) =>
                 name: 'laundrylo Plus',
                 price: money(PLUS_PRICE),
                 period: 'month' as const,
-                benefits: ['free-pickup', 'ten-percent-off', 'priority-slots'],
+                benefits: ['ten-percent-off', 'one-month-access', 'itemized-checkout'],
             },
         ],
     })

@@ -14,7 +14,7 @@ export const AUTH_COPY = {
     },
     signUp: {
         title: 'Create your account',
-        subtitle: 'Book your first pickup in under a minute',
+        subtitle: 'Create your account and continue to booking',
         submit: 'Create Account',
         switchPrompt: 'Already have an account?',
         switchAction: 'Sign in',

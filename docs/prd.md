@@ -137,7 +137,7 @@ per-item pricing actually gives the customer (see
 
 - What is the cancellation window, and who absorbs the cost after pickup?
 - Do partners set their own prices, or does the platform set a rate card?
-- What are the actual Plus benefits, and how do they apply to per-item pricing?
+- Should Plus renew automatically, and what cancellation policy should apply?
 - Delivery fee: flat, distance-based, or free above a threshold?
 - Which city and pincodes launch first? (demo data is Bengaluru)
 
@@ -150,13 +150,14 @@ facts but keep separate navigation and presentation.
 - **The product must be legible in second one.** Both surfaces put the pin-code
   input in the first viewport; on `/journey` the cycle is the container, never a
   gate.
-- **Claims trace to a real surface.** No invented testimonials or customer
-  counts. The three figures in the spin section (52+ partners, 6 pin codes, 24h)
-  are demo figures rather than counts of the seed data, which is why the footer
-  carries "a demo project by ayush, not a real service." plainly and unmissably.
+- **Claims trace to a real surface.** The homepage labels the product as a demo
+  and uses implemented capability statements rather than invented customer,
+  partner, timing or cancellation promises. The unlinked journey retains its
+  illustrative figures as part of the preserved motion concept.
 - **Service vocabulary is shared.** Marketing cards and the journey use the same
   canonical service slugs; the API derives each partner's real starting price
   from its catalogue.
-- **Plus presents three plan benefits** (free pickup, 10% off, priority slots).
-  The discount is enforced in server totals; the operational meaning of free
-  pickup and priority capacity must be settled before taking paid memberships.
+- **Plus presents only implemented benefits.** It describes the server-enforced
+  10% service discount, one-month access period and itemized checkout pricing.
+  Pickup-fee or priority-capacity benefits stay out of public copy until the
+  placement transaction enforces them.
