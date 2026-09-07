@@ -190,3 +190,17 @@ export interface Order {
     delivery: { date: string; startsAt: string; endsAt: string };
     events: Array<{ type: OrderEventType; occurredAt: string }>;
 }
+
+export interface PartnerOrderSummary {
+    id: string;
+    reference: string;
+    status: OrderStatus;
+    placedAt: string;
+    partner: { id: string; name: string };
+    recipient: { name: string; pincode: string };
+    itemCount: number;
+    total: Money;
+    pickup: { startsAt: string; endsAt: string };
+    delivery: { startsAt: string; endsAt: string };
+    latestEvent: { type: OrderEventType; occurredAt: string };
+}

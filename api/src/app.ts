@@ -8,6 +8,7 @@ import { partnerRoutes } from './routes/partners.js';
 import { accountRoutes, addressRoutes, membershipRoutes } from './routes/account.js';
 import { cartRoutes } from './routes/cart.js';
 import { orderRoutes } from './routes/orders.js';
+import { partnerOrderRoutes } from './routes/partnerOrders.js';
 
 export interface AppEnv {
     Variables: {
@@ -75,6 +76,7 @@ export const createApp = ({ pool, config, verify }: AppDeps) => {
     app.route('/api/v1/addresses', addressRoutes);
     app.route('/api/v1/cart', cartRoutes);
     app.route('/api/v1/orders', orderRoutes);
+    app.route('/api/v1/partner/orders', partnerOrderRoutes);
     app.route('/api/v1/membership', membershipRoutes);
 
     app.notFound((c) => {

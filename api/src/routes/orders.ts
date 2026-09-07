@@ -7,7 +7,7 @@ import { ApiError } from '../http/errors.js';
 import { DEFAULT_LIMIT, MAX_LIMIT, decodeCursor, encodeCursor } from '../http/pagination.js';
 import { parse } from '../http/validation.js';
 import type { Order, Page } from '../models.js';
-import { getOrder } from '../queries/customerQueries.js';
+import { getOrder } from '../queries/orderQueries.js';
 
 const createOrderBody = z.object({
     cartId: z.string().min(1, 'Cart is required.'),
