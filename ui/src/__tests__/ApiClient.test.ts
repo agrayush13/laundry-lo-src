@@ -75,6 +75,31 @@ describe('the API client', () => {
         });
     });
 
+    it('preserves checkout serviceability errors for customer-facing recovery', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi.fn().mockResolvedValue(
+                new Response(
+                    JSON.stringify({
+                        error: {
+                            code: 'ADDRESS_NOT_SERVICEABLE',
+                            message:
+                                'That laundry does not currently serve the selected address pincode.',
+                            requestId: 'req_serviceability',
+                        },
+                    }),
+                    { status: 409, headers: { 'Content-Type': 'application/json' } }
+                )
+            )
+        );
+
+        await expect(apiPost('/orders', {})).rejects.toMatchObject({
+            code: 'ADDRESS_NOT_SERVICEABLE',
+            status: 409,
+            requestId: 'req_serviceability',
+        });
+    });
+
     it('sends JSON mutations and caller-provided idempotency headers', async () => {
         const fetch = vi.fn().mockResolvedValue(
             new Response(JSON.stringify({ id: 'ord_1' }), {

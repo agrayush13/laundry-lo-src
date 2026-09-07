@@ -284,6 +284,86 @@ describe('cart, membership and order placement', () => {
         await request('DELETE', '/api/v1/cart', undefined, authorization);
     });
 
+    it('rejects an address outside the laundry pincode without consuming the cart or slots', async () => {
+        const cartResponse = await request(
+            'PUT',
+            '/api/v1/cart/items/itm_1001_wf-shirt',
+            { quantity: 1 },
+            authorization
+        );
+        const cart = cartResponse.body as Cart;
+        const addressResponse = await request(
+            'POST',
+            '/api/v1/addresses',
+            {
+                label: 'Outside service area',
+                recipientName: 'Customer One',
+                phone: '+91 90000 00000',
+                building: '10',
+                street: 'HSR Layout',
+                landmark: '',
+                pincode: '560102',
+                isDefault: false,
+            },
+            authorization
+        );
+        const addressId = (addressResponse.body as SavedAddress).id;
+        const key = '22222222-3333-4444-8555-666666666666';
+
+        await pool.query(
+            `insert into public.slots
+                (id, partner_id, starts_at, ends_at, capacity, booked, state)
+             values
+                ('slt_test_service_pickup', '1001', now() + interval '39 days',
+                 now() + interval '39 days 2 hours', 1, 0, 'open'),
+                ('slt_test_service_delivery', '1001', now() + interval '39 days 4 hours',
+                 now() + interval '39 days 6 hours', 1, 0, 'open')`
+        );
+
+        try {
+            const failed = await request(
+                'POST',
+                '/api/v1/orders',
+                {
+                    cartId: cart.id,
+                    addressId,
+                    pickupSlotId: 'slt_test_service_pickup',
+                    deliverySlotId: 'slt_test_service_delivery',
+                    paymentMethod: 'cash_on_pickup',
+                },
+                { ...authorization, 'Idempotency-Key': key }
+            );
+            expect(failed.status).toBe(409);
+            expect(failed.body).toMatchObject({
+                error: {
+                    code: 'ADDRESS_NOT_SERVICEABLE',
+                    message: 'That laundry does not currently serve the selected address pincode.',
+                },
+            });
+
+            const preserved = await get('/api/v1/cart', authorization);
+            expect(preserved.body).toMatchObject({ id: cart.id, items: [{ quantity: 1 }] });
+            const slots = await pool.query<{ booked: number }>(
+                `select booked from public.slots
+                 where id in ('slt_test_service_pickup', 'slt_test_service_delivery')
+                 order by id`
+            );
+            expect(slots.rows).toEqual([{ booked: 0 }, { booked: 0 }]);
+            const orders = await pool.query<{ count: string }>(
+                'select count(*) from public.orders where user_id = $1 and idempotency_key = $2',
+                [CUSTOMER, key]
+            );
+            expect(orders.rows[0]?.count).toBe('0');
+        } finally {
+            await request('DELETE', '/api/v1/cart', undefined, authorization);
+            await request('DELETE', `/api/v1/addresses/${addressId}`, undefined, authorization);
+            await pool.query(
+                `delete from public.slots
+                 where id in ('slt_test_service_pickup', 'slt_test_service_delivery')`
+            );
+        }
+    });
+
     it('keeps the cart and rolls back every write when a slot is unavailable', async () => {
         const cartResponse = await request(
             'PUT',

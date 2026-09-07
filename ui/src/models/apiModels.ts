@@ -16,6 +16,7 @@ export type ApiErrorCode =
     | 'PARTNER_NOT_FOUND'
     | 'PROFILE_NOT_FOUND'
     | 'ADDRESS_NOT_FOUND'
+    | 'ADDRESS_NOT_SERVICEABLE'
     | 'CART_NOT_FOUND'
     | 'CART_EMPTY'
     | 'CART_CHANGED'

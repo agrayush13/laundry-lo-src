@@ -35,6 +35,13 @@ const databaseFailures = new Map<string, ConstructorParameters<typeof ApiError>>
     ['CART_EMPTY', ['CART_EMPTY', 'Add at least one laundry item before placing the order.']],
     ['CART_CHANGED', ['CART_CHANGED', 'Your cart changed because an item is no longer available.']],
     ['ADDRESS_NOT_FOUND', ['ADDRESS_NOT_FOUND', 'That saved address was not found.']],
+    [
+        'ADDRESS_NOT_SERVICEABLE',
+        [
+            'ADDRESS_NOT_SERVICEABLE',
+            'That laundry does not currently serve the selected address pincode.',
+        ],
+    ],
     ['SLOT_UNAVAILABLE', ['SLOT_UNAVAILABLE', 'One of those time slots is no longer available.']],
     ['PARTNER_CLOSED', ['PARTNER_CLOSED', 'That laundry is not accepting orders right now.']],
     ['UNAUTHENTICATED', ['UNAUTHENTICATED', 'Please sign in to continue.']],
