@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { analytics } from '../services/analyticsServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import { PIN_CODE_COPY, PIN_CODE_LENGTH } from '../config/bookingConfig';
 import { ROUTES } from '../config/navigationConfig';
 
@@ -13,6 +15,7 @@ import { ROUTES } from '../config/navigationConfig';
  */
 export const usePinCodeSearch = () => {
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const inputRef = useRef<HTMLInputElement>(null);
     const [pinCode, setPinCode] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -35,6 +38,9 @@ export const usePinCodeSearch = () => {
                 return;
             }
 
+            analytics.trackEvent(ANALYTICS_EVENTS.partnerSearch, {
+                surface: pathname === ROUTES.journey ? 'journey' : 'homepage',
+            });
             navigate(ROUTES.laundriesForPin(pinCode));
         },
     };

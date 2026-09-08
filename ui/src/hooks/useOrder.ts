@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { analytics } from '../services/analyticsServices';
 import { ApiError } from '../services/apiClient';
 import { getOrder } from '../services/customerServices';
 import { cancelCustomerOrder } from '../services/orderServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import { ORDERS_COPY } from '../config/cartConfig';
 import { useAsync } from './useAsync';
 
@@ -17,6 +19,16 @@ export const useOrder = () => {
             orderId ? getOrder(orderId, signal) : Promise.reject(new Error('Missing order id')),
         [orderId]
     );
+    const reportedOrder = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!state.data || reportedOrder.current === state.data.id) return;
+        reportedOrder.current = state.data.id;
+        analytics.trackEvent(ANALYTICS_EVENTS.orderTrackingViewed, {
+            status: state.data.status,
+            can_cancel: state.data.canCancel,
+        });
+    }, [state.data]);
 
     const requestCancellation = useCallback(() => {
         setCancellationError(null);
@@ -31,6 +43,7 @@ export const useOrder = () => {
         setCancellationError(null);
         try {
             await cancelCustomerOrder(state.data.id);
+            analytics.trackEvent(ANALYTICS_EVENTS.orderCancelled);
             setIsConfirmingCancellation(false);
             state.reload();
         } catch (error) {

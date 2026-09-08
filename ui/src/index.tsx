@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { analytics } from './services/analyticsServices';
 import App from './App';
 import './index.scss';
 
@@ -9,6 +10,7 @@ if (!container) {
 }
 
 const root = createRoot(container);
+analytics.initialize();
 root.render(
     <React.StrictMode>
         <App />

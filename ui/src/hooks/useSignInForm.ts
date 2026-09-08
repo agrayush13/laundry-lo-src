@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { analytics } from '../services/analyticsServices';
 import { authFailureMessage } from '../services/authServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import { useAuth } from '../context/AuthContext';
 import { destinationFromState } from '../utils/authUtils';
 
@@ -29,6 +31,7 @@ export const useSignInForm = () => {
             setIsSubmitting(true);
             try {
                 await signIn({ email, password });
+                analytics.trackEvent(ANALYTICS_EVENTS.passwordSignIn);
                 navigate(redirectTo, { replace: true });
             } catch (submitError) {
                 setError(authFailureMessage(submitError));

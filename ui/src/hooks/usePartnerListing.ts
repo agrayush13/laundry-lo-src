@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Partner, PartnerTag } from '../models/partnerModels';
 import { SERVICE_TYPES } from '../data/services';
+import { analytics } from '../services/analyticsServices';
 import { PartnerQuery, listPartners } from '../services/partnerServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import { DEFAULT_SORT, LISTING_COPY, PARTNER_PAGE_SIZE, SortKey } from '../config/listingConfig';
 import { useAsync } from './useAsync';
 
@@ -50,6 +52,20 @@ export const usePartnerListing = () => {
         (signal) => listPartners(buildQuery(), signal),
         [pinCode, service, tagKey, effectiveSortKey]
     );
+    const reportedQuery = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!firstPage.data || reportedQuery.current === queryKey) return;
+        reportedQuery.current = queryKey;
+        analytics.trackEvent(ANALYTICS_EVENTS.partnerResults, {
+            result_count: firstPage.data.data.length,
+            has_more: firstPage.data.nextCursor !== null,
+            has_pincode: Boolean(pinCode),
+            service_filter: service ?? 'none',
+            tag_count: activeTags.length,
+            sort: effectiveSortKey,
+        });
+    }, [activeTags.length, effectiveSortKey, firstPage.data, pinCode, queryKey, service]);
 
     // Pages beyond the first are appended rather than replacing what is shown.
     const [appended, setAppended] = useState<Partner[]>([]);

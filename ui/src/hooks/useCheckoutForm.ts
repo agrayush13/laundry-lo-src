@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Address, EMPTY_SLOT, SlotSelection, emptyAddress } from '../models/bookingModels';
+import { analytics } from '../services/analyticsServices';
 import { ApiError } from '../services/apiClient';
 import { createAddress } from '../services/customerServices';
 import { createOrder } from '../services/orderServices';
 import { getPartner, getPartnerSlots } from '../services/partnerServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import {
     CHECKOUT_ADDRESS_ID_PREFIX,
     SCHEDULE_DAYS,
@@ -84,6 +86,16 @@ export const useCheckoutForm = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const idempotencyKey = useRef(crypto.randomUUID());
+    const reportedCheckout = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!partner || cart.lines.length === 0 || reportedCheckout.current === partner.id) return;
+        reportedCheckout.current = partner.id;
+        analytics.trackEvent(ANALYTICS_EVENTS.checkoutStarted, {
+            item_count: cart.itemCount,
+            has_plus: cart.hasPlus,
+        });
+    }, [cart.hasPlus, cart.itemCount, cart.lines.length, partner]);
 
     const selectedSaved = savedAddresses.find((address) => address.id === selectedAddressId);
     const address = selectedSaved ?? draftAddress;
@@ -184,6 +196,11 @@ export const useCheckoutForm = () => {
             }
 
             if (!cart.isApiBacked) {
+                analytics.trackEvent(ANALYTICS_EVENTS.orderPlaced, {
+                    source: 'browser_fixture',
+                    item_count: cart.itemCount,
+                    has_plus: cart.hasPlus,
+                });
                 navigate(ROUTES.orderConfirmed, {
                     replace: true,
                     state: createOrderIdentifiers(),
@@ -220,6 +237,11 @@ export const useCheckoutForm = () => {
                     },
                     idempotencyKey.current
                 );
+                analytics.trackEvent(ANALYTICS_EVENTS.orderPlaced, {
+                    source: 'database',
+                    item_count: cart.itemCount,
+                    has_plus: cart.hasPlus,
+                });
                 navigate(ROUTES.orderConfirmed, {
                     replace: true,
                     state: { orderId: order.id, orderReference: order.reference },
