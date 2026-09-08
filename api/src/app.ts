@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { NOOP_ANALYTICS, type AnalyticsReporter } from './analytics.js';
 import type { Config } from './config.js';
 import type { Pool } from './db/pool.js';
 import { ApiError, toErrorBody } from './http/errors.js';
@@ -17,6 +18,7 @@ export interface AppEnv {
         userId: string | null;
         userEmail: string;
         requestId: string;
+        analytics: AnalyticsReporter;
     };
 }
 
@@ -24,12 +26,13 @@ export interface AppDeps {
     pool: Pool;
     config: Config;
     verify: TokenVerifier;
+    analytics?: AnalyticsReporter;
 }
 
 const isSafeRequestId = (value: string | undefined): value is string =>
     value !== undefined && /^[A-Za-z0-9._:-]{1,128}$/.test(value);
 
-export const createApp = ({ pool, config, verify }: AppDeps) => {
+export const createApp = ({ pool, config, verify, analytics = NOOP_ANALYTICS }: AppDeps) => {
     const app = new Hono<AppEnv>();
 
     app.use(
@@ -50,6 +53,7 @@ export const createApp = ({ pool, config, verify }: AppDeps) => {
             : crypto.randomUUID();
         c.set('requestId', requestId);
         c.set('pool', pool);
+        c.set('analytics', analytics);
         c.header('X-Request-Id', requestId);
         await next();
     });

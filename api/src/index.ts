@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { createAnalyticsReporter } from './analytics.js';
 import { createApp } from './app.js';
 import { createVerifier } from './auth/verifyToken.js';
 import { loadConfig } from './config.js';
@@ -6,7 +7,12 @@ import { createPool } from './db/pool.js';
 
 const config = loadConfig();
 const pool = createPool(config);
-const app = createApp({ pool, config, verify: createVerifier(config) });
+const app = createApp({
+    pool,
+    config,
+    verify: createVerifier(config),
+    analytics: createAnalyticsReporter(config),
+});
 
 const server = serve({ fetch: app.fetch, port: config.port }, ({ port }) => {
     console.log(`laundrylo api listening on http://localhost:${port}`);

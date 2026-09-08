@@ -10,6 +10,9 @@ const config: Config = {
     supabaseJwtSecret: 'test-secret',
     corsOrigins: ['http://localhost:3000'],
     isProduction: false,
+    umamiHostUrl: undefined,
+    umamiWebsiteId: undefined,
+    publicAppHostname: 'localhost',
 };
 
 describe('GET /health', () => {

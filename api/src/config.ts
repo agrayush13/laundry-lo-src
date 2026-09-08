@@ -22,6 +22,9 @@ export interface Config {
     supabaseJwtSecret: string | undefined;
     corsOrigins: string[];
     isProduction: boolean;
+    umamiHostUrl: string | undefined;
+    umamiWebsiteId: string | undefined;
+    publicAppHostname: string;
 }
 
 export const loadConfig = (): Config => ({
@@ -33,4 +36,7 @@ export const loadConfig = (): Config => ({
         .split(',')
         .map((o) => o.trim()),
     isProduction: process.env.NODE_ENV === 'production',
+    umamiHostUrl: optional('UMAMI_HOST_URL'),
+    umamiWebsiteId: optional('UMAMI_WEBSITE_ID'),
+    publicAppHostname: process.env.PUBLIC_APP_HOSTNAME ?? 'localhost',
 });

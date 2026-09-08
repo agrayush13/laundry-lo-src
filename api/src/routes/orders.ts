@@ -134,6 +134,9 @@ export const orderRoutes = new Hono<AppEnv>()
             return { order, replayed: row.replayed };
         }).catch(translatePlacementFailure);
 
+        if (!result.replayed) {
+            c.get('analytics').trackOrderPlaced(result.order, c.req.header('User-Agent'));
+        }
         return result.replayed ? c.json(result.order) : c.json(result.order, 201);
     })
     .get('/', async (c) => {
