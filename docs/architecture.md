@@ -87,6 +87,9 @@ Naming: components PascalCase, directories kebab-case, styles
 | Guest cart                 | `CartContext`  | Versioned `localStorage`, merged after authentication    |
 | Signed-in cart and totals  | API/PostgreSQL | One active cart per account                              |
 | Profile, addresses, orders | API/PostgreSQL | Protected by user-scoped RLS                             |
+| Partner fulfilment queue   | API/PostgreSQL | Restricted to each partner's owner by RLS and API checks |
+| Laundry configuration      | API/PostgreSQL | Owner-scoped profile, coverage, state and weekly hours   |
+| Partner catalogue editing  | API/PostgreSQL | Owner-scoped names, prices and item availability         |
 | Auth                       | Supabase Auth  | Short-lived access token plus rotated refresh session    |
 | Theme                      | `ThemeContext` | `localStorage`                                           |
 | Partners, slots            | API/PostgreSQL | Partner reads cached 5 min by the SW; slots never cached |
@@ -125,11 +128,16 @@ matching carts take the larger quantity for each line.
 
 The homepage ships in the initial bundle; every other route, the journey
 included, is `React.lazy` behind a Suspense boundary in `Layout`. Webpack `splitChunks` separates vendor
-code. Protected routes (`profile`, `bookings`) sit behind a `ProtectedRoute`
-wrapper that waits for session restoration before redirecting. Sign-in and
-sign-up use the inverse guest-only guard. `/auth/callback` completes email and
-Google sign-in and permits only same-origin return paths; `/update-password`
-accepts only a Supabase password-recovery session.
+code. Protected routes (`profile`, `bookings`, `partner/orders`,
+`partner/settings` and `partner/catalogue`) sit behind a `ProtectedRoute`
+wrapper that waits for session
+restoration before redirecting. The partner portal does not trust a browser-side
+role: its first resource request is authorized by the API against
+`partners.owner_id`, and a signed-in non-owner receives a dedicated access
+state. Sign-in and sign-up use
+the inverse guest-only guard. `/auth/callback` completes email and Google sign-in
+and permits only same-origin return paths; `/update-password` accepts only a
+Supabase password-recovery session.
 
 `Layout` renders the shared header and footer for every route except
 `/journey`. The journey carries its own minimal header and its own footer, which
@@ -308,11 +316,32 @@ one story twice, and them drifting apart would not look like a failure: it would
 look like a site that simply says two different things. See
 [journey.md](./journey.md) section 20.
 
+`PartnerPortal.test.tsx` drives the owner operations slice through its route
+guard, server-authorized access state, status filters, cursor pagination,
+fulfilment detail and two-step lifecycle mutation. A conflict refreshes the
+order from the server instead of leaving the operator on stale state.
+
+`PartnerSettings.test.tsx` drives the owner configuration slice through the
+same route and server authorization boundaries, edits the listing and multiple
+service pincodes, changes availability and weekly hours, and proves that failed
+saves preserve the operator's draft.
+
+`PartnerCatalog.test.tsx` drives the owner catalogue slice through the protected
+route, updates category and item copy, converts editable rupee values to integer
+paise, hides items without deleting them, rejects invalid local input and proves
+that failed saves preserve the operator's draft.
+
+`CustomerCancellation.test.tsx` verifies that only server-eligible orders show
+the cancellation action, requires an explicit confirmation, refreshes tracking
+after success and preserves the confirmation with a visible retryable error when
+the mutation fails.
+
 ## 3. Backend
 
 The deployed Hono service in [`api/`](../api/) serves partners, catalogues,
-slots, profiles, addresses, carts, orders, laundry-owner order queues and
-fulfilment events, and membership from PostgreSQL.
+slots, profiles, addresses, carts, orders, laundry-owner order queues,
+fulfilment events, laundry configuration and catalogue maintenance, and
+membership from PostgreSQL.
 
 ### Why Supabase
 
@@ -353,8 +382,9 @@ mapping lives beside its transactional reads in `customerQueries.ts`.
 Built by `supabase/migrations/`, filled by `supabase/seed.sql`, documented in
 [schema.md](./schema.md). The migrations build tables and RLS first, then the
 derived listing and slot functions, catalogue and id hardening, the atomic
-customer write path, exact-pincode serviceability and the partner order
-lifecycle.
+customer write path, the partner order lifecycle, owner-managed laundry
+configuration and catalogue maintenance, and shared multi-pincode service areas
+for discovery and checkout.
 
 Two things are derived rather than stored, and that is the point of them:
 `Partner.services` is the distinct set of `catalog_categories.service`, and
@@ -391,6 +421,13 @@ both slots, snapshots the address and catalogue lines, records the first event,
 activates Plus when selected and clears the cart in one transaction. Direct
 order inserts remain unavailable to API roles.
 
+Customer cancellation uses `cancel_order`, another narrow database operation.
+It locks the caller's order and permits only service-only cash-on-pickup orders
+whose latest event is `placed` or `confirmed` and whose scheduled pickup is
+still in the future. Status, terminal tracking event and both slot reservations
+change atomically. The read model exposes `canCancel` from the same inputs; the
+mutation rechecks them under lock so a stale browser cannot override policy.
+
 Fulfilment uses the equally narrow `advance_order` function. It verifies that
 the caller owns the order's laundry, locks the order, permits only the next event
 in the defined sequence, updates the denormalized status and appends the
@@ -402,6 +439,22 @@ Laundry-owner order reads use the same caller-scoped transaction and RLS. The
 queue can span all laundries owned by the caller or filter by laundry and
 status, and uses opaque keyset cursors. It returns only the recipient name and
 pincode; phone and street details stay on the owner-checked detail endpoint.
+
+Laundry configuration uses the same ownership boundary. Authenticated owners
+have column-level update privileges only for public profile, address,
+turnaround and availability fields; ownership, ratings, imagery and other
+platform-managed columns remain unwritable. Weekly hours are replaced by a
+narrow security-definer function that validates ownership and the complete
+seven-day calendar. A changed calendar removes only future unbooked slots,
+blocks already-booked future capacity and generates a fresh 14-day window; an
+unchanged save leaves existing reservations and capacity untouched.
+
+Catalogue maintenance is similarly narrow. Authenticated owners may update
+only category names and item names, descriptions, integer-paise prices and
+active state. They cannot change a category's canonical service, move an item,
+change currency/unit/icon/order, insert a new service or delete a referenced
+row. Deactivation removes an item from public catalogue reads while preserving
+cart foreign keys and historical order snapshots.
 
 ### What the server owns
 
@@ -420,6 +473,8 @@ results rather than reimplementing them.
   order at placement so later edits never rewrite the past.
 - **Order progression.** Laundry owners can advance only their own orders and
   only one lifecycle step at a time; concurrent repeats create one event.
+- **Customer cancellation.** An eligible customer can cancel before pickup;
+  concurrent attempts produce one terminal event and release capacity once.
 - **Fulfilment access.** Partner queues and order details are resolved against
   `owns_partner`; another partner and the customer-facing session cannot use
   those operational reads.
@@ -479,11 +534,17 @@ readiness probe and returns `503` when the database cannot be reached.
 ## 6. Known gaps
 
 - No analytics, no error reporting service.
-- No partner admin panel, so `is_open`, hours and catalogs have no editor.
+- The partner portal covers fulfilment, profile, multi-pincode coverage,
+  `is_open`, turnaround, weekly hours and maintenance of existing catalogue
+  names/items/prices. New-service creation, holidays/capacity, staffing and
+  onboarding remain.
 - Images are Unsplash URLs rather than owned assets.
 - Cash on pickup only; no payment integration.
-- Serviceability currently uses exact partner pincodes in search and order
-  placement. A future partner service-area model can replace this with radius
-  or multi-pincode coverage when operations require it.
+- Self-service cancellation covers service-only orders before pickup. Plus
+  reversal, rescheduling, partner cancellation and post-pickup exceptions
+  remain support/operations policy work.
+- Serviceability uses the same owner-managed exact-pincode coverage table in
+  marketplace search and order placement. Radius or polygon coverage remains a
+  future option if exact pincodes become operationally insufficient.
 - The API has a per-instance order-write limiter; production should also keep a
   shared edge limiter across instances.

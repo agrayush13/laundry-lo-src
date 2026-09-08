@@ -198,6 +198,10 @@ card links to `/laundries?pin=560103&service=wash-fold`. See decision 7.
 
 `isOpen` is stored server-side and controlled by partner operations. See decision 2.
 
+When `pincode` is supplied, the listing includes laundries whose owner-managed
+service-area set contains that exact pincode. `address.pincode` remains the
+laundry's physical business address and is not used as a coverage shortcut.
+
 `sort=distance` requires either `pincode` or a latitude/longitude pair. Without
 an origin there is no meaningful distance to sort, so the API returns `422`
 instead of presenting a stable-looking but arbitrary order.
@@ -396,8 +400,8 @@ Header: `Idempotency-Key: <uuid>`
 
 → `201` `Order`
 → `200` the original `Order` when the same idempotency key is replayed
-→ `409` `ADDRESS_NOT_SERVICEABLE` when the saved address pincode differs from
-the selected laundry's service pincode. The cart and slot capacity are preserved.
+→ `409` `ADDRESS_NOT_SERVICEABLE` when the saved address pincode is not in the
+selected laundry's service-area set. The cart and slot capacity are preserved.
 → `409` `SLOT_UNAVAILABLE` if a slot filled between selection and submit
 → `409` `CART_CHANGED` if a cart line became inactive or no longer belongs
 to the selected laundry. The cart is preserved so the UI can refresh it and ask
@@ -412,6 +416,7 @@ the customer to review the change.
   "id": "ord_01J8XR3K2W",
   "reference": "LL-2026-001",
   "status": "processing",
+  "canCancel": false,
   "placedAt": "2024-03-20T10:30:00Z",
   "partner": { "id": "1001", "name": "SparkleWash Express" },
   "lines": [
@@ -453,6 +458,39 @@ copy changes and translations do not need a backend deploy.
 
 `status` values: `processing | out_for_delivery | delivered | cancelled`
 (lowercase snake, not display strings).
+
+`canCancel` is evaluated by the server using the current tracking event,
+scheduled pickup, payment method and membership charge. The client shows the
+self-service action only when this value is true and still treats the mutation
+response as authoritative if eligibility changes after the read.
+
+### `POST /orders/{id}/cancellation`
+
+Authenticated customer operation with no request body. It is available only
+for the caller's own service-only, cash-on-pickup order while the latest event
+is `placed` or `confirmed` and the scheduled pickup has not started.
+
+→ `200`
+
+```json
+{
+  "orderId": "ord_01J8XR3K2W",
+  "status": "cancelled",
+  "event": { "type": "cancelled", "occurredAt": "2026-09-07T06:30:00Z" }
+}
+```
+
+The database locks the order, appends the terminal event, updates status and
+releases both slot reservations in one transaction. Concurrent repeat requests
+produce one cancellation and one `409 CANCELLATION_NOT_ALLOWED`; capacity is
+released exactly once. Another customer's order returns the same `404` as a
+missing id.
+
+Orders that have reached pickup, whose pickup time has elapsed, or that
+activated Plus return `409 CANCELLATION_NOT_ALLOWED`. Plus-activation orders
+remain a support case because the current membership table has no safe reversal
+or refund lifecycle. Rescheduling, partner-initiated cancellation and
+post-pickup exceptions remain separate policies.
 
 ### `GET /partner/orders?partnerId=1001&status=processing&limit=20&cursor=...`
 
@@ -511,7 +549,113 @@ outside the caller's laundry returns the same `404` as a missing order.
 
 The database locks the order and appends the event plus status change in one
 transaction. Direct `orders` updates and `order_events` inserts remain denied to
-authenticated sessions; cancellation is a separate policy and API decision.
+authenticated sessions. Customer cancellation goes through the narrower
+`cancel_order` operation; partner-initiated cancellation remains a separate
+policy decision.
+
+### `GET /partner/laundries`
+
+Authenticated laundry-owner configuration list. It returns every laundry whose
+`owner_id` is the caller. An authenticated account that owns no laundry receives
+`403`; anonymous requests receive `401`.
+
+→ `{ "data": [PartnerConfiguration] }`
+
+### `GET /partner/laundries/{id}`
+
+Returns one owned laundry configuration. A customer, another owner or a missing
+id receives the same `404`, so the endpoint does not disclose ownership.
+
+```json
+{
+  "id": "1001",
+  "name": "SparkleWash Express",
+  "about": "Fast, careful garment care.",
+  "address": {
+    "line1": "12 Lake Road",
+    "line2": "HSR Layout",
+    "city": "Bengaluru",
+    "pincode": "560103"
+  },
+  "servicePincodes": ["560102", "560103"],
+  "turnaroundHours": 24,
+  "acceptingOrders": true,
+  "useOpeningHours": true,
+  "currentlyOpen": true,
+  "openingHours": [
+    { "weekday": 0, "opensAt": null, "closesAt": null },
+    { "weekday": 1, "opensAt": "08:00", "closesAt": "20:00" }
+  ]
+}
+```
+
+`acceptingOrders` is the owner's master switch. `currentlyOpen` is read-only and
+applies that switch plus the current weekly schedule when `useOpeningHours` is
+enabled.
+
+### `PUT /partner/laundries/{id}`
+
+Replaces the editable configuration in one transaction. The body is the shape
+above without `id` and `currentlyOpen`. `openingHours` must contain each weekday
+`0` through `6` exactly once. A closed day uses two null times; an open day uses
+24-hour `HH:MM` values with closing after opening. Overnight windows are not
+accepted. `servicePincodes` must contain between 1 and 50 unique six-digit
+pincodes. It replaces the complete service-area set; `address.pincode` remains
+the physical business address and does not have to be in that set.
+
+Only profile, address, service areas, turnaround, manual state and schedule
+fields are owner writable. The owner cannot change `owner_id`, ratings or
+platform-managed media.
+
+When hours change, future unbooked slots are regenerated and booked slots are
+preserved but blocked from further capacity. Saving unchanged hours does not
+disturb existing slots.
+
+### `GET /partner/laundries/{id}/catalog`
+
+Returns the complete catalogue for an owned laundry. It uses the public
+catalogue shape from `GET /partners/{id}/catalog`, with an additional
+`isActive` boolean on every item. Hidden items are included here so an owner can
+restore them; public catalogue reads include active items only. A customer,
+another owner or a missing laundry receives the same `404`.
+
+### `PATCH /partner/laundries/{id}/catalog/categories/{categoryId}`
+
+Updates an existing category's customer-facing name:
+
+```json
+{ "name": "Everyday Laundry" }
+```
+
+→ `200` the updated owner catalogue category, including active and hidden
+items. The canonical `service` slug is platform-owned and cannot be changed by
+this endpoint.
+
+### `PATCH /partner/laundries/{id}/catalog/items/{itemId}`
+
+Updates the editable fields of one existing item:
+
+```json
+{
+  "name": "Shirt / T-shirt",
+  "description": "Washed, pressed and folded.",
+  "price": { "amount": 2500, "currency": "INR" },
+  "isActive": true
+}
+```
+
+→ `200` the updated item. Prices are integer paise from `0` through
+`100000000`, and this launch surface accepts INR only. Name, optional
+description, price and customer availability are the only editable fields;
+category assignment, currency, unit, icon and display order remain
+platform-managed.
+
+There is deliberately no delete operation. Setting `isActive` to `false` hides
+an item from customer catalogue reads without removing the row, so saved carts
+retain their references and placed orders retain their snapshots. A stale cart
+containing a hidden item is rejected by order placement as `CART_CHANGED`.
+Category/item creation, category reassignment and new service creation remain
+part of partner onboarding rather than this maintenance surface.
 
 ---
 
@@ -541,8 +685,8 @@ Reviewed 2026-08-31.
    into the account: **guest cart wins on partner conflict** (replace the server
    cart, warn via `CART_PARTNER_CONFLICT`); if the partner matches, union the
    line items and take the higher quantity per item.
-2. **`isOpen` → server-stored.** An admin panel will let partners toggle
-   open/closed and opt into auto open/close by opening hours. Consequence: the
+2. **`isOpen` → server-stored.** Partner settings let owners toggle open/closed
+   and opt into auto open/close by opening hours. Consequence: the
    partner list must not be cached hard on the client (short TTL or revalidate on
    detail) so a store that just closed stops taking orders promptly.
 3. **Money → integer minor units (paise).**

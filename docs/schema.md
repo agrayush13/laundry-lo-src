@@ -70,25 +70,39 @@ Created on first login by a trigger on `auth.users`.
 
 ### partners
 
-| Column             | Type    | Notes                                    |
-| ------------------ | ------- | ---------------------------------------- |
-| `id`               | text PK |                                          |
-| `owner_id`         | uuid FK | -> profiles; who administers it          |
-| `name`             | text    |                                          |
-| `about`            | text    |                                          |
-| `line1` `line2`    | text    | structured address                       |
-| `city` `pincode`   | text    | pincode indexed for search               |
-| `latitude`         | numeric | for distance and the future map view     |
-| `longitude`        | numeric |                                          |
-| `turnaround_hours` | integer |                                          |
-| `is_open`          | boolean | manual override for partner operations   |
-| `auto_schedule`    | boolean | when true, opening hours drive `is_open` |
-| `image_url`        | text    |                                          |
-| `image_alt`        | text    |                                          |
+| Column             | Type    | Notes                                      |
+| ------------------ | ------- | ------------------------------------------ |
+| `id`               | text PK |                                            |
+| `owner_id`         | uuid FK | -> profiles; who administers it            |
+| `name`             | text    | owner-editable, 1-120 trimmed characters   |
+| `about`            | text    | owner-editable, nullable, max 1,000        |
+| `line1` `line2`    | text    | owner-editable structured address          |
+| `city` `pincode`   | text    | owner-editable physical business address   |
+| `latitude`         | numeric | for distance and the future map view       |
+| `longitude`        | numeric |                                            |
+| `turnaround_hours` | integer | owner-editable, 1-336                      |
+| `is_open`          | boolean | owner-editable booking master switch       |
+| `auto_schedule`    | boolean | owner-editable; hours also gate opening    |
+| `image_url`        | text    |                                            |
+| `image_alt`        | text    |                                            |
 
 `rating` and `review_count` are currently denormalized columns seeded for the
 demo catalogue. The `partner_details` view is the API boundary, so they can move
 to an aggregate over `reviews` later without changing the route shape.
+
+### partner_service_areas
+
+One row per exact pincode served by a laundry, separate from its physical
+address. `(partner_id, pincode)` is the primary key, and `pincode` is indexed
+first for marketplace lookup. Owners replace the complete 1-50 pincode set
+through `replace_partner_service_areas`; direct writes remain unavailable to
+application roles. Existing laundries are migrated with their physical pincode
+as the initial service area.
+
+| Column       | Type    | Notes                             |
+| ------------ | ------- | --------------------------------- |
+| `partner_id` | text FK | -> partners, cascade delete       |
+| `pincode`    | text    | exactly six digits; indexed first |
 
 ### partner_hours
 
@@ -100,6 +114,12 @@ One row per weekday per partner. Drives `auto_schedule`.
 | `weekday`    | smallint | 0-6                  |
 | `opens_at`   | time     | nullable when closed |
 | `closes_at`  | time     | nullable when closed |
+
+Owner saves replace all seven rows through `replace_partner_hours`. The
+function requires ownership, rejects missing/duplicate weekdays and overnight
+hours, and resynchronizes only future slots when the schedule changed. Direct
+partner-table updates are restricted to the approved configuration columns;
+platform-managed ownership, ratings and imagery stay outside owner privileges.
 
 ### partner_tags
 
@@ -126,6 +146,10 @@ of a `services=dry-cleaning` filter, and so the homepage service cards keep work
 when partners rename things. `Partner.services` in the API is the distinct set of
 `service` values across a partner's categories. A database check rejects values
 outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`.
+Authenticated owners receive column-level update permission for `name` only;
+RLS still requires ownership. Names are trimmed by the API and constrained to
+1-80 characters by PostgreSQL. Insert, delete, partner reassignment, canonical
+service and display order are not exposed to an authenticated browser.
 
 ### catalog_items
 
@@ -144,6 +168,14 @@ outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`.
 
 The service is encoded in the item: _Wash & Fold - Shirt_ and _Dry Clean - Shirt_
 are separate rows under separate categories.
+
+Owners may update only `name`, `description`, `price` and `is_active`, with RLS
+resolving ownership through the parent category. PostgreSQL bounds names to
+1-120 characters, descriptions to 500, prices to ₹1,000,000 in paise, icon keys
+to 40 characters and positions to non-negative values. Currency, unit, icon,
+category assignment and position stay platform-managed. Items are deactivated,
+not deleted: cart foreign keys remain valid, public reads filter them out, and
+order placement reports an inactive cart line as `CART_CHANGED`.
 
 ### slots
 
@@ -258,6 +290,13 @@ only `placed → confirmed → picked_up → in_progress → out_for_delivery �
 delivered`. Authenticated roles cannot update `orders` or insert
 `order_events` directly.
 
+Eligible customer cancellation goes through the separate `cancel_order`
+security-definer function. It locks the customer's order, accepts only
+service-only cash-on-pickup orders at `placed` or `confirmed` before the
+scheduled pickup, appends `cancelled`, updates status and decrements both slot
+reservations atomically. A full slot becomes open again; a blocked slot remains
+blocked. Repeated or concurrent attempts cannot release capacity twice.
+
 ### memberships
 
 | Column       | Type            | Notes |
@@ -272,11 +311,10 @@ The implemented 10% benefit is applied server-side in cart totals and order
 placement. Future pickup-fee or priority-capacity benefits belong at the same
 boundary; nothing in the UI decides a discount.
 
-Order placement currently uses exact-pincode serviceability, matching the
-marketplace search rule. A trigger checks the snapshotted order address against
-the selected partner's pincode, so an unsupported address rolls back the order,
-slot reservations and cart deletion together. A future service-area model can
-replace this rule without trusting the browser.
+Order placement uses the same `partner_service_areas` rows as marketplace
+search. A trigger checks the snapshotted order address against the selected
+partner's coverage set, so an unsupported address rolls back the order, slot
+reservations and cart deletion together without trusting the browser.
 
 ### reviews (deferred)
 
@@ -305,6 +343,7 @@ auth.users 1--1 profiles 1--* addresses
                          1--? memberships
 
 partners 1--* partner_hours
+         1--* partner_service_areas
          1--* partner_tags
          1--* catalog_categories 1--* catalog_items
          1--* slots
@@ -313,7 +352,7 @@ partners 1--* partner_hours
 
 ## 5. Indexes worth having early
 
-- `partners (pincode)` and `partners (pincode, is_open)` - the listing query
+- `partner_service_areas (pincode, partner_id)` - marketplace coverage lookup
 - `catalog_categories (service, partner_id)` - filtering the listing by service
 - `slots (partner_id, starts_at)` - the slot picker
 - `orders (user_id, placed_at desc)` - order history pagination
@@ -347,7 +386,7 @@ Bengaluru demo set.
   to override. PostGIS earns its place when there is a map view and radius
   search; a scalar function costs no extension today.
 - **`owner_id` alone**, no `partner_staff`. One administrator per partner is
-  enough for the first admin panel, and the RLS policies all funnel through
+  enough for the first partner portal, and the RLS policies all funnel through
   `owns_partner(partner_id)`, so adding staff later changes that one function
   rather than every policy.
 - **`rating` and `review_count` are denormalised columns** for now, seeded from

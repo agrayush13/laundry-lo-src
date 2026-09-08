@@ -32,11 +32,16 @@ bookings and order tracking on both desktop and mobile.
 - Per-partner catalogues and a one-partner cart
 - Pickup and delivery slot selection
 - Persistent profiles and saved addresses, server-backed carts and order tracking
+- Customer cancellation before pickup with atomic tracking and slot-capacity release
+- Protected laundry-owner order queue with filters, fulfilment detail and confirmed status updates
+- Owner-managed laundry profile, multiple service pincodes, booking state and weekly hours
+- Owner-managed catalogue names, item details, per-piece prices and customer availability
 - Plus membership selection with server-computed pricing and discounts
 - Supabase email/password authentication, email confirmation, password recovery,
   Google OAuth with PKCE, session restoration and current-session sign-out
 - Installable PWA shell with offline caching for safe public reads
-- Hono API for partners, catalogues, slots, profiles, addresses, carts, orders and membership
+- Hono API for partners, catalogues, slots, profiles, addresses, carts, customer orders,
+  laundry-owner fulfilment, configuration and catalogue management, and membership
 - PostgreSQL migrations, seed data, Row Level Security and API integration tests
 - CI gates for frontend and backend types, lint, tests and production builds
 
