@@ -68,8 +68,7 @@ export const WASH = {
         { text: 'weekends', accent: true },
         { text: 'back.' },
     ] as CleanWord[],
-    subtitle:
-        'Compare local laundries, read reviews, book a pickup. Clean clothes back in 24 hours.',
+    subtitle: 'Compare local laundries and ratings, book a pickup. Clean clothes back in 24 hours.',
     // Per-item pricing means the total is known before the van arrives, which is
     // what the third beat says now that "pay after weighing" is retired.
     micro: ['free pickup', '24h turnaround', 'price shown up front'],

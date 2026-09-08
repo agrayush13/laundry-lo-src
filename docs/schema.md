@@ -1,6 +1,6 @@
 # laundrylo - data schema
 
-Status: **implemented**. Postgres on Supabase, built by
+Status: **implemented**. Reviewed on 2026-09-09. Postgres on Supabase, built by
 `supabase/migrations/` and filled by `supabase/seed.sql`. Pairs with
 [api-contract.md](./api-contract.md); this is the storage shape behind it.
 
@@ -18,9 +18,9 @@ Status: **implemented**. Postgres on Supabase, built by
 - **Enums** are Postgres enum types, lowercase snake case.
 - **Identity** lives in Supabase's `auth.users`. Our tables reference it by
   `auth.uid()`; we never store passwords.
-- **Row Level Security is on for every table.** Customers can only read and
-  write their own rows; partner-owned rows are readable publicly but writable
-  only by that partner.
+- **Row Level Security is on for every table.** Customer resources are scoped to
+  their user, owner-management resources to the laundry owner, and public
+  marketplace policies expose only the rows intended for anonymous discovery.
 
 ## 2. Enums
 
@@ -51,7 +51,7 @@ App-level user data. Supabase owns the credentials; this owns everything else.
 | `email_opt_in` | boolean     | default false             |
 | `created_at`   | timestamptz | doubles as "member since" |
 
-Created on first login by a trigger on `auth.users`.
+Created with the Supabase identity by a trigger on `auth.users`.
 
 ### addresses
 
@@ -70,21 +70,21 @@ Created on first login by a trigger on `auth.users`.
 
 ### partners
 
-| Column             | Type    | Notes                                      |
-| ------------------ | ------- | ------------------------------------------ |
-| `id`               | text PK |                                            |
-| `owner_id`         | uuid FK | -> profiles; who administers it            |
-| `name`             | text    | owner-editable, 1-120 trimmed characters   |
-| `about`            | text    | owner-editable, nullable, max 1,000        |
-| `line1` `line2`    | text    | owner-editable structured address          |
-| `city` `pincode`   | text    | owner-editable physical business address   |
-| `latitude`         | numeric | for distance and the future map view       |
-| `longitude`        | numeric |                                            |
-| `turnaround_hours` | integer | owner-editable, 1-336                      |
-| `is_open`          | boolean | owner-editable booking master switch       |
-| `auto_schedule`    | boolean | owner-editable; hours also gate opening    |
-| `image_url`        | text    |                                            |
-| `image_alt`        | text    |                                            |
+| Column             | Type    | Notes                                    |
+| ------------------ | ------- | ---------------------------------------- |
+| `id`               | text PK |                                          |
+| `owner_id`         | uuid FK | -> profiles; who administers it          |
+| `name`             | text    | owner-editable, 1-120 trimmed characters |
+| `about`            | text    | owner-editable, nullable, max 1,000      |
+| `line1` `line2`    | text    | owner-editable structured address        |
+| `city` `pincode`   | text    | owner-editable physical business address |
+| `latitude`         | numeric | for distance and the future map view     |
+| `longitude`        | numeric |                                          |
+| `turnaround_hours` | integer | owner-editable, 1-336                    |
+| `is_open`          | boolean | owner-editable booking master switch     |
+| `auto_schedule`    | boolean | owner-editable; hours also gate opening  |
+| `image_url`        | text    |                                          |
+| `image_alt`        | text    |                                          |
 
 `rating` and `review_count` are currently denormalized columns seeded for the
 demo catalogue. The `partner_details` view is the API boundary, so they can move
@@ -120,6 +120,24 @@ function requires ownership, rejects missing/duplicate weekdays and overnight
 hours, and resynchronizes only future slots when the schedule changed. Direct
 partner-table updates are restricted to the approved configuration columns;
 platform-managed ownership, ratings and imagery stay outside owner privileges.
+
+### partner_holiday_closures
+
+Exceptional local calendar days when a laundry cannot accept bookings. Weekly
+hours remain the default schedule. Owners replace today and future closures
+through `replace_partner_holiday_closures`; historical rows are retained, and
+direct writes remain unavailable to application roles.
+
+| Column         | Type    | Notes                             |
+| -------------- | ------- | --------------------------------- |
+| `partner_id`   | text FK | -> partners, cascade delete       |
+| `closure_date` | date    | local Asia/Kolkata operating date |
+| `reason`       | text    | optional, at most 120 characters  |
+
+`(partner_id, closure_date)` is the primary key. Adding a closure removes
+future unbooked slots on that date and blocks reserved slots without breaking
+their order references. Removing one refills safe windows in the 14-day
+horizon. `generate_slots` and `is_partner_open` both consult the same table.
 
 ### partner_tags
 
@@ -181,15 +199,15 @@ order placement reports an inactive cart line as `CART_CHANGED`.
 
 Server-owned availability. The client must never invent these.
 
-| Column       | Type        | Notes                  |
-| ------------ | ----------- | ---------------------- |
-| `id`         | text PK     | `slt_...`              |
-| `partner_id` | text FK     |                        |
-| `starts_at`  | timestamptz |                        |
-| `ends_at`    | timestamptz |                        |
-| `capacity`   | integer     |                        |
-| `booked`     | integer     | default 0              |
-| `state`      | slot_state  | `blocked` for holidays |
+| Column       | Type        | Notes                                       |
+| ------------ | ----------- | ------------------------------------------- |
+| `id`         | text PK     | `slt_...`                                   |
+| `partner_id` | text FK     |                                             |
+| `starts_at`  | timestamptz |                                             |
+| `ends_at`    | timestamptz |                                             |
+| `capacity`   | integer     |                                             |
+| `booked`     | integer     | default 0                                   |
+| `state`      | slot_state  | `blocked` for closures or operational holds |
 
 Availability is `state = 'open' and booked < capacity`. The order transaction
 increments `booked` atomically, which is what makes
@@ -344,6 +362,7 @@ auth.users 1--1 profiles 1--* addresses
 
 partners 1--* partner_hours
          1--* partner_service_areas
+         1--* partner_holiday_closures
          1--* partner_tags
          1--* catalog_categories 1--* catalog_items
          1--* slots
@@ -353,6 +372,7 @@ partners 1--* partner_hours
 ## 5. Indexes worth having early
 
 - `partner_service_areas (pincode, partner_id)` - marketplace coverage lookup
+- `partner_holiday_closures (closure_date, partner_id)` - closure and slot-generation lookup
 - `catalog_categories (service, partner_id)` - filtering the listing by service
 - `slots (partner_id, starts_at)` - the slot picker
 - `orders (user_id, placed_at desc)` - order history pagination
@@ -375,11 +395,12 @@ Bengaluru demo set.
   scales one base rate card by a per-partner factor, which is a seeding
   convenience rather than a schema the platform enforces.
 - **Slots are generated ahead**, one row per slot per day, by
-  `generate_slots(partner_id, from_date, days)` reading `partner_hours`. Derived
-  windows avoid a growing table but leave `booked` and holiday blocking with
-  nowhere to live, and it is `booked` that makes `409 SLOT_UNAVAILABLE` truthful
-  under concurrency. The table is small - one partner-fortnight is roughly 80
-  rows - and old rows can be pruned once orders reference a snapshot.
+  `generate_slots(partner_id, from_date, days)` reading `partner_hours` and
+  skipping `partner_holiday_closures`. Derived windows would leave reserved
+  capacity and operational blocking with nowhere to live; the stored `booked`
+  count makes `409 SLOT_UNAVAILABLE` truthful under concurrency. The table is
+  small - one partner-fortnight is roughly 80 rows - and old rows can be pruned
+  once orders reference a snapshot.
 - **Distance is haversine from a pincode centroid**, not PostGIS.
   `pincode_centroids` maps a searched pincode to a point, `haversine_meters`
   measures from it, and `GET /partners` accepts explicit `latitude`/`longitude`
@@ -397,5 +418,9 @@ Bengaluru demo set.
 Slot generation rolls forward daily through `refresh_scheduled_slots(14)` and a
 `pg_cron` job where that Supabase extension is available. The seed invokes the
 same underlying generator for local and preview data.
+
+Umami analytics uses a separate PostgreSQL database and does not add tables,
+identifiers or retention concerns to this application schema. Application
+orders, not analytics events, remain the authoritative transaction record.
 
 Still open: pruning. `slots` and `order_events` both grow without bound.

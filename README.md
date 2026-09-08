@@ -34,7 +34,7 @@ bookings and order tracking on both desktop and mobile.
 - Persistent profiles and saved addresses, server-backed carts and order tracking
 - Customer cancellation before pickup with atomic tracking and slot-capacity release
 - Protected laundry-owner order queue with filters, fulfilment detail and confirmed status updates
-- Owner-managed laundry profile, multiple service pincodes, booking state and weekly hours
+- Owner-managed laundry profile, service pincodes, booking state, weekly hours and holiday closures
 - Owner-managed catalogue names, item details, per-piece prices and customer availability
 - Plus membership selection with server-computed pricing and discounts
 - Supabase email/password authentication, email confirmation, password recovery,
@@ -43,6 +43,7 @@ bookings and order tracking on both desktop and mobile.
 - Hono API for partners, catalogues, slots, profiles, addresses, carts, customer orders,
   laundry-owner fulfilment, configuration and catalogue management, and membership
 - PostgreSQL migrations, seed data, Row Level Security and API integration tests
+- Privacy-conscious Umami page views, product funnels and server-confirmed order events
 - CI gates for frontend and backend types, lint, tests and production builds
 
 Marketplace data, account resources, cart totals and orders come from PostgreSQL
@@ -61,6 +62,9 @@ flowchart LR
     UI -->|sign in and refresh| Auth[Supabase Auth]
     Auth -->|access JWT| UI
     UI -->|Bearer JWT| API
+    UI -->|sanitized page views and events| Analytics[Umami]
+    API -->|committed order event| Analytics
+    Analytics --> AnalyticsDB[(Analytics PostgreSQL)]
 ```
 
 The browser uses same-origin `/api` requests. In development Webpack proxies
@@ -82,6 +86,7 @@ See [docs/architecture.md](docs/architecture.md) for the detailed design and
 | API            | Node.js 22, Hono 4, TypeScript, Zod, `pg`, `jose`                    |
 | Data           | PostgreSQL 17, Supabase migrations and seed data                     |
 | Authentication | Supabase Auth JS, email/password, Google OAuth and JWT verification  |
+| Analytics      | Self-hosted Umami, sanitized product events and Cloudflare edge data |
 | Quality        | ESLint, Stylelint, Prettier, Vitest, Testing Library, GitHub Actions |
 | Hosting        | Netlify frontend behind Cloudflare, Node API, hosted Supabase        |
 
@@ -191,9 +196,10 @@ backend jobs; the backend job creates a clean PostgreSQL 17 database first.
 
 Build from `ui/` with `npm ci && npm run build` and publish `ui/dist`. The build
 requires `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`; both are browser-safe
-project settings. It includes the SPA `_redirects` rule and a `_headers` rule
-that forces `service-worker.js` revalidation. Keep generated source maps out of
-the public directory.
+project settings. Set `UMAMI_HOST_URL`, `UMAMI_WEBSITE_ID` and `UMAMI_DOMAINS`
+to activate anonymous product analytics. It includes the SPA `_redirects` rule
+and a `_headers` rule that forces `service-worker.js` revalidation. Keep
+generated source maps out of the public directory.
 
 ### Backend and PostgreSQL
 
@@ -216,6 +222,9 @@ the public directory.
    set `NODE_ENV=production`.
 5. Route public `/api/*` traffic to the API and monitor `/health`. Configure
    `CORS_ORIGINS` if the API is also exposed on a different browser origin.
+6. Set the API's `UMAMI_HOST_URL`, `UMAMI_WEBSITE_ID` and
+   `PUBLIC_APP_HOSTNAME` so newly committed orders produce the authoritative,
+   best-effort conversion event.
 
 For a persistent Node service, use the direct Supabase connection when the host
 supports IPv6, or the session pooler when it needs IPv4. Store the connection
@@ -254,12 +263,24 @@ this ordering (replace the API hostname):
 The `/api` prefix is deliberately preserved because the server routes live
 under `/api/v1`.
 
+### Analytics
+
+Deploy an open-source Umami instance with its own PostgreSQL database, add
+`laundrylo.com`, then configure the frontend and API variables described above.
+The integration is disabled when those values are blank, so local development
+does not pollute production data. Dynamic record ids and raw search inputs are
+removed before tracking; only restricted `utm_*` campaign tags are retained.
+
+See [docs/analytics.md](docs/analytics.md) for the event catalogue, dashboard
+funnel, retention policy, activation checks and the correct way to compare
+Umami's browser sessions with Cloudflare's bot-inclusive edge traffic.
+
 ## Documentation
 
 Start with the [documentation index](docs/README.md). The PRD defines the
 product, the architecture document describes the implemented system and gaps,
-the API contract documents the live routes, and the schema documents PostgreSQL
-and RLS.
+the API contract documents the live routes, the schema documents PostgreSQL and
+RLS, and the analytics guide documents anonymous product measurement.
 
 The experimental wash-cycle journey remains available at `/journey` by direct
 URL. It is intentionally not linked from the product navigation; its design and

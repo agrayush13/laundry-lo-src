@@ -1,13 +1,16 @@
 # laundrylo API contract
 
-Status: **implemented and consumed**. Supabase Auth is the deployed identity
-provider; the API serves the public marketplace and authenticated customer
-resources described here.
+Status: **implemented and consumed**. Reviewed against the application on
+2026-09-09. Supabase Auth is the deployed identity provider; the API serves the
+public marketplace plus authenticated customer and laundry-owner resources
+described here.
 
 Public partner, catalogue, slot and membership-plan reads need no token.
 Profiles, addresses, carts, order placement/history and current membership use
-the verified Supabase caller. No production resource falls back to bundled
-data; local order/user arrays exist only behind the browser-test fixture.
+the verified Supabase caller. Laundry-owner queues, configuration and catalogue
+maintenance use the same verified caller and owner-scoped RLS. No production
+resource falls back to bundled data; local order/user arrays exist only behind
+the browser-test fixture.
 
 Base URL: `/api/v1`
 
@@ -34,8 +37,10 @@ otherwise guaranteed once discounts arrive.
 
 ### Dates and times
 
-ISO 8601, UTC, always. **No pre-formatted display strings.** The client receives
-`"2026-08-20T05:00:00Z"` and formats for the user's locale.
+Instants are ISO 8601 timestamps in UTC. **No pre-formatted display strings.**
+The client receives `"2026-08-20T05:00:00Z"` and formats for the user's locale.
+Calendar-only fields use `YYYY-MM-DD`; partner schedules and holiday closures
+interpret those dates in the Asia/Kolkata operating timezone.
 
 ### Errors
 
@@ -77,6 +82,11 @@ Supabase's JWKS. See section 2 and decision 5.
 `POST /orders` requires an `Idempotency-Key` header (client-generated UUID).
 Replaying the same key returns the original order rather than creating a second
 one. Without this, a double-tap on Place Order creates two orders.
+
+A first successful commit may emit a best-effort anonymous analytics event. It
+is outside the HTTP contract, contains no customer/order/address/pincode
+identifier and cannot change the status or body. Idempotent replays do not emit
+another server event.
 
 ---
 
@@ -196,7 +206,8 @@ takes one or more slugs and matches partners offering **all** of them, the same
 conjunctive rule as `tags=`. The homepage service cards are the first caller: each
 card links to `/laundries?pin=560103&service=wash-fold`. See decision 7.
 
-`isOpen` is stored server-side and controlled by partner operations. See decision 2.
+`isOpen` is resolved server-side from the owner's master switch, today's
+holiday closure and optional weekly schedule. See decision 2.
 
 When `pincode` is supplied, the listing includes laundries whose owner-managed
 service-area set contains that exact pincode. `address.pincode` remains the
@@ -438,8 +449,11 @@ the customer to review the change.
   },
   "deliveryAddress": {
     "label": "Home",
+    "recipientName": "Ayush Agrawal",
+    "phone": "+91 98765 43210",
     "building": "42",
     "street": "Sector 5, HSR Layout, Bengaluru",
+    "landmark": "",
     "pincode": "560103"
   },
   "pickup": { "date": "2024-03-20", "startsAt": "...", "endsAt": "..." },
@@ -578,6 +592,7 @@ id receives the same `404`, so the endpoint does not disclose ownership.
     "pincode": "560103"
   },
   "servicePincodes": ["560102", "560103"],
+  "holidayClosures": [{ "date": "2026-10-02", "reason": "Public holiday" }],
   "turnaroundHours": 24,
   "acceptingOrders": true,
   "useOpeningHours": true,
@@ -590,8 +605,9 @@ id receives the same `404`, so the endpoint does not disclose ownership.
 ```
 
 `acceptingOrders` is the owner's master switch. `currentlyOpen` is read-only and
-applies that switch plus the current weekly schedule when `useOpeningHours` is
-enabled.
+applies that switch, today's exceptional closure and the current weekly schedule
+when `useOpeningHours` is enabled. `holidayClosures` contains only today and
+future dates in the laundry's Asia/Kolkata operating timezone.
 
 ### `PUT /partner/laundries/{id}`
 
@@ -602,14 +618,24 @@ above without `id` and `currentlyOpen`. `openingHours` must contain each weekday
 accepted. `servicePincodes` must contain between 1 and 50 unique six-digit
 pincodes. It replaces the complete service-area set; `address.pincode` remains
 the physical business address and does not have to be in that set.
+`holidayClosures` accepts up to 60 unique real dates from today onward. Reasons
+are optional, trimmed and limited to 120 characters. A save replaces the
+laundry's complete current/future closure set while preserving historical
+closure records.
 
-Only profile, address, service areas, turnaround, manual state and schedule
-fields are owner writable. The owner cannot change `owner_id`, ratings or
-platform-managed media.
+Only profile, address, service areas, holiday closures, turnaround, manual state
+and schedule fields are owner writable. The owner cannot change `owner_id`,
+ratings or platform-managed media.
 
 When hours change, future unbooked slots are regenerated and booked slots are
 preserved but blocked from further capacity. Saving unchanged hours does not
 disturb existing slots.
+
+Adding a closure removes its future unbooked slots. Slots with an existing
+reservation are retained for referential integrity and blocked from additional
+bookings, so the laundry can resolve those orders from its queue. Removing a
+closure regenerates safe windows within the rolling 14-day horizon. Slot
+generation and daily rollover continue to skip every active closure.
 
 ### `GET /partner/laundries/{id}/catalog`
 
@@ -676,7 +702,7 @@ them.
 
 ## 9. Decisions
 
-Reviewed 2026-08-31.
+Reviewed 2026-09-09.
 
 ### Settled
 
@@ -685,10 +711,11 @@ Reviewed 2026-08-31.
    into the account: **guest cart wins on partner conflict** (replace the server
    cart, warn via `CART_PARTNER_CONFLICT`); if the partner matches, union the
    line items and take the higher quantity per item.
-2. **`isOpen` → server-stored.** Partner settings let owners toggle open/closed
-   and opt into auto open/close by opening hours. Consequence: the
-   partner list must not be cached hard on the client (short TTL or revalidate on
-   detail) so a store that just closed stops taking orders promptly.
+2. **`isOpen` → server-resolved.** Partner settings let owners toggle open/closed,
+   opt into auto open/close by opening hours and close exceptional local dates.
+   Consequence: the partner list must not be cached hard on the client (short TTL
+   or revalidate on detail) so a store that just closed stops taking orders
+   promptly.
 3. **Money → integer minor units (paise).**
 4. **Order id → two fields.** Opaque non-guessable `id` (ULID, used in every URL
    and API call) plus a human-friendly display-only `reference` (`LL-2026-001`).
@@ -742,3 +769,8 @@ Implemented:
   surfaces `409 SLOT_UNAVAILABLE` without losing the cart.
 - Profile, address, order and membership screens use authenticated endpoints;
   local arrays are browser-test fixtures only.
+- Eligible order tracking exposes a confirmed customer cancellation and refreshes
+  from the server after the atomic status/event/capacity change.
+- The protected laundry-owner portal consumes its order queue, detail and
+  lifecycle routes, and maintains profile, service areas, weekly hours, holiday
+  closures and existing catalogue entries through owner-scoped endpoints.

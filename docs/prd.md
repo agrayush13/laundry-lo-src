@@ -1,6 +1,6 @@
 # laundrylo - product requirements
 
-Status: **living document**. Reviewed against the application on 2026-09-08.
+Status: **living document**. Reviewed against the application on 2026-09-09.
 
 ---
 
@@ -18,15 +18,15 @@ partners, order from one partner at a time, and track the order to their door.
 
 ## 3. Who it is for
 
-| Audience               | Needs                                                       | Status                                         |
-| ---------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
-| **Customer**           | Find a nearby laundry, know the price up front, book, track | Product surface built                          |
-| **Partner (laundry)**  | Receive orders, maintain listing and hours, set prices      | Order, configuration and catalogue tools built |
-| **Fleet / operations** | Pickup and delivery runs                                    | Out of scope for now                           |
+| Audience               | Needs                                                         | Status                                         |
+| ---------------------- | ------------------------------------------------------------- | ---------------------------------------------- |
+| **Customer**           | Find a nearby laundry, know the price up front, book, track   | Product surface built                          |
+| **Partner (laundry)**  | Receive orders, maintain listing and availability, set prices | Order, configuration and catalogue tools built |
+| **Fleet / operations** | Pickup and delivery runs                                      | Out of scope for now                           |
 
 The customer surface and the first laundry-owner operations slices are in the
-current build. Partner onboarding, new-service creation, advanced availability
-and staff operations remain deferred.
+current build, including exceptional holiday closures. Partner onboarding,
+new-service creation, per-date capacity and staff operations remain deferred.
 
 ## 4. Core flow
 
@@ -88,19 +88,21 @@ per-item pricing actually gives the customer (see
 - laundrylo Plus membership, purchased through the cart
 - Protected laundry-owner order queue, fulfilment detail and ordered status progression
 - Protected laundry settings for the public profile, multiple service pincodes,
-  open/closed state, turnaround and weekly hours
+  open/closed state, turnaround, weekly hours and holiday closures
 - Protected catalogue maintenance for existing service names, item copy,
   per-piece prices and customer availability
+- Anonymous, cookieless acquisition and product-funnel analytics with a
+  server-confirmed order conversion
 
 ### Deferred
 
-| Item                                        | Why deferred                                                                                                                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reviews (writing them)                      | Ratings are shown read-only; write path comes later                                                                                                                             |
-| Order chat with the partner                 | Placeholder in the UI today                                                                                                                                                     |
-| Map view of partners                        | Placeholder in the UI today                                                                                                                                                     |
-| Partner onboarding and remaining operations | Profile, multi-pincode coverage, weekly hours and existing catalogue items are editable; signup, new services/items, holidays, capacity and staff come later |
-| Payments                                    | Cash on pickup only at launch                                                                                                                                                   |
+| Item                                        | Why deferred                                                                                                                                                         |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviews (writing them)                      | Ratings are shown read-only; write path comes later                                                                                                                  |
+| Order chat with the partner                 | Placeholder in the UI today                                                                                                                                          |
+| Map view of partners                        | Placeholder in the UI today                                                                                                                                          |
+| Partner onboarding and remaining operations | Profile, multi-pincode coverage, weekly hours, holiday closures and existing catalogue items are editable; signup, new services/items, capacity and staff come later |
+| Payments                                    | Cash on pickup only at launch                                                                                                                                        |
 
 ### Implementation snapshot
 
@@ -112,8 +114,11 @@ per-item pricing actually gives the customer (see
 - **API source of truth:** partner search/details, per-partner catalogues, slot
   availability, profiles, addresses, server carts and totals, order
   placement/history, laundry-owner fulfilment queues, status progression and
-  core laundry configuration, multi-pincode service areas, catalogue maintenance
-  and membership status.
+  core laundry configuration, multi-pincode service areas, holiday closures,
+  catalogue maintenance and membership status.
+- **Analytics boundary:** Umami receives sanitized route templates and
+  non-identifying funnel events; PostgreSQL remains authoritative for customers,
+  orders and revenue.
 
 ## 7. Product rules
 
@@ -126,7 +131,8 @@ per-item pricing actually gives the customer (see
   clears a delivery selection that a changed pickup invalidates; the order
   transaction verifies the slot ordering again.
 - **A closed partner cannot take orders.** `isOpen` is server-owned so partner
-  operations can toggle it manually or automate it from opening hours.
+  operations can toggle it manually, automate it from opening hours, or close
+  an exceptional local date without rewriting the weekly schedule.
 - **Checkout money is server-owned.** A signed-out guest cart can display a
   local preview from catalogue prices, but tax, delivery, discounts and the
   final total are recalculated and returned by the server before placement.
@@ -147,6 +153,8 @@ per-item pricing actually gives the customer (see
 - Accessible forms: labelled inputs, `aria-invalid`, errors tied to fields
 - Validation explains itself - the confirm button stays enabled and scrolls to
   the first problem rather than silently disabling
+- Analytics sends no entered pincode, identity, contact/address data or record
+  identifier, respects Do Not Track and never blocks a product action
 
 ## 9. Open product questions
 
