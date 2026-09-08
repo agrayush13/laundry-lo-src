@@ -46,6 +46,8 @@ export const EXTERNAL_LINKS: ExternalLink[] = [
     },
 ];
 
+export const FOOTER_LINKS: NavLink[] = [{ label: 'Partner portal', href: '/partner/orders' }];
+
 export const ROUTES = {
     home: '/',
     journey: '/journey',
@@ -61,6 +63,10 @@ export const ROUTES = {
     addAddress: '/profile/addresses/new',
     editAddress: (addressId: string) => `/profile/addresses/${addressId}/edit`,
     bookings: '/bookings',
+    partnerOrders: '/partner/orders',
+    partnerOrder: (orderId: string) => `/partner/orders/${orderId}`,
+    partnerSettings: '/partner/settings',
+    partnerCatalog: '/partner/catalogue',
     plus: '/plus',
     signUpCta: '/signup',
     laundry: (partnerId: string) => `/laundries/${partnerId}`,
@@ -117,6 +123,8 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
     { match: /^\/profile\/?$/, title: 'Your profile' },
     { match: /^\/bookings\/?$/, title: 'My bookings' },
     { match: /^\/bookings\/[^/]+\/?$/, title: 'Order' },
+    { match: /^\/partner\/orders\/?$/, title: 'Partner order queue' },
+    { match: /^\/partner\/orders\/[^/]+\/?$/, title: 'Partner order' },
 ];
 
 /** The page's own name, without the app name appended. */

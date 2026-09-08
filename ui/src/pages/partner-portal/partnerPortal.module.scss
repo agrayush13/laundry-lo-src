@@ -1,0 +1,1075 @@
+@use '../../styles/tokens' as t;
+@use '../../styles/mixins' as m;
+
+.portalPage {
+    min-height: 70vh;
+    padding: 3rem 1.5rem 5rem;
+}
+
+.portalInner {
+    max-width: 70rem;
+    margin: 0 auto;
+}
+
+.detailInner {
+    max-width: 54rem;
+    margin: 0 auto;
+}
+
+.settingsInner {
+    max-width: 62rem;
+    margin: 0 auto;
+}
+
+.portalHead {
+    max-width: 42rem;
+    margin-bottom: 2rem;
+
+    > p:first-child {
+        margin-bottom: 1rem;
+    }
+
+    h1 {
+        margin: 0 0 0.625rem;
+        font-size: t.$font-size-page-title;
+        font-weight: t.$font-weight-black;
+        letter-spacing: t.$tracking-tight;
+    }
+
+    > p:last-child {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-body-lg;
+    }
+}
+
+.queueControls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+
+    label {
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    select {
+        min-width: 12rem;
+        padding: 0.6875rem 2.25rem 0.6875rem 0.875rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+        font-weight: t.$font-weight-semibold;
+
+        &:focus-visible {
+            outline: 2px solid t.$color-primary;
+            outline-offset: 2px;
+        }
+    }
+}
+
+.queueCount {
+    margin: 0 0 1rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-md;
+}
+
+.queueList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.queueCard {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 1.5rem;
+    color: inherit;
+    text-decoration: none;
+    transition:
+        border-color t.$transition-fast,
+        box-shadow t.$transition-fast;
+
+    &:hover {
+        border-color: t.$color-primary;
+        box-shadow: t.$shadow-md;
+    }
+
+    &:focus-visible {
+        outline: 2px solid t.$color-primary;
+        outline-offset: 3px;
+    }
+}
+
+.queueCardHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.queueCardReference {
+    margin: 0 0 0.25rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-sm;
+    font-weight: t.$font-weight-semibold;
+    letter-spacing: t.$tracking-wide;
+    text-transform: uppercase;
+}
+
+.queueCardCustomer {
+    margin: 0;
+    font-size: t.$font-size-h4;
+    font-weight: t.$font-weight-black;
+}
+
+.queueCardPartner {
+    margin: 0.375rem 0 1.25rem;
+    color: t.$color-primary;
+    font-size: t.$font-size-lg;
+    font-weight: t.$font-weight-semibold;
+}
+
+.queueFacts,
+.scheduleList {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+
+    div {
+        min-width: 0;
+    }
+
+    dt {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        margin-bottom: 0.25rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-sm;
+        font-weight: t.$font-weight-semibold;
+        letter-spacing: t.$tracking-wide;
+        text-transform: uppercase;
+    }
+
+    dd {
+        margin: 0;
+        font-size: t.$font-size-lg;
+        font-weight: t.$font-weight-semibold;
+    }
+}
+
+.queueFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.queueCardFooter {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: auto;
+    padding-top: 1.25rem;
+    border-top: 1px solid t.$color-border;
+
+    > p:first-child {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-sm;
+
+        strong {
+            color: t.$color-text;
+            font-size: t.$font-size-lg;
+        }
+    }
+}
+
+.queueCardTotal {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    font-size: t.$font-size-h5;
+    font-weight: t.$font-weight-black;
+    white-space: nowrap;
+}
+
+.loadMore {
+    display: flex;
+    margin: 1.5rem auto 0;
+    border: 1px solid t.$color-border;
+    background: t.$color-surface;
+    color: t.$color-text;
+}
+
+.loadMoreError {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border: 1px solid color-mix(in srgb, t.$color-danger 35%, transparent);
+    border-radius: t.$radius-sm;
+    color: t.$color-danger;
+
+    p {
+        margin: 0;
+    }
+
+    button {
+        flex-shrink: 0;
+        border: 1px solid currentcolor;
+        background: transparent;
+        color: inherit;
+    }
+}
+
+.accessState,
+.emptyState {
+    padding: 3rem 1.5rem;
+    text-align: center;
+
+    h2 {
+        margin: 1rem 0 0.5rem;
+        font-size: t.$font-size-h2;
+    }
+
+    p {
+        max-width: 34rem;
+        margin: 0 auto 1.5rem;
+        color: t.$color-text-muted;
+    }
+}
+
+.accessIcon {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    margin: 0 auto;
+    border-radius: t.$radius-circle;
+    background: t.$color-primary-soft;
+    color: t.$color-primary;
+}
+
+.emptyState > svg {
+    color: t.$color-text-muted;
+}
+
+.detailSummary {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding: 1.5rem;
+
+    h1 {
+        margin: 0 0 0.375rem;
+        font-size: t.$font-size-h2;
+        font-weight: t.$font-weight-black;
+    }
+
+    p:last-child {
+        margin: 0;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-lg;
+    }
+}
+
+.detailLabel {
+    margin: 0 0 0.25rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-sm;
+    font-weight: t.$font-weight-semibold;
+    letter-spacing: t.$tracking-wide;
+    text-transform: uppercase;
+}
+
+.detailGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.detailCard,
+.actionCard {
+    margin-bottom: 1.25rem;
+    padding: 1.5rem;
+
+    h2 {
+        margin: 0 0 1.25rem;
+        font-size: t.$font-size-h5;
+        font-weight: t.$font-weight-bold;
+    }
+}
+
+.detailGrid .detailCard {
+    margin-bottom: 0;
+}
+
+.customerName {
+    margin: 0 0 0.375rem;
+    font-size: t.$font-size-body-lg;
+    font-weight: t.$font-weight-bold;
+}
+
+.customerPhone {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+    color: t.$color-primary;
+    font-size: t.$font-size-lg;
+    font-weight: t.$font-weight-semibold;
+    text-decoration: none;
+}
+
+.detailCard address {
+    color: t.$color-text-muted;
+    font-size: t.$font-size-lg;
+    font-style: normal;
+    line-height: t.$line-height-base;
+}
+
+.scheduleList {
+    dd {
+        display: flex;
+        flex-direction: column;
+
+        span {
+            color: t.$color-text-muted;
+            font-size: t.$font-size-md;
+            font-weight: t.$font-weight-regular;
+        }
+    }
+}
+
+.itemList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+
+        + li {
+            margin-top: 0.875rem;
+        }
+
+        > span {
+            display: flex;
+            flex-direction: column;
+            font-weight: t.$font-weight-semibold;
+        }
+
+        em {
+            color: t.$color-text-muted;
+            font-size: t.$font-size-md;
+            font-style: normal;
+            font-weight: t.$font-weight-regular;
+        }
+    }
+}
+
+.orderTotal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1.25rem 0 0;
+    padding-top: 1.25rem;
+    border-top: 1px solid t.$color-border;
+    font-size: t.$font-size-body-lg;
+}
+
+.progressList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        position: relative;
+        display: flex;
+        gap: 1rem;
+        padding-bottom: 1.25rem;
+
+        &:last-child {
+            padding-bottom: 0;
+        }
+
+        &:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            top: 1rem;
+            bottom: 0;
+            left: 0.4375rem;
+            width: 2px;
+            background: t.$color-border;
+        }
+
+        &[data-state='done']::before,
+        &[data-state='current']::before {
+            background: t.$color-accent;
+        }
+
+        > span {
+            z-index: 1;
+            flex: 0 0 1rem;
+            width: 1rem;
+            height: 1rem;
+            margin-top: 0.1875rem;
+            border: 2px solid t.$color-border;
+            border-radius: t.$radius-circle;
+            background: t.$color-surface;
+        }
+
+        &[data-state='done'] > span {
+            border-color: t.$color-accent;
+            background: t.$color-accent;
+        }
+
+        &[data-state='current'] > span {
+            border-color: t.$color-primary;
+            background: t.$color-primary;
+        }
+
+        p {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        small {
+            color: t.$color-text-muted;
+            font-size: t.$font-size-md;
+        }
+
+        &[data-state='pending'] strong {
+            color: t.$color-text-muted;
+        }
+    }
+}
+
+.actionCard {
+    border-color: color-mix(in srgb, t.$color-primary 40%, t.$color-border);
+
+    > p {
+        margin: -0.75rem 0 1.25rem;
+        color: t.$color-text-muted;
+    }
+}
+
+.confirmation {
+    padding: 1.25rem;
+    border-radius: t.$radius-sm;
+    background: t.$color-surface-muted;
+
+    h3 {
+        margin: 0 0 0.375rem;
+        font-size: t.$font-size-body-lg;
+    }
+
+    p {
+        margin: 0 0 1rem;
+        color: t.$color-text-muted;
+    }
+
+    > div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+
+        button:first-child {
+            border: 1px solid t.$color-border;
+            background: t.$color-surface;
+            color: t.$color-text;
+        }
+    }
+}
+
+.updateError {
+    margin: 1rem 0 0 !important;
+    color: t.$color-danger !important;
+}
+
+.latestUpdate {
+    margin: 0;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-md;
+    text-align: center;
+}
+
+.settingsHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+
+    .portalHead {
+        flex: 1;
+    }
+}
+
+.secondaryAction {
+    flex-shrink: 0;
+    border: 1px solid t.$color-border;
+    background: t.$color-surface;
+    color: t.$color-text;
+
+    &:hover {
+        border-color: t.$color-primary;
+    }
+}
+
+.portalActions {
+    display: flex;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.locationPicker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+
+    label {
+        font-weight: t.$font-weight-semibold;
+    }
+
+    select {
+        min-width: 17rem;
+        padding: 0.6875rem 0.875rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+    }
+}
+
+.catalogNote {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin: 0 0 1.25rem;
+    padding: 1rem 1.25rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-md;
+    line-height: t.$line-height-base;
+
+    svg {
+        flex-shrink: 0;
+        margin-top: 0.125rem;
+        color: t.$color-primary;
+    }
+}
+
+.catalogCategories {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.catalogCategory {
+    padding: 1.75rem;
+}
+
+.catalogCategoryHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    p {
+        margin: 0 0 0.25rem;
+        color: t.$color-primary;
+        font-size: t.$font-size-xs;
+        font-weight: t.$font-weight-bold;
+        letter-spacing: t.$tracking-wide;
+        text-transform: uppercase;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: t.$font-size-h4;
+    }
+
+    > span {
+        flex-shrink: 0;
+        padding: 0.375rem 0.625rem;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface-muted;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+        font-weight: t.$font-weight-semibold;
+    }
+}
+
+.categoryEditor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.75rem 1rem;
+    margin-bottom: 1.75rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid t.$color-border;
+
+    .formField {
+        margin: 0;
+    }
+
+    .saveMessage {
+        grid-column: 1 / -1;
+    }
+}
+
+.catalogItems {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    > li {
+        padding: 1.25rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-md;
+        background: t.$color-surface;
+
+        &[data-active='false'] {
+            background: t.$color-surface-muted;
+        }
+
+        > header {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            margin-bottom: 1.25rem;
+
+            h3,
+            p {
+                margin: 0;
+            }
+
+            h3 {
+                font-size: t.$font-size-body-lg;
+            }
+
+            p {
+                color: t.$color-text-muted;
+                font-size: t.$font-size-md;
+            }
+        }
+    }
+}
+
+.itemEditor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.5fr);
+    gap: 1rem;
+
+    .formField {
+        margin: 0;
+    }
+}
+
+.itemDescription {
+    grid-column: 1 / -1;
+}
+
+.catalogAvailability {
+    display: flex;
+    align-items: center;
+    align-self: end;
+    gap: 0.625rem;
+    min-height: 2.875rem;
+    padding: 0 0.75rem;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-sm;
+    font-size: t.$font-size-md;
+    font-weight: t.$font-weight-semibold;
+    cursor: pointer;
+
+    input {
+        width: 1rem;
+        height: 1rem;
+        accent-color: t.$color-primary;
+    }
+}
+
+.itemActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.25rem;
+}
+
+.settingsCard {
+    margin-bottom: 1.25rem;
+    padding: 1.75rem;
+
+    > header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+
+        h2 {
+            margin: 0 0 0.375rem;
+            font-size: t.$font-size-h4;
+        }
+
+        p {
+            max-width: 42rem;
+            margin: 0;
+            color: t.$color-text-muted;
+        }
+    }
+}
+
+.settingsFields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.fullField {
+    grid-column: 1 / -1;
+}
+
+.serviceAreaList {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.serviceAreaRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.75rem;
+
+    .formField {
+        margin: 0;
+    }
+}
+
+.addServiceArea,
+.removeServiceArea {
+    border: 1px solid t.$color-border;
+    background: t.$color-surface;
+    color: t.$color-text;
+
+    &:hover:not(:disabled) {
+        border-color: t.$color-primary;
+    }
+}
+
+.addServiceArea {
+    margin-top: 1rem;
+}
+
+.removeServiceArea {
+    min-height: 2.875rem;
+    padding-inline: 0.875rem;
+}
+
+.formField {
+    @include m.form-field;
+
+    textarea {
+        width: 100%;
+        padding: 0.75rem 0.875rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+        font-size: t.$font-size-xl;
+        line-height: t.$line-height-base;
+        resize: vertical;
+
+        &:focus-visible {
+            outline: 2px solid t.$color-primary;
+            outline-offset: 1px;
+        }
+    }
+}
+
+.currentState {
+    flex-shrink: 0;
+    padding: 0.625rem 0.875rem;
+    border-radius: t.$radius-sm;
+    background: t.$color-surface-muted;
+
+    span,
+    strong {
+        display: block;
+    }
+
+    span {
+        margin-bottom: 0.125rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xs;
+        font-weight: t.$font-weight-semibold;
+        letter-spacing: t.$tracking-wide;
+        text-transform: uppercase;
+    }
+
+    strong {
+        color: t.$color-danger;
+        font-size: t.$font-size-md;
+    }
+
+    &[data-open='true'] strong {
+        color: t.$color-accent-ink;
+    }
+}
+
+.availabilityControls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(10rem, 0.6fr);
+    gap: 1rem;
+}
+
+.checkboxControl {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-sm;
+    cursor: pointer;
+
+    input {
+        width: 1rem;
+        height: 1rem;
+        margin-top: 0.1875rem;
+        accent-color: t.$color-primary;
+    }
+
+    span,
+    strong,
+    small {
+        display: block;
+    }
+
+    strong {
+        margin-bottom: 0.1875rem;
+        font-size: t.$font-size-lg;
+    }
+
+    small {
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+        line-height: t.$line-height-snug;
+    }
+}
+
+.hoursSection {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid t.$color-border;
+
+    h3 {
+        margin: 0 0 0.25rem;
+        font-size: t.$font-size-h5;
+    }
+
+    > p {
+        margin: 0 0 1rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+}
+
+.hoursList {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: grid;
+        grid-template-columns: minmax(6rem, 0.8fr) minmax(5rem, 0.6fr) 1fr 1fr;
+        align-items: end;
+        gap: 0.875rem;
+        padding: 0.875rem 0;
+        border-top: 1px solid t.$color-border;
+    }
+}
+
+.dayLabel {
+    align-self: center;
+}
+
+.closedControl {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 0.5rem;
+    color: t.$color-text-muted;
+    font-size: t.$font-size-md;
+    font-weight: t.$font-weight-semibold;
+    cursor: pointer;
+
+    input {
+        accent-color: t.$color-primary;
+    }
+}
+
+.timeField {
+    span {
+        display: block;
+        margin-bottom: 0.375rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-xs;
+        font-weight: t.$font-weight-semibold;
+        text-transform: uppercase;
+    }
+
+    input {
+        width: 100%;
+        min-width: 0;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface;
+        color: t.$color-text;
+        font: inherit;
+
+        &:disabled {
+            background: t.$color-surface-muted;
+            color: t.$color-text-subtle;
+        }
+    }
+}
+
+.settingsActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 0.5rem;
+}
+
+.saveMessage {
+    p {
+        margin: 0;
+        color: t.$color-accent-ink;
+        font-weight: t.$font-weight-semibold;
+    }
+
+    p[data-error='true'] {
+        color: t.$color-danger;
+    }
+}
+
+@media (max-width: t.$breakpoint-md) {
+    .queueList {
+        grid-template-columns: 1fr;
+    }
+
+    .availabilityControls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        .formField {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .itemEditor {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: t.$breakpoint-sm) {
+    .portalPage {
+        padding: 2rem 1rem 4rem;
+    }
+
+    .queueControls,
+    .detailSummary,
+    .queueCardFooter,
+    .settingsHead,
+    .settingsCard > header,
+    .settingsActions,
+    .locationPicker,
+    .catalogCategoryHead,
+    .itemActions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .portalActions {
+        width: 100%;
+
+        a {
+            flex: 1;
+        }
+    }
+
+    .queueControls select,
+    .locationPicker select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .queueFacts,
+    .detailGrid,
+    .settingsFields,
+    .serviceAreaList,
+    .availabilityControls {
+        grid-template-columns: 1fr;
+    }
+
+    .queueCardTotal {
+        justify-content: space-between;
+    }
+
+    .detailSummary {
+        align-items: flex-start;
+    }
+
+    .hoursList li {
+        grid-template-columns: 1fr 1fr;
+
+        .timeField {
+            grid-row: 2;
+        }
+    }
+
+    .settingsActions button {
+        width: 100%;
+    }
+
+    .categoryEditor {
+        grid-template-columns: 1fr;
+
+        button {
+            width: 100%;
+        }
+    }
+
+    .itemActions button {
+        width: 100%;
+    }
+}

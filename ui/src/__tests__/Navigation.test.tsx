@@ -46,6 +46,10 @@ describe('the document title', () => {
         // announces the page twice.
         expect(documentTitleFor('/laundries/1001')).toBe('Laundry - laundrylo');
         expect(documentTitleFor('/bookings/ord_01J8XR3K2WQ4')).toBe('Order - laundrylo');
+        expect(documentTitleFor('/partner/orders')).toBe('Partner order queue - laundrylo');
+        expect(documentTitleFor('/partner/orders/ord_01J8XR3K2WQ4')).toBe(
+            'Partner order - laundrylo'
+        );
         // The literal route is matched before the dynamic one that would eat it.
         expect(documentTitleFor('/profile')).toBe('Your profile - laundrylo');
         expect(documentTitleFor('/profile/addresses/new')).toBe('Add an address - laundrylo');

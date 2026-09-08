@@ -24,6 +24,8 @@ const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const AddAddressPage = lazy(() => import('./pages/profile/AddAddressPage'));
 const BookingsPage = lazy(() => import('./pages/bookings/BookingsPage'));
 const OrderDetailPage = lazy(() => import('./pages/bookings/OrderDetailPage'));
+const PartnerOrdersPage = lazy(() => import('./pages/partner-portal/PartnerOrdersPage'));
+const PartnerOrderDetailPage = lazy(() => import('./pages/partner-portal/PartnerOrderDetailPage'));
 const NotFoundPage = lazy(() => import('./pages/not-found/NotFoundPage'));
 
 const AppRoutes: React.FC = () => (
@@ -107,6 +109,14 @@ const AppRoutes: React.FC = () => (
                 <Route
                     path="bookings/:orderId"
                     element={<OrderDetailPage />}
+                />
+                <Route
+                    path="partner/orders"
+                    element={<PartnerOrdersPage />}
+                />
+                <Route
+                    path="partner/orders/:orderId"
+                    element={<PartnerOrderDetailPage />}
                 />
             </Route>
 
