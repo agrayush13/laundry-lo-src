@@ -38,6 +38,7 @@ const input = (overrides: Partial<Omit<PartnerConfiguration, 'id' | 'currentlyOp
         pincode: '560103',
     },
     servicePincodes: ['560103'],
+    holidayClosures: [],
     turnaroundHours: 24,
     acceptingOrders: true,
     useOpeningHours: true,
@@ -85,6 +86,9 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await pool.query('delete from public.slots where partner_id = $1', [PARTNER_ID]);
+    await pool.query('delete from public.partner_holiday_closures where partner_id = $1', [
+        PARTNER_ID,
+    ]);
     await pool.query('delete from public.partner_hours where partner_id = $1', [PARTNER_ID]);
     await pool.query(
         `insert into public.partner_hours (partner_id, weekday, opens_at, closes_at)
@@ -140,6 +144,7 @@ describe('partner laundry configuration', () => {
                     name: 'Configuration Laundry',
                     address: { pincode: '560103' },
                     servicePincodes: ['560103'],
+                    holidayClosures: [],
                     acceptingOrders: true,
                     useOpeningHours: true,
                     currentlyOpen: expect.any(Boolean),
@@ -182,6 +187,7 @@ describe('partner laundry configuration', () => {
                     pincode: '560001',
                 },
                 servicePincodes: ['560102', '560104'],
+                holidayClosures: [{ date: '2099-12-24', reason: 'Public holiday' }],
                 turnaroundHours: 36,
                 acceptingOrders: false,
                 openingHours: closedHours,
@@ -196,6 +202,7 @@ describe('partner laundry configuration', () => {
             about: 'Updated by its owner.',
             address: { line1: '42 New Road', line2: '', pincode: '560001' },
             servicePincodes: ['560102', '560104'],
+            holidayClosures: [{ date: '2099-12-24', reason: 'Public holiday' }],
             turnaroundHours: 36,
             acceptingOrders: false,
             useOpeningHours: true,
@@ -243,6 +250,14 @@ describe('partner laundry configuration', () => {
             input({ servicePincodes: [] }),
             input({ servicePincodes: ['560102', '560102'] }),
             input({ servicePincodes: ['56010x'] }),
+            input({ holidayClosures: [{ date: '2000-01-01', reason: '' }] }),
+            input({ holidayClosures: [{ date: '2099-02-29', reason: '' }] }),
+            input({
+                holidayClosures: [
+                    { date: '2099-12-24', reason: '' },
+                    { date: '2099-12-24', reason: 'Duplicate' },
+                ],
+            }),
         ];
 
         for (const body of invalidBodies) {
@@ -290,6 +305,97 @@ describe('partner laundry configuration', () => {
             [BOOKED_SLOT_ID]
         );
         expect(slot.rows[0]).toEqual({ state: 'open', booked: 1 });
+    });
+
+    it('removes unbooked slots, blocks booked slots and safely reopens a closure date', async () => {
+        const dateResult = await pool.query<{ date: string }>(
+            `select to_char(timezone('Asia/Kolkata', now())::date + 7, 'YYYY-MM-DD') as date`
+        );
+        const closureDate = dateResult.rows[0]!.date;
+        await pool.query(
+            `insert into public.slots
+                (id, partner_id, starts_at, ends_at, capacity, booked, state)
+             values
+                ($1, $3,
+                 timezone('Asia/Kolkata', ($4::date + time '08:00')::timestamp),
+                 timezone('Asia/Kolkata', ($4::date + time '10:00')::timestamp),
+                 8, 0, 'open'),
+                ($2, $3,
+                 timezone('Asia/Kolkata', ($4::date + time '10:00')::timestamp),
+                 timezone('Asia/Kolkata', ($4::date + time '12:00')::timestamp),
+                 8, 1, 'open')`,
+            [UNBOOKED_SLOT_ID, BOOKED_SLOT_ID, PARTNER_ID, closureDate]
+        );
+
+        const closed = await request(
+            'PUT',
+            `/api/v1/partner/laundries/${PARTNER_ID}`,
+            input({
+                holidayClosures: [{ date: closureDate, reason: 'Maintenance' }],
+            }),
+            ownerAuthorization
+        );
+        expect(closed.status).toBe(200);
+        expect(closed.body).toMatchObject({
+            holidayClosures: [{ date: closureDate, reason: 'Maintenance' }],
+        });
+
+        const closedSlots = await pool.query<{ id: string; state: string; booked: number }>(
+            `select id, state, booked from public.slots
+             where id = any($1::text[]) order by id`,
+            [[UNBOOKED_SLOT_ID, BOOKED_SLOT_ID]]
+        );
+        expect(closedSlots.rows).toEqual([{ id: BOOKED_SLOT_ID, state: 'blocked', booked: 1 }]);
+        const remainingAvailability = await pool.query<{ count: string }>(
+            `select count(*)::text as count
+             from public.slots
+             where partner_id = $1
+               and timezone('Asia/Kolkata', starts_at)::date = $2::date
+               and state = 'open'`,
+            [PARTNER_ID, closureDate]
+        );
+        expect(remainingAvailability.rows[0]?.count).toBe('0');
+
+        const reopened = await request(
+            'PUT',
+            `/api/v1/partner/laundries/${PARTNER_ID}`,
+            input(),
+            ownerAuthorization
+        );
+        expect(reopened.status).toBe(200);
+        expect(reopened.body).toMatchObject({ holidayClosures: [] });
+        const reopenedAvailability = await pool.query<{ count: string }>(
+            `select count(*)::text as count
+             from public.slots
+             where partner_id = $1
+               and timezone('Asia/Kolkata', starts_at)::date = $2::date
+               and state = 'open'`,
+            [PARTNER_ID, closureDate]
+        );
+        expect(Number(reopenedAvailability.rows[0]?.count)).toBeGreaterThan(0);
+    });
+
+    it('closes the public listing on a holiday even in manual availability mode', async () => {
+        const dateResult = await pool.query<{ date: string }>(
+            `select to_char(timezone('Asia/Kolkata', now())::date, 'YYYY-MM-DD') as date`
+        );
+        const today = dateResult.rows[0]!.date;
+        const response = await request(
+            'PUT',
+            `/api/v1/partner/laundries/${PARTNER_ID}`,
+            input({
+                acceptingOrders: true,
+                useOpeningHours: false,
+                holidayClosures: [{ date: today, reason: '' }],
+            }),
+            ownerAuthorization
+        );
+
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({ acceptingOrders: true, currentlyOpen: false });
+        const publicDetail = await get(`/api/v1/partners/${PARTNER_ID}`);
+        expect(publicDetail.status).toBe(200);
+        expect(publicDetail.body).toMatchObject({ isOpen: false });
     });
 
     it('removes unbooked capacity and blocks booked capacity when hours change', async () => {
@@ -375,6 +481,39 @@ describe('partner laundry configuration', () => {
                 client.query(
                     `insert into public.partner_service_areas (partner_id, pincode)
                      values ($1, '560105')`,
+                    [PARTNER_ID]
+                )
+            )
+        ).rejects.toThrow(/permission denied|row-level security/i);
+
+        await asCaller(pool, OWNER, (client) =>
+            client.query('select public.replace_partner_holiday_closures($1, $2::jsonb)', [
+                PARTNER_ID,
+                JSON.stringify([{ date: '2099-12-24', reason: 'Public holiday' }]),
+            ])
+        );
+        const closures = await pool.query<{ closure_date: string; reason: string }>(
+            `select to_char(closure_date, 'YYYY-MM-DD') as closure_date, reason
+             from public.partner_holiday_closures where partner_id = $1`,
+            [PARTNER_ID]
+        );
+        expect(closures.rows).toEqual([{ closure_date: '2099-12-24', reason: 'Public holiday' }]);
+
+        await expect(
+            asCaller(pool, OTHER_OWNER, (client) =>
+                client.query('select public.replace_partner_holiday_closures($1, $2::jsonb)', [
+                    PARTNER_ID,
+                    '[]',
+                ])
+            )
+        ).rejects.toThrow(/PARTNER_NOT_FOUND/);
+
+        await expect(
+            asCaller(pool, OWNER, (client) =>
+                client.query(
+                    `insert into public.partner_holiday_closures
+                        (partner_id, closure_date, reason)
+                     values ($1, '2099-12-25', 'Direct write')`,
                     [PARTNER_ID]
                 )
             )

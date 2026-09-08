@@ -21,6 +21,36 @@ const pincode = z
     .string()
     .trim()
     .regex(/^\d{6}$/, 'Enter a 6-digit pincode.');
+const todayInIst = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date());
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((candidate) => candidate.type === type)?.value ?? '';
+    return `${part('year')}-${part('month')}-${part('day')}`;
+};
+const calendarDate = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use a YYYY-MM-DD date.')
+    .refine((value) => {
+        const [year, month, day] = value.split('-').map(Number);
+        const parsed = new Date(Date.UTC(year!, month! - 1, day!));
+        return (
+            parsed.getUTCFullYear() === year &&
+            parsed.getUTCMonth() === month! - 1 &&
+            parsed.getUTCDate() === day
+        );
+    }, 'Use a real calendar date.')
+    .refine((value) => value >= todayInIst(), 'Closure dates cannot be in the past.');
+const holidayClosure = z
+    .object({
+        date: calendarDate,
+        reason: z.string().trim().max(120),
+    })
+    .strict();
 
 const openingHour = z
     .object({
@@ -58,6 +88,7 @@ const configurationBody = z
             })
             .strict(),
         servicePincodes: z.array(pincode).min(1).max(50),
+        holidayClosures: z.array(holidayClosure).max(60),
         turnaroundHours: z.number().int().min(1).max(336),
         acceptingOrders: z.boolean(),
         useOpeningHours: z.boolean(),
@@ -79,6 +110,15 @@ const configurationBody = z
                 code: z.ZodIssueCode.custom,
                 message: 'Each service pincode must be unique.',
                 path: ['servicePincodes'],
+            });
+        }
+
+        const closureDates = value.holidayClosures.map(({ date }) => date);
+        if (new Set(closureDates).size !== closureDates.length) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Each holiday closure date must be unique.',
+                path: ['holidayClosures'],
             });
         }
     });

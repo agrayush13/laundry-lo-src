@@ -44,6 +44,8 @@ export interface PartnerConfiguration {
     address: PartnerAddress;
     /** Exact pincodes where this laundry currently accepts customer orders. */
     servicePincodes: string[];
+    /** Today and future exceptional closure dates in the laundry's local zone. */
+    holidayClosures: HolidayClosure[];
     turnaroundHours: number;
     /** Manual master switch controlled by the laundry owner. */
     acceptingOrders: boolean;
@@ -52,6 +54,11 @@ export interface PartnerConfiguration {
     /** Effective state after the manual switch and current schedule are applied. */
     currentlyOpen: boolean;
     openingHours: OpeningHours[];
+}
+
+export interface HolidayClosure {
+    date: string;
+    reason: string;
 }
 
 export interface OpeningHours {

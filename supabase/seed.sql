@@ -13,6 +13,7 @@ truncate table public.order_events, public.order_addresses, public.order_items,
                public.cart_items, public.carts,
                public.slots, public.catalog_items, public.catalog_categories,
                public.partner_tags, public.partner_hours, public.partner_service_areas,
+               public.partner_holiday_closures,
                public.partners,
                public.pincode_centroids restart identity;
 

@@ -1,5 +1,5 @@
 import type { Client } from '../db/pool.js';
-import type { OpeningHours, PartnerConfiguration } from '../models.js';
+import type { HolidayClosure, OpeningHours, PartnerConfiguration } from '../models.js';
 
 interface PartnerConfigurationRow {
     id: string;
@@ -10,6 +10,7 @@ interface PartnerConfigurationRow {
     city: string;
     pincode: string;
     service_pincodes: string[];
+    holiday_closures: HolidayClosure[];
     turnaround_hours: number;
     is_open: boolean;
     auto_schedule: boolean;
@@ -31,6 +32,7 @@ export interface PartnerConfigurationInput {
         pincode: string;
     };
     servicePincodes: string[];
+    holidayClosures: HolidayClosure[];
     turnaroundHours: number;
     acceptingOrders: boolean;
     useOpeningHours: boolean;
@@ -49,6 +51,20 @@ const baseQuery = `
                ),
                '[]'::jsonb
            ) as service_pincodes,
+           coalesce(
+               (
+                   select jsonb_agg(
+                       jsonb_build_object(
+                           'date', to_char(closure.closure_date, 'YYYY-MM-DD'),
+                           'reason', coalesce(closure.reason, '')
+                       ) order by closure.closure_date
+                   )
+                   from public.partner_holiday_closures closure
+                   where closure.partner_id = p.id
+                     and closure.closure_date >= timezone('Asia/Kolkata', now())::date
+               ),
+               '[]'::jsonb
+           ) as holiday_closures,
            coalesce(
                jsonb_agg(
                    jsonb_build_object(
@@ -77,6 +93,7 @@ const toConfiguration = (row: PartnerConfigurationRow): PartnerConfiguration => 
         pincode: row.pincode,
     },
     servicePincodes: row.service_pincodes,
+    holidayClosures: row.holiday_closures,
     turnaroundHours: row.turnaround_hours,
     acceptingOrders: row.is_open,
     useOpeningHours: row.auto_schedule,
@@ -148,6 +165,10 @@ export const updateOwnedPartnerConfiguration = async (
     await client.query('select public.replace_partner_service_areas($1, $2::text[])', [
         partnerId,
         input.servicePincodes,
+    ]);
+    await client.query('select public.replace_partner_holiday_closures($1, $2::jsonb)', [
+        partnerId,
+        JSON.stringify(input.holidayClosures),
     ]);
     return getOwnedPartnerConfiguration(client, partnerId);
 };
