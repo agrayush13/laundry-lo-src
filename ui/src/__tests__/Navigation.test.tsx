@@ -51,6 +51,7 @@ describe('the document title', () => {
             'Partner order - laundrylo'
         );
         expect(documentTitleFor('/partner/settings')).toBe('Laundry settings - laundrylo');
+        expect(documentTitleFor('/partner/catalogue')).toBe('Catalogue and pricing - laundrylo');
         // The literal route is matched before the dynamic one that would eat it.
         expect(documentTitleFor('/profile')).toBe('Your profile - laundrylo');
         expect(documentTitleFor('/profile/addresses/new')).toBe('Add an address - laundrylo');
