@@ -109,7 +109,15 @@ export const listPartners = async (
                 public.haversine_meters(o.lat, o.lon, d.latitude, d.longitude) as distance_meters
             from public.partner_details d
             cross join origin o
-            where ($3::text is null or d.pincode = $3)
+            where (
+                $3::text is null
+                or exists (
+                    select 1
+                    from public.partner_service_areas area
+                    where area.partner_id = d.id
+                      and area.pincode = $3
+                )
+            )
               -- Conjunctive: @> means the partner offers all of them, not any.
               and ($4::text[] is null or d.services @> $4)
               and ($5::text[] is null or d.tags @> $5)

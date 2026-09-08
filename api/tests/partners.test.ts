@@ -94,7 +94,11 @@ describe('GET /api/v1/partners', () => {
         const { body } = await get('/api/v1/partners?pincode=560103');
         const page = body as Page<Partner>;
         expect(page.data.length).toBeGreaterThan(0);
-        expect(page.data.every((p) => p.address.pincode === '560103')).toBe(true);
+        const servedBy = await pool.query<{ partner_id: string }>(
+            `select partner_id from public.partner_service_areas where pincode = '560103'`
+        );
+        const coveredIds = new Set(servedBy.rows.map(({ partner_id }) => partner_id));
+        expect(page.data.every((partner) => coveredIds.has(partner.id))).toBe(true);
     });
 
     it('measures distance from the searched pincode', async () => {

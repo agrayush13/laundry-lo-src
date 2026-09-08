@@ -37,6 +37,23 @@ export interface PartnerDetail extends Partner {
     openingHours: OpeningHours[];
 }
 
+export interface PartnerConfiguration {
+    id: string;
+    name: string;
+    about: string;
+    address: PartnerAddress;
+    /** Exact pincodes where this laundry currently accepts customer orders. */
+    servicePincodes: string[];
+    turnaroundHours: number;
+    /** Manual master switch controlled by the laundry owner. */
+    acceptingOrders: boolean;
+    /** When true, acceptingOrders is also constrained by openingHours. */
+    useOpeningHours: boolean;
+    /** Effective state after the manual switch and current schedule are applied. */
+    currentlyOpen: boolean;
+    openingHours: OpeningHours[];
+}
+
 export interface OpeningHours {
     /** 0 = Sunday. Null times mean shut that day. */
     weekday: number;
@@ -60,6 +77,17 @@ export interface CatalogCategory {
     /** The partner's own name for it. */
     name: string;
     items: CatalogItem[];
+}
+
+export interface PartnerCatalogItem extends CatalogItem {
+    isActive: boolean;
+}
+
+export interface PartnerCatalogCategory {
+    id: string;
+    service: ServiceId;
+    name: string;
+    items: PartnerCatalogItem[];
 }
 
 export interface Slot {

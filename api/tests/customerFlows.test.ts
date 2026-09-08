@@ -284,7 +284,7 @@ describe('cart, membership and order placement', () => {
         await request('DELETE', '/api/v1/cart', undefined, authorization);
     });
 
-    it('rejects an address outside the laundry pincode without consuming the cart or slots', async () => {
+    it('rejects an uncovered address and accepts it after that pincode enters the service area', async () => {
         const cartResponse = await request(
             'PUT',
             '/api/v1/cart/items/itm_1001_wf-shirt',
@@ -309,6 +309,7 @@ describe('cart, membership and order placement', () => {
         );
         const addressId = (addressResponse.body as SavedAddress).id;
         const key = '22222222-3333-4444-8555-666666666666';
+        let placedOrderId: string | null = null;
 
         await pool.query(
             `insert into public.slots
@@ -354,7 +355,50 @@ describe('cart, membership and order placement', () => {
                 [CUSTOMER, key]
             );
             expect(orders.rows[0]?.count).toBe('0');
+
+            await pool.query(
+                `insert into public.partner_service_areas (partner_id, pincode)
+                 values ('1001', '560102')`
+            );
+            const accepted = await request(
+                'POST',
+                '/api/v1/orders',
+                {
+                    cartId: cart.id,
+                    addressId,
+                    pickupSlotId: 'slt_test_service_pickup',
+                    deliverySlotId: 'slt_test_service_delivery',
+                    paymentMethod: 'cash_on_pickup',
+                },
+                {
+                    ...authorization,
+                    'Idempotency-Key': '22222222-3333-4444-8555-777777777777',
+                }
+            );
+            expect(accepted.status).toBe(201);
+            expect(accepted.body).toMatchObject({
+                deliveryAddress: { pincode: '560102' },
+                partner: { id: '1001' },
+            });
+            placedOrderId = (accepted.body as Order).id;
+
+            const reserved = await pool.query<{ booked: number; state: string }>(
+                `select booked, state from public.slots
+                 where id in ('slt_test_service_pickup', 'slt_test_service_delivery')
+                 order by id`
+            );
+            expect(reserved.rows).toEqual([
+                { booked: 1, state: 'full' },
+                { booked: 1, state: 'full' },
+            ]);
         } finally {
+            if (placedOrderId) {
+                await pool.query('delete from public.orders where id = $1', [placedOrderId]);
+            }
+            await pool.query(
+                `delete from public.partner_service_areas
+                 where partner_id = '1001' and pincode = '560102'`
+            );
             await request('DELETE', '/api/v1/cart', undefined, authorization);
             await request('DELETE', `/api/v1/addresses/${addressId}`, undefined, authorization);
             await pool.query(
