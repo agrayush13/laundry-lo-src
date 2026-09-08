@@ -125,6 +125,7 @@ const PAGE_TITLES: { match: RegExp; title: string }[] = [
     { match: /^\/bookings\/[^/]+\/?$/, title: 'Order' },
     { match: /^\/partner\/orders\/?$/, title: 'Partner order queue' },
     { match: /^\/partner\/orders\/[^/]+\/?$/, title: 'Partner order' },
+    { match: /^\/partner\/settings\/?$/, title: 'Laundry settings' },
 ];
 
 /** The page's own name, without the app name appended. */
