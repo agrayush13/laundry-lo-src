@@ -52,6 +52,8 @@ export interface Order {
     /** Human-friendly, display only. Never looked up by. */
     reference: string;
     status: OrderStatus;
+    /** Server-evaluated cancellation policy; never inferred from display state. */
+    canCancel: boolean;
     placedAt: string;
     partner: { id: string; name: string };
     lines: OrderLine[];
@@ -86,6 +88,7 @@ export const ORDERS: Order[] = [
         id: 'ord_01J8XR3K2WQ4',
         reference: 'LL-2026-001',
         status: 'processing',
+        canCancel: false,
         placedAt: '2026-08-20T05:00:00Z',
         partner: { id: '1001', name: 'SparkleWash Express' },
         lines: [
@@ -116,6 +119,7 @@ export const ORDERS: Order[] = [
         id: 'ord_01J8XR7M5BD9',
         reference: 'LL-2026-002',
         status: 'out_for_delivery',
+        canCancel: false,
         placedAt: '2026-08-19T06:20:00Z',
         partner: { id: '1003', name: 'Royal Dry Cleaners' },
         lines: [
@@ -148,6 +152,7 @@ export const ORDERS: Order[] = [
         id: 'ord_01J8XRB1N4TC',
         reference: 'LL-2026-003',
         status: 'delivered',
+        canCancel: false,
         placedAt: '2026-08-15T05:30:00Z',
         partner: { id: '1002', name: 'CleanFold Laundry' },
         lines: [

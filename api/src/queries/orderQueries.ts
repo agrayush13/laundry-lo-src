@@ -26,6 +26,8 @@ interface OrderRow {
     pickup_ends_at: Date;
     delivery_starts_at: Date;
     delivery_ends_at: Date;
+    payment_method: string;
+    pickup_not_started: boolean;
 }
 
 export interface PartnerOrderCursorRow {
@@ -78,7 +80,9 @@ const readOrder = async (
                 pickup.starts_at as pickup_starts_at,
                 pickup.ends_at as pickup_ends_at,
                 delivery.starts_at as delivery_starts_at,
-                delivery.ends_at as delivery_ends_at
+                delivery.ends_at as delivery_ends_at,
+                o.payment_method,
+                pickup.starts_at > now() as pickup_not_started
          from public.orders o
          join public.partners p on p.id = o.partner_id
          join public.slots pickup on pickup.id = o.pickup_slot_id
@@ -119,11 +123,19 @@ const readOrder = async (
     );
     const address = addresses.rows[0];
     if (!address) return null;
+    const latestEvent = events.rows[events.rows.length - 1]?.type;
+    const canCancel =
+        row.status === 'processing' &&
+        (latestEvent === 'placed' || latestEvent === 'confirmed') &&
+        row.pickup_not_started &&
+        row.payment_method === 'cash_on_pickup' &&
+        row.membership_fee === 0;
 
     return {
         id: row.id,
         reference: row.reference,
         status: row.status,
+        canCancel,
         placedAt: row.placed_at.toISOString(),
         partner: { id: row.partner_id, name: row.partner_name },
         lines: lines.rows.map((line) => ({

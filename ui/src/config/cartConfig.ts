@@ -36,6 +36,17 @@ export const ORDERS_COPY = {
     callSupport: 'Call Support',
     chat: 'Chat',
     servicesSuffix: 'services',
+    cancellationTitle: 'Need to cancel?',
+    cancellationPolicy:
+        'Service-only cash-on-pickup orders can be cancelled until the scheduled pickup. Reserved pickup and delivery capacity is released immediately.',
+    cancelOrder: 'Cancel order',
+    cancellationConfirmationTitle: 'Cancel this order?',
+    cancellationConfirmationBody:
+        'This cannot be undone. No payment has been collected, and both reserved time slots will be released.',
+    keepOrder: 'Keep order',
+    confirmCancellation: 'Yes, cancel order',
+    cancelling: 'Cancelling…',
+    cancellationFallback: 'The order could not be cancelled. Try again.',
 } as const;
 
 export const PLUS_COPY = {

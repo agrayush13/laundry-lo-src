@@ -195,6 +195,7 @@ export interface Order {
     id: string;
     reference: string;
     status: OrderStatus;
+    canCancel: boolean;
     placedAt: string;
     partner: { id: string; name: string };
     lines: Array<{

@@ -112,6 +112,67 @@ const OrderDetailPage: React.FC = () => {
                             </address>
                         </section>
 
+                        {order.canCancel && (
+                            <section className={`card ${styles.orderCancellation}`}>
+                                <h2 className={styles.orderHeading}>
+                                    {ORDERS_COPY.cancellationTitle}
+                                </h2>
+                                <p>{ORDERS_COPY.cancellationPolicy}</p>
+                                {!state.isConfirmingCancellation ? (
+                                    <button
+                                        className={`button ${styles.dangerButton}`}
+                                        type="button"
+                                        onClick={state.requestCancellation}
+                                    >
+                                        {ORDERS_COPY.cancelOrder}
+                                    </button>
+                                ) : (
+                                    <div
+                                        className={styles.cancellationConfirmation}
+                                        role="alertdialog"
+                                        aria-labelledby="customer-cancellation-title"
+                                        aria-describedby="customer-cancellation-body"
+                                    >
+                                        <h3 id="customer-cancellation-title">
+                                            {ORDERS_COPY.cancellationConfirmationTitle}
+                                        </h3>
+                                        <p id="customer-cancellation-body">
+                                            {ORDERS_COPY.cancellationConfirmationBody}
+                                        </p>
+                                        <div>
+                                            <button
+                                                className="button"
+                                                type="button"
+                                                onClick={state.keepOrder}
+                                                disabled={state.isCancelling}
+                                                autoFocus
+                                            >
+                                                {ORDERS_COPY.keepOrder}
+                                            </button>
+                                            <button
+                                                className={`button ${styles.dangerButton}`}
+                                                type="button"
+                                                onClick={() => void state.submitCancellation()}
+                                                disabled={state.isCancelling}
+                                            >
+                                                {state.isCancelling
+                                                    ? ORDERS_COPY.cancelling
+                                                    : ORDERS_COPY.confirmCancellation}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                                {state.cancellationError && (
+                                    <p
+                                        className={styles.cancellationError}
+                                        role="alert"
+                                    >
+                                        {state.cancellationError}
+                                    </p>
+                                )}
+                            </section>
+                        )}
+
                         <div className={styles.orderSupport}>
                             <a
                                 className={`button ${styles.orderSupportButton}`}

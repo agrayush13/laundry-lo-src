@@ -30,6 +30,13 @@ interface PlacementRow {
     replayed: boolean;
 }
 
+interface CancellationRow {
+    order_id: string;
+    status: 'cancelled';
+    event_type: 'cancelled';
+    occurred_at: Date;
+}
+
 const databaseFailures = new Map<string, ConstructorParameters<typeof ApiError>>([
     ['CART_NOT_FOUND', ['CART_NOT_FOUND', 'That cart no longer exists.']],
     ['CART_EMPTY', ['CART_EMPTY', 'Add at least one laundry item before placing the order.']],
@@ -50,6 +57,25 @@ const databaseFailures = new Map<string, ConstructorParameters<typeof ApiError>>
 const translatePlacementFailure = (error: unknown): never => {
     const message = error instanceof Error ? error.message : '';
     const failure = databaseFailures.get(message);
+    if (failure) throw new ApiError(...failure);
+    throw error;
+};
+
+const cancellationFailures = new Map<string, ConstructorParameters<typeof ApiError>>([
+    ['ORDER_NOT_FOUND', ['NOT_FOUND', 'That order was not found.']],
+    [
+        'CANCELLATION_NOT_ALLOWED',
+        [
+            'CANCELLATION_NOT_ALLOWED',
+            'This order can no longer be cancelled online. Please contact support.',
+        ],
+    ],
+    ['UNAUTHENTICATED', ['UNAUTHENTICATED', 'Please sign in to continue.']],
+]);
+
+const translateCancellationFailure = (error: unknown): never => {
+    const message = error instanceof Error ? error.message : '';
+    const failure = cancellationFailures.get(message);
     if (failure) throw new ApiError(...failure);
     throw error;
 };
@@ -145,6 +171,22 @@ export const orderRoutes = new Hono<AppEnv>()
             return body;
         });
         return c.json(page);
+    })
+    .post('/:id/cancellation', async (c) => {
+        const userId = requireUser(c.get('userId'));
+        const result = await asCaller(c.get('pool'), userId, async (client) => {
+            const cancellation = await client.query<CancellationRow>(
+                'select * from public.cancel_order($1)',
+                [c.req.param('id')]
+            );
+            const row = cancellation.rows[0]!;
+            return {
+                orderId: row.order_id,
+                status: row.status,
+                event: { type: row.event_type, occurredAt: row.occurred_at.toISOString() },
+            };
+        }).catch(translateCancellationFailure);
+        return c.json(result);
     })
     .get('/:id', async (c) => {
         const userId = requireUser(c.get('userId'));
