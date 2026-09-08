@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type {
+    HolidayClosure,
     PartnerLaundryConfiguration,
     PartnerLaundryConfigurationInput,
 } from '../models/partnerConfigurationModels';
@@ -17,6 +18,7 @@ const toDraft = ({
     about,
     address,
     servicePincodes,
+    holidayClosures,
     turnaroundHours,
     acceptingOrders,
     useOpeningHours,
@@ -26,6 +28,7 @@ const toDraft = ({
     about,
     address: { ...address },
     servicePincodes: [...servicePincodes],
+    holidayClosures: holidayClosures.map((closure) => ({ ...closure })),
     turnaroundHours,
     acceptingOrders,
     useOpeningHours,
@@ -113,6 +116,40 @@ export const usePartnerSettings = () => {
                 : current
         );
 
+    const updateHolidayClosure = (index: number, value: Partial<HolidayClosure>) =>
+        setDraft((current) =>
+            current
+                ? {
+                      ...current,
+                      holidayClosures: current.holidayClosures.map((closure, position) =>
+                          position === index ? { ...closure, ...value } : closure
+                      ),
+                  }
+                : current
+        );
+
+    const addHolidayClosure = () =>
+        setDraft((current) =>
+            current && current.holidayClosures.length < 60
+                ? {
+                      ...current,
+                      holidayClosures: [...current.holidayClosures, { date: '', reason: '' }],
+                  }
+                : current
+        );
+
+    const removeHolidayClosure = (index: number) =>
+        setDraft((current) =>
+            current
+                ? {
+                      ...current,
+                      holidayClosures: current.holidayClosures.filter(
+                          (_, position) => position !== index
+                      ),
+                  }
+                : current
+        );
+
     const updateHours = (weekday: number, value: Partial<OpeningHours>) =>
         setDraft((current) =>
             current
@@ -165,6 +202,9 @@ export const usePartnerSettings = () => {
         updateServicePincode,
         addServicePincode,
         removeServicePincode,
+        updateHolidayClosure,
+        addHolidayClosure,
+        removeHolidayClosure,
         updateHours,
         setDayClosed,
         save,

@@ -11,7 +11,7 @@ export const WEEKDAYS = [
 export const PARTNER_SETTINGS_COPY = {
     eyebrow: 'Laundry operations',
     title: 'Laundry settings',
-    intro: 'Keep your public listing, service areas and weekly availability accurate.',
+    intro: 'Keep your public listing, service areas and availability accurate.',
     portalNavigation: 'Partner portal',
     ordersLink: 'View order queue',
     catalogLink: 'Manage catalogue',
@@ -31,6 +31,7 @@ export const PARTNER_SETTINGS_COPY = {
         'Add every pincode where this laundry accepts pickup and delivery orders. At least one is required.',
     servicePincode: (position: number) => `Service pincode ${position}`,
     addServicePincode: 'Add service pincode',
+    remove: 'Remove',
     removeServicePincode: (position: number) => `Remove service pincode ${position}`,
     availabilityTitle: 'Availability',
     availabilityIntro: 'Control new bookings and the hours used to create pickup slots.',
@@ -39,6 +40,16 @@ export const PARTNER_SETTINGS_COPY = {
     useOpeningHours: 'Apply weekly opening hours',
     useOpeningHoursHelp: 'When enabled, the listing closes outside the hours below.',
     turnaround: 'Typical turnaround (hours)',
+    closuresTitle: 'Holiday closures',
+    closuresIntro:
+        'Close exceptional dates without changing the weekly schedule. Only today and future dates can be managed here.',
+    closuresWarning:
+        'Unbooked pickup slots are removed. Existing bookings are kept and must be handled from the order queue.',
+    closureDate: (position: number) => `Closure date ${position}`,
+    closureReason: (position: number) => `Closure reason ${position} (optional)`,
+    closureReasonPlaceholder: 'For example, public holiday',
+    addClosure: 'Add holiday closure',
+    removeClosure: (position: number) => `Remove holiday closure ${position}`,
     hoursTitle: 'Weekly opening hours',
     hoursIntro: 'Overnight hours are not supported. Mark a day closed instead.',
     closed: 'Closed',

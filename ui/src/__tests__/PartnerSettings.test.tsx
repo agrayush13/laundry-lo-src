@@ -14,6 +14,7 @@ const configuration = (): PartnerLaundryConfiguration => ({
         pincode: '560103',
     },
     servicePincodes: ['560103'],
+    holidayClosures: [],
     turnaroundHours: 24,
     acceptingOrders: true,
     useOpeningHours: true,
@@ -95,6 +96,10 @@ describe('laundry-partner settings', () => {
         await user.click(screen.getByRole('button', { name: 'Add service pincode' }));
         await user.type(screen.getByLabelText('Service pincode 2'), '560104');
 
+        await user.click(screen.getByRole('button', { name: 'Add holiday closure' }));
+        await user.type(screen.getByLabelText('Closure date 1'), '2099-12-24');
+        await user.type(screen.getByLabelText('Closure reason 1 (optional)'), 'Public holiday');
+
         const turnaround = screen.getByLabelText('Typical turnaround (hours)');
         await user.clear(turnaround);
         await user.type(turnaround, '36');
@@ -114,6 +119,7 @@ describe('laundry-partner settings', () => {
             name: 'SparkleWash Central',
             address: { pincode: '560001' },
             servicePincodes: ['560102', '560104'],
+            holidayClosures: [{ date: '2099-12-24', reason: 'Public holiday' }],
             turnaroundHours: 36,
             acceptingOrders: false,
             useOpeningHours: true,
@@ -124,6 +130,20 @@ describe('laundry-partner settings', () => {
             { weekday: 1, opensAt: '08:00', closesAt: '20:00' },
         ]);
         expect(screen.getByText('Closed for bookings now')).toBeInTheDocument();
+    });
+
+    it('lets an owner remove a planned closure before saving', async () => {
+        const user = userEvent.setup();
+        authenticateTestUser();
+        installSettingsApi();
+        renderApp('/partner/settings');
+
+        await screen.findByDisplayValue('SparkleWash Express');
+        await user.click(screen.getByRole('button', { name: 'Add holiday closure' }));
+        await user.type(screen.getByLabelText('Closure date 1'), '2099-12-24');
+        await user.click(screen.getByRole('button', { name: 'Remove holiday closure 1' }));
+
+        expect(screen.queryByLabelText('Closure date 1')).toBeNull();
     });
 
     it('keeps at least one service pincode while allowing obsolete areas to be removed', async () => {

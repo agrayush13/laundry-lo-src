@@ -4,11 +4,13 @@ import AsyncBoundary from '../../common-ui/async-boundary/AsyncBoundary';
 import { ROUTES } from '../../config/navigationConfig';
 import { PARTNER_SETTINGS_COPY, WEEKDAYS } from '../../config/partnerSettingsConfig';
 import { usePartnerSettings } from '../../hooks/usePartnerSettings';
+import { todayInPartnerTimezone } from '../../utils/datesUtils';
 import PartnerAccessRequired from './PartnerAccessRequired';
 import styles from './partnerPortal.module.scss';
 
 const PartnerSettingsPage: React.FC = () => {
     const settings = usePartnerSettings();
+    const minimumClosureDate = todayInPartnerTimezone();
 
     return (
         <div className={styles.portalPage}>
@@ -171,7 +173,7 @@ const PartnerSettingsPage: React.FC = () => {
                                                                 settings.removeServicePincode(index)
                                                             }
                                                         >
-                                                            Remove
+                                                            {PARTNER_SETTINGS_COPY.remove}
                                                         </button>
                                                     </div>
                                                 );
@@ -355,6 +357,98 @@ const PartnerSettingsPage: React.FC = () => {
                                                     }
                                                 />
                                             </p>
+                                        </div>
+
+                                        <div className={styles.closuresSection}>
+                                            <h3>{PARTNER_SETTINGS_COPY.closuresTitle}</h3>
+                                            <p>{PARTNER_SETTINGS_COPY.closuresIntro}</p>
+                                            <p className={styles.closuresWarning}>
+                                                {PARTNER_SETTINGS_COPY.closuresWarning}
+                                            </p>
+                                            {draft.holidayClosures.length > 0 && (
+                                                <ul className={styles.closuresList}>
+                                                    {draft.holidayClosures.map((closure, index) => {
+                                                        const position = index + 1;
+                                                        const dateId = `partner-closure-date-${position}`;
+                                                        const reasonId = `partner-closure-reason-${position}`;
+                                                        return (
+                                                            <li key={index}>
+                                                                <p className={styles.formField}>
+                                                                    <label htmlFor={dateId}>
+                                                                        {PARTNER_SETTINGS_COPY.closureDate(
+                                                                            position
+                                                                        )}
+                                                                    </label>
+                                                                    <input
+                                                                        id={dateId}
+                                                                        type="date"
+                                                                        min={minimumClosureDate}
+                                                                        value={closure.date}
+                                                                        required
+                                                                        onChange={(event) =>
+                                                                            settings.updateHolidayClosure(
+                                                                                index,
+                                                                                {
+                                                                                    date: event
+                                                                                        .target
+                                                                                        .value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </p>
+                                                                <p className={styles.formField}>
+                                                                    <label htmlFor={reasonId}>
+                                                                        {PARTNER_SETTINGS_COPY.closureReason(
+                                                                            position
+                                                                        )}
+                                                                    </label>
+                                                                    <input
+                                                                        id={reasonId}
+                                                                        value={closure.reason}
+                                                                        maxLength={120}
+                                                                        placeholder={
+                                                                            PARTNER_SETTINGS_COPY.closureReasonPlaceholder
+                                                                        }
+                                                                        onChange={(event) =>
+                                                                            settings.updateHolidayClosure(
+                                                                                index,
+                                                                                {
+                                                                                    reason: event
+                                                                                        .target
+                                                                                        .value,
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </p>
+                                                                <button
+                                                                    className={`button ${styles.removeClosure}`}
+                                                                    type="button"
+                                                                    aria-label={PARTNER_SETTINGS_COPY.removeClosure(
+                                                                        position
+                                                                    )}
+                                                                    onClick={() =>
+                                                                        settings.removeHolidayClosure(
+                                                                            index
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {PARTNER_SETTINGS_COPY.remove}
+                                                                </button>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
+                                            <button
+                                                className={`button ${styles.addClosure}`}
+                                                type="button"
+                                                disabled={draft.holidayClosures.length >= 60}
+                                                onClick={settings.addHolidayClosure}
+                                            >
+                                                {PARTNER_SETTINGS_COPY.addClosure}
+                                            </button>
                                         </div>
 
                                         <div className={styles.hoursSection}>

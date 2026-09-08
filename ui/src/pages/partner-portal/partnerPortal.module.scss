@@ -886,6 +886,69 @@
     }
 }
 
+.closuresSection {
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid t.$color-border;
+
+    h3 {
+        margin: 0 0 0.25rem;
+        font-size: t.$font-size-h5;
+    }
+
+    > p {
+        margin: 0 0 1rem;
+        color: t.$color-text-muted;
+        font-size: t.$font-size-md;
+    }
+
+    .closuresWarning {
+        padding: 0.75rem 0.875rem;
+        border-left: 3px solid t.$color-primary;
+        background: t.$color-surface-muted;
+        color: t.$color-text;
+    }
+}
+
+.closuresList {
+    display: grid;
+    gap: 0.875rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: grid;
+        grid-template-columns: minmax(10rem, 0.6fr) minmax(12rem, 1fr) auto;
+        align-items: end;
+        gap: 0.75rem;
+        padding: 1rem;
+        border: 1px solid t.$color-border;
+        border-radius: t.$radius-sm;
+        background: t.$color-surface-muted;
+    }
+
+    .formField {
+        margin: 0;
+    }
+}
+
+.addClosure,
+.removeClosure {
+    border: 1px solid t.$color-border;
+    background: t.$color-surface;
+    color: t.$color-text;
+
+    &:hover:not(:disabled) {
+        border-color: t.$color-primary;
+    }
+}
+
+.removeClosure {
+    min-height: 2.875rem;
+    padding-inline: 0.875rem;
+}
+
 .hoursSection {
     margin-top: 1.75rem;
     padding-top: 1.5rem;
@@ -999,6 +1062,14 @@
     .itemEditor {
         grid-template-columns: 1fr;
     }
+
+    .closuresList li {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+
+        .removeClosure {
+            grid-column: 1 / -1;
+        }
+    }
 }
 
 @media (max-width: t.$breakpoint-sm) {
@@ -1039,6 +1110,14 @@
     .serviceAreaList,
     .availabilityControls {
         grid-template-columns: 1fr;
+    }
+
+    .closuresList li {
+        grid-template-columns: 1fr;
+
+        .removeClosure {
+            grid-column: auto;
+        }
     }
 
     .queueCardTotal {
