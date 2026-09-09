@@ -1,3 +1,4 @@
+import type { ServiceId } from '../data/services';
 import type { PriceUnit } from './catalogModels';
 import type { Money } from './moneyModels';
 
@@ -13,9 +14,14 @@ export interface PartnerManagedCatalogItem {
 
 export interface PartnerManagedCatalogCategory {
     id: string;
-    service: string;
+    service: ServiceId;
     name: string;
     items: PartnerManagedCatalogItem[];
+}
+
+export interface PartnerManagedCatalogCategoryInput {
+    service: ServiceId;
+    name: string;
 }
 
 export interface PartnerManagedCatalogItemInput {

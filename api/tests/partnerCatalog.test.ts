@@ -10,6 +10,7 @@ const CUSTOMER = 'eeeeeeee-0000-4000-8000-000000000013';
 const PARTNER_ID = 'ptr_test_catalog';
 const CATEGORY_ID = 'cat_test_catalog_wash';
 const SECOND_CATEGORY_ID = 'cat_test_catalog_dry';
+const CREATED_SERVICE = 'premium-care';
 const SHIRT_ID = 'itm_test_catalog_shirt';
 const TOWEL_ID = 'itm_test_catalog_towel';
 const CART_ID = 'crt_test_catalog';
@@ -81,6 +82,11 @@ beforeAll(async () => {
 
 beforeEach(async () => {
     await pool.query('delete from public.carts where user_id = $1', [CUSTOMER]);
+    await pool.query(
+        `delete from public.catalog_categories
+         where partner_id = $1 and service in ('wash-iron', 'premium-care')`,
+        [PARTNER_ID]
+    );
     await pool.query(
         `update public.catalog_categories
          set name = case id
@@ -154,6 +160,92 @@ describe('partner catalogue management', () => {
                 { id: SECOND_CATEGORY_ID, items: [] },
             ],
         });
+    });
+
+    it('creates a canonical service and customer-facing item for the owner', async () => {
+        const category = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories`,
+            { service: CREATED_SERVICE, name: 'Couture Care' },
+            ownerAuthorization
+        );
+        expect(category.status).toBe(201);
+        expect(category.body).toMatchObject({
+            service: CREATED_SERVICE,
+            name: 'Couture Care',
+            items: [],
+        });
+        const categoryId = (category.body as PartnerCatalogCategory).id;
+
+        const item = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories/${categoryId}/items`,
+            itemInput({ name: 'Silk saree', price: { amount: 39900, currency: 'INR' } }),
+            ownerAuthorization
+        );
+        expect(item.status).toBe(201);
+        expect(item.body).toMatchObject({
+            name: 'Silk saree',
+            price: { amount: 39900, currency: 'INR' },
+            unit: 'piece',
+            iconKey: 'box',
+            isActive: true,
+        });
+
+        const publicCatalog = await get(`/api/v1/partners/${PARTNER_ID}/catalog`);
+        expect(publicCatalog.body as { categories: CatalogCategory[] }).toMatchObject({
+            categories: expect.arrayContaining([
+                expect.objectContaining({
+                    id: categoryId,
+                    service: CREATED_SERVICE,
+                    name: 'Couture Care',
+                    items: [
+                        expect.objectContaining({
+                            name: 'Silk saree',
+                            price: { amount: 39900, currency: 'INR' },
+                        }),
+                    ],
+                }),
+            ]),
+        });
+
+        const positions = await pool.query(
+            `select category.position as category_position, item.position as item_position
+             from public.catalog_categories category
+             join public.catalog_items item on item.category_id = category.id
+             where category.id = $1`,
+            [categoryId]
+        );
+        expect(positions.rows[0]).toEqual({ category_position: 3, item_position: 0 });
+    });
+
+    it('rejects duplicate services and malformed create requests', async () => {
+        const duplicate = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories`,
+            { service: 'wash-fold', name: 'Duplicate Wash' },
+            ownerAuthorization
+        );
+        expect(duplicate.status).toBe(409);
+        expect(duplicate.body).toMatchObject({ error: { code: 'SERVICE_ALREADY_EXISTS' } });
+
+        const invalidCategory = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories`,
+            { service: 'unknown-service', name: '' },
+            ownerAuthorization
+        );
+        expect(invalidCategory.status).toBe(422);
+        expect(invalidCategory.body).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
+
+        const invalidItem = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories/${CATEGORY_ID}/items`,
+            itemInput({ price: { amount: -1, currency: 'INR' } }),
+            ownerAuthorization
+        );
+        expect(invalidItem.status).toBe(422);
+        expect(invalidItem.body).toMatchObject({ error: { code: 'VALIDATION_FAILED' } });
     });
 
     it('updates customer-facing names, descriptions, prices and availability', async () => {
@@ -277,6 +369,22 @@ describe('partner catalogue management', () => {
     });
 
     it('hides catalogue writes from another owner', async () => {
+        const createdCategory = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories`,
+            { service: CREATED_SERVICE, name: 'Not yours' },
+            otherOwnerAuthorization
+        );
+        expect(createdCategory.status).toBe(404);
+
+        const createdItem = await request(
+            'POST',
+            `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories/${CATEGORY_ID}/items`,
+            itemInput(),
+            otherOwnerAuthorization
+        );
+        expect(createdItem.status).toBe(404);
+
         const category = await request(
             'PATCH',
             `/api/v1/partner/laundries/${PARTNER_ID}/catalog/categories/${CATEGORY_ID}`,
@@ -317,6 +425,25 @@ describe('partner catalogue management', () => {
                     SHIRT_ID,
                     SECOND_CATEGORY_ID,
                 ])
+            )
+        ).rejects.toThrow(/permission denied/i);
+
+        await expect(
+            asCaller(pool, null, (client) =>
+                client.query(
+                    `select public.create_partner_catalog_category($1, 'premium-care', 'No auth')`,
+                    [PARTNER_ID]
+                )
+            )
+        ).rejects.toThrow(/permission denied/i);
+
+        await expect(
+            asCaller(pool, OWNER, (client) =>
+                client.query(
+                    `insert into public.catalog_categories (partner_id, service, name)
+                     values ($1, 'premium-care', 'Direct insert')`,
+                    [PARTNER_ID]
+                )
             )
         ).rejects.toThrow(/permission denied/i);
         await expect(

@@ -1,9 +1,10 @@
 import type {
     PartnerManagedCatalogCategory,
+    PartnerManagedCatalogCategoryInput,
     PartnerManagedCatalogItem,
     PartnerManagedCatalogItemInput,
 } from '../models/partnerCatalogModels';
-import { apiGet, apiPatch } from './apiClient';
+import { apiGet, apiPatch, apiPost } from './apiClient';
 
 const partnerCatalogPath = (partnerId: string) =>
     `/partner/laundries/${encodeURIComponent(partnerId)}/catalog`;
@@ -19,6 +20,11 @@ export const updateManagedCatalogCategory = (partnerId: string, categoryId: stri
         { name }
     );
 
+export const createManagedCatalogCategory = (
+    partnerId: string,
+    input: PartnerManagedCatalogCategoryInput
+) => apiPost<PartnerManagedCatalogCategory>(`${partnerCatalogPath(partnerId)}/categories`, input);
+
 export const updateManagedCatalogItem = (
     partnerId: string,
     itemId: string,
@@ -26,5 +32,15 @@ export const updateManagedCatalogItem = (
 ) =>
     apiPatch<PartnerManagedCatalogItem>(
         `${partnerCatalogPath(partnerId)}/items/${encodeURIComponent(itemId)}`,
+        input
+    );
+
+export const createManagedCatalogItem = (
+    partnerId: string,
+    categoryId: string,
+    input: PartnerManagedCatalogItemInput
+) =>
+    apiPost<PartnerManagedCatalogItem>(
+        `${partnerCatalogPath(partnerId)}/categories/${encodeURIComponent(categoryId)}/items`,
         input
     );

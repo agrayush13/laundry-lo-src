@@ -78,6 +78,53 @@ const installCatalogApi = ({ denied = false, saveFails = false } = {}) => {
             return json({ categories });
         }
 
+        if (path === '/partner/laundries/1001/catalog/categories' && method === 'POST') {
+            if (saveFails) return apiError('INTERNAL_ERROR', 'Service save failed.', 500);
+            const body = JSON.parse(String(init?.body)) as Pick<
+                PartnerManagedCatalogCategory,
+                'service' | 'name'
+            >;
+            if (categories.some(({ service }) => service === body.service)) {
+                return apiError(
+                    'SERVICE_ALREADY_EXISTS',
+                    'This laundry already has that service in its catalogue.',
+                    409
+                );
+            }
+            const saved: PartnerManagedCatalogCategory = {
+                id: `cat_${body.service}`,
+                service: body.service,
+                name: body.name.trim(),
+                items: [],
+            };
+            categories = [...categories, saved];
+            return json(saved, 201);
+        }
+
+        const itemCreate =
+            method === 'POST'
+                ? /^\/partner\/laundries\/1001\/catalog\/categories\/([^/]+)\/items$/.exec(path)
+                : null;
+        if (itemCreate) {
+            if (saveFails) return apiError('INTERNAL_ERROR', 'Item save failed.', 500);
+            const body = JSON.parse(String(init?.body)) as Pick<
+                PartnerManagedCatalogItem,
+                'name' | 'description' | 'price' | 'isActive'
+            >;
+            const saved: PartnerManagedCatalogItem = {
+                id: 'itm_created',
+                ...body,
+                unit: 'piece',
+                iconKey: 'box',
+            };
+            categories = categories.map((category) =>
+                category.id === itemCreate[1]
+                    ? { ...category, items: [...category.items, saved] }
+                    : category
+            );
+            return json(saved, 201);
+        }
+
         if (path === '/partner/laundries/1001/catalog/categories/cat_wash' && method === 'PATCH') {
             if (saveFails) return apiError('INTERNAL_ERROR', 'Service save failed.', 500);
             const body = JSON.parse(String(init?.body)) as { name: string };
@@ -154,6 +201,76 @@ describe('laundry-partner catalogue management', () => {
                 String(input).endsWith('/catalog/categories/cat_wash') && init?.method === 'PATCH'
         );
         expect(patch?.[1]?.body).toBe(JSON.stringify({ name: 'Everyday Laundry' }));
+    });
+
+    it('adds an unused canonical service to the catalogue', async () => {
+        const user = userEvent.setup();
+        authenticateTestUser();
+        const fetch = installCatalogApi();
+        renderApp('/partner/catalogue');
+
+        await user.selectOptions(await screen.findByLabelText('Service type'), 'premium-care');
+        const name = screen.getByLabelText('Customer-facing service name', {
+            selector: '#new-category-name',
+        });
+        await user.clear(name);
+        await user.type(name, 'Couture Care');
+        await user.click(screen.getByRole('button', { name: 'Add service' }));
+
+        expect(
+            await screen.findByRole('heading', { name: 'Couture Care', level: 2 })
+        ).toBeInTheDocument();
+        const post = fetch.mock.calls.find(
+            ([input, init]) =>
+                String(input).endsWith('/catalog/categories') && init?.method === 'POST'
+        );
+        expect(post?.[1]?.body).toBe(
+            JSON.stringify({ service: 'premium-care', name: 'Couture Care' })
+        );
+    });
+
+    it('adds a priced item to an existing service', async () => {
+        const user = userEvent.setup();
+        authenticateTestUser();
+        const fetch = installCatalogApi();
+        renderApp('/partner/catalogue');
+
+        const categoryHeading = await screen.findByRole('heading', {
+            name: 'Wash & Fold',
+            level: 2,
+        });
+        const category = within(categoryHeading.closest('section')!);
+        await user.click(category.getByText('Add an item', { selector: 'summary' }));
+        const creator = within(category.getByText('New catalogue item').closest('form')!);
+        await user.type(creator.getByLabelText('Item name'), 'Bedsheet');
+        await user.type(creator.getByLabelText('Description (optional)'), 'Cleaned and folded.');
+        await user.type(creator.getByLabelText('Price (₹ per piece)'), '59.5');
+        expect(creator.getByLabelText('Item name')).toHaveValue('Bedsheet');
+        expect(creator.getByLabelText('Price (₹ per piece)')).toHaveValue(59.5);
+        await user.click(creator.getByRole('button', { name: 'Add an item' }));
+
+        await waitFor(() =>
+            expect(
+                fetch.mock.calls.map(([input, init]) => [String(input), init?.method ?? 'GET'])
+            ).toContainEqual([
+                expect.stringContaining('/catalog/categories/cat_wash/items'),
+                'POST',
+            ])
+        );
+        const post = fetch.mock.calls.find(
+            ([input, init]) =>
+                String(input).endsWith('/catalog/categories/cat_wash/items') &&
+                init?.method === 'POST'
+        );
+        expect(JSON.parse(String(post?.[1]?.body))).toEqual({
+            name: 'Bedsheet',
+            description: 'Cleaned and folded.',
+            price: { amount: 5950, currency: 'INR' },
+            isActive: true,
+        });
+        expect(
+            await screen.findByRole('heading', { name: 'Bedsheet', level: 3 })
+        ).toBeInTheDocument();
     });
 
     it('updates item content, rupee pricing and customer availability together', async () => {

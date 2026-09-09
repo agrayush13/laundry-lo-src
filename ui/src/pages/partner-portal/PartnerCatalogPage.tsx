@@ -83,6 +83,106 @@ const PartnerCatalogPage: React.FC = () => {
                                     {PARTNER_CATALOG_COPY.preservationNote}
                                 </p>
 
+                                {catalog.catalogState.data && (
+                                    <section className={`card ${styles.catalogCreate}`}>
+                                        <header>
+                                            <div>
+                                                <h2>{PARTNER_CATALOG_COPY.createCategoryTitle}</h2>
+                                                <p>{PARTNER_CATALOG_COPY.createCategoryBody}</p>
+                                            </div>
+                                        </header>
+                                        {catalog.availableServices.length === 0 ? (
+                                            <p>{PARTNER_CATALOG_COPY.allServicesAdded}</p>
+                                        ) : (
+                                            <form
+                                                className={styles.createCategoryForm}
+                                                noValidate
+                                                onSubmit={(event) => {
+                                                    event.preventDefault();
+                                                    void catalog.createCategory();
+                                                }}
+                                            >
+                                                <p className={styles.formField}>
+                                                    <label htmlFor="new-category-service">
+                                                        {PARTNER_CATALOG_COPY.serviceType}
+                                                    </label>
+                                                    <select
+                                                        id="new-category-service"
+                                                        value={catalog.newCategoryDraft.service}
+                                                        disabled={catalog.savingKey !== null}
+                                                        onChange={(event) =>
+                                                            catalog.updateNewCategoryService(
+                                                                event.target
+                                                                    .value as (typeof catalog.availableServices)[number]
+                                                            )
+                                                        }
+                                                    >
+                                                        {catalog.availableServices.map(
+                                                            (service) => (
+                                                                <option
+                                                                    key={service}
+                                                                    value={service}
+                                                                >
+                                                                    {partnerServiceLabel(service)}
+                                                                </option>
+                                                            )
+                                                        )}
+                                                    </select>
+                                                </p>
+                                                <p className={styles.formField}>
+                                                    <label htmlFor="new-category-name">
+                                                        {PARTNER_CATALOG_COPY.categoryName}
+                                                    </label>
+                                                    <input
+                                                        id="new-category-name"
+                                                        value={catalog.newCategoryDraft.name}
+                                                        required
+                                                        maxLength={80}
+                                                        aria-invalid={
+                                                            catalog.invalidFields[
+                                                                'new-category'
+                                                            ] === 'name'
+                                                        }
+                                                        aria-describedby={
+                                                            catalog.errors['new-category']
+                                                                ? 'new-category-feedback'
+                                                                : undefined
+                                                        }
+                                                        onChange={(event) =>
+                                                            catalog.updateNewCategoryName(
+                                                                event.target.value
+                                                            )
+                                                        }
+                                                    />
+                                                </p>
+                                                <button
+                                                    className="button button--primary"
+                                                    type="submit"
+                                                    disabled={catalog.savingKey !== null}
+                                                >
+                                                    {catalog.savingKey === 'new-category'
+                                                        ? PARTNER_CATALOG_COPY.creating
+                                                        : PARTNER_CATALOG_COPY.createCategory}
+                                                </button>
+                                                <div
+                                                    id="new-category-feedback"
+                                                    className={styles.saveMessage}
+                                                    aria-live="polite"
+                                                >
+                                                    {catalog.errors['new-category'] && (
+                                                        <p
+                                                            data-error="true"
+                                                            role="alert"
+                                                        >
+                                                            {catalog.errors['new-category']}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </form>
+                                        )}
+                                    </section>
+                                )}
+
                                 <AsyncBoundary
                                     state={catalog.catalogState}
                                     label={PARTNER_CATALOG_COPY.loading}
@@ -201,6 +301,254 @@ const PartnerCatalogPage: React.FC = () => {
                                                                 )}
                                                             </div>
                                                         </div>
+
+                                                        <details className={styles.createItem}>
+                                                            <summary>
+                                                                {PARTNER_CATALOG_COPY.createItem}
+                                                            </summary>
+                                                            {(() => {
+                                                                const key = `new-item:${category.id}`;
+                                                                const draft =
+                                                                    catalog.newItemDrafts[
+                                                                        category.id
+                                                                    ];
+                                                                if (!draft) return null;
+                                                                const feedbackId = `${category.id}-new-item-feedback`;
+
+                                                                return (
+                                                                    <form
+                                                                        noValidate
+                                                                        onSubmit={(event) => {
+                                                                            event.preventDefault();
+                                                                            void catalog.createItem(
+                                                                                category.id
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <header>
+                                                                            <h3>
+                                                                                {
+                                                                                    PARTNER_CATALOG_COPY.createItemTitle
+                                                                                }
+                                                                            </h3>
+                                                                            <p>
+                                                                                {
+                                                                                    PARTNER_CATALOG_COPY.createItemBody
+                                                                                }
+                                                                            </p>
+                                                                        </header>
+                                                                        <div
+                                                                            className={
+                                                                                styles.itemEditor
+                                                                            }
+                                                                        >
+                                                                            <p
+                                                                                className={
+                                                                                    styles.formField
+                                                                                }
+                                                                            >
+                                                                                <label
+                                                                                    htmlFor={`${category.id}-new-item-name`}
+                                                                                >
+                                                                                    {
+                                                                                        PARTNER_CATALOG_COPY.itemName
+                                                                                    }
+                                                                                </label>
+                                                                                <input
+                                                                                    id={`${category.id}-new-item-name`}
+                                                                                    value={
+                                                                                        draft.name
+                                                                                    }
+                                                                                    required
+                                                                                    maxLength={120}
+                                                                                    aria-invalid={
+                                                                                        catalog
+                                                                                            .invalidFields[
+                                                                                            key
+                                                                                        ] === 'name'
+                                                                                    }
+                                                                                    aria-describedby={
+                                                                                        catalog
+                                                                                            .errors[
+                                                                                            key
+                                                                                        ]
+                                                                                            ? feedbackId
+                                                                                            : undefined
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        catalog.updateNewItem(
+                                                                                            category.id,
+                                                                                            {
+                                                                                                name: event
+                                                                                                    .target
+                                                                                                    .value,
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </p>
+                                                                            <p
+                                                                                className={`${styles.formField} ${styles.itemDescription}`}
+                                                                            >
+                                                                                <label
+                                                                                    htmlFor={`${category.id}-new-item-description`}
+                                                                                >
+                                                                                    {
+                                                                                        PARTNER_CATALOG_COPY.description
+                                                                                    }
+                                                                                </label>
+                                                                                <input
+                                                                                    id={`${category.id}-new-item-description`}
+                                                                                    value={
+                                                                                        draft.description
+                                                                                    }
+                                                                                    maxLength={500}
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        catalog.updateNewItem(
+                                                                                            category.id,
+                                                                                            {
+                                                                                                description:
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </p>
+                                                                            <p
+                                                                                className={
+                                                                                    styles.formField
+                                                                                }
+                                                                            >
+                                                                                <label
+                                                                                    htmlFor={`${category.id}-new-item-price`}
+                                                                                >
+                                                                                    {
+                                                                                        PARTNER_CATALOG_COPY.price
+                                                                                    }
+                                                                                </label>
+                                                                                <input
+                                                                                    id={`${category.id}-new-item-price`}
+                                                                                    type="number"
+                                                                                    value={
+                                                                                        draft.priceRupees
+                                                                                    }
+                                                                                    required
+                                                                                    min={0}
+                                                                                    max={1_000_000}
+                                                                                    step="0.01"
+                                                                                    inputMode="decimal"
+                                                                                    aria-invalid={
+                                                                                        catalog
+                                                                                            .invalidFields[
+                                                                                            key
+                                                                                        ] ===
+                                                                                        'price'
+                                                                                    }
+                                                                                    aria-describedby={
+                                                                                        catalog
+                                                                                            .errors[
+                                                                                            key
+                                                                                        ]
+                                                                                            ? feedbackId
+                                                                                            : undefined
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        catalog.updateNewItem(
+                                                                                            category.id,
+                                                                                            {
+                                                                                                priceRupees:
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .value,
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </p>
+                                                                            <label
+                                                                                className={
+                                                                                    styles.catalogAvailability
+                                                                                }
+                                                                            >
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    aria-label={`${PARTNER_CATALOG_COPY.createItemTitle} ${PARTNER_CATALOG_COPY.available}`}
+                                                                                    checked={
+                                                                                        draft.isActive
+                                                                                    }
+                                                                                    onChange={(
+                                                                                        event
+                                                                                    ) =>
+                                                                                        catalog.updateNewItem(
+                                                                                            category.id,
+                                                                                            {
+                                                                                                isActive:
+                                                                                                    event
+                                                                                                        .target
+                                                                                                        .checked,
+                                                                                            }
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                                {
+                                                                                    PARTNER_CATALOG_COPY.available
+                                                                                }
+                                                                            </label>
+                                                                        </div>
+                                                                        <footer
+                                                                            className={
+                                                                                styles.itemActions
+                                                                            }
+                                                                        >
+                                                                            <button
+                                                                                className="button button--primary"
+                                                                                type="submit"
+                                                                                disabled={
+                                                                                    catalog.savingKey !==
+                                                                                    null
+                                                                                }
+                                                                            >
+                                                                                {catalog.savingKey ===
+                                                                                key
+                                                                                    ? PARTNER_CATALOG_COPY.creating
+                                                                                    : PARTNER_CATALOG_COPY.createItem}
+                                                                            </button>
+                                                                            <div
+                                                                                id={feedbackId}
+                                                                                className={
+                                                                                    styles.saveMessage
+                                                                                }
+                                                                                aria-live="polite"
+                                                                            >
+                                                                                {catalog.errors[
+                                                                                    key
+                                                                                ] && (
+                                                                                    <p
+                                                                                        data-error="true"
+                                                                                        role="alert"
+                                                                                    >
+                                                                                        {
+                                                                                            catalog
+                                                                                                .errors[
+                                                                                                key
+                                                                                            ]
+                                                                                        }
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                        </footer>
+                                                                    </form>
+                                                                );
+                                                            })()}
+                                                        </details>
 
                                                         <ul className={styles.catalogItems}>
                                                             {category.items.map((item) => {

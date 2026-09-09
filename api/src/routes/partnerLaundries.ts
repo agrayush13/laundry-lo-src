@@ -11,6 +11,8 @@ import {
     updateOwnedPartnerConfiguration,
 } from '../queries/partnerConfigurationQueries.js';
 import {
+    createOwnedCatalogCategory,
+    createOwnedCatalogItem,
     getOwnedPartnerCatalog,
     updateOwnedCatalogCategory,
     updateOwnedCatalogItem,
@@ -146,6 +148,13 @@ const categoryBody = z
     })
     .strict();
 
+const categoryCreateBody = z
+    .object({
+        service: z.enum(['wash-fold', 'wash-iron', 'dry-cleaning', 'premium-care']),
+        name: z.string().trim().min(1).max(80),
+    })
+    .strict();
+
 const itemBody = z
     .object({
         name: z.string().trim().min(1).max(120),
@@ -225,6 +234,15 @@ export const partnerLaundryRoutes = new Hono<AppEnv>()
         if (!categories) throw notFound();
         return c.json({ categories });
     })
+    .post('/:id/catalog/categories', async (c) => {
+        const userId = requireUser(c.get('userId'));
+        const input = parse(categoryCreateBody, await c.req.json().catch(() => ({})));
+        const category = await asCaller(c.get('pool'), userId, (client) =>
+            createOwnedCatalogCategory(client, c.req.param('id'), input)
+        ).catch(translateCatalogFailure);
+        if (!category) throw notFound();
+        return c.json(category, 201);
+    })
     .patch('/:id/catalog/categories/:categoryId', async (c) => {
         const userId = requireUser(c.get('userId'));
         const input = parse(categoryBody, await c.req.json().catch(() => ({})));
@@ -238,6 +256,15 @@ export const partnerLaundryRoutes = new Hono<AppEnv>()
         );
         if (!category) throw notFound();
         return c.json(category);
+    })
+    .post('/:id/catalog/categories/:categoryId/items', async (c) => {
+        const userId = requireUser(c.get('userId'));
+        const input = parse(itemBody, await c.req.json().catch(() => ({})));
+        const item = await asCaller(c.get('pool'), userId, (client) =>
+            createOwnedCatalogItem(client, c.req.param('id'), c.req.param('categoryId'), input)
+        ).catch(translateCatalogFailure);
+        if (!item) throw notFound();
+        return c.json(item, 201);
     })
     .patch('/:id/catalog/items/:itemId', async (c) => {
         const userId = requireUser(c.get('userId'));

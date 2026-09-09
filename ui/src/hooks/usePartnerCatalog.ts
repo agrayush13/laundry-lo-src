@@ -3,14 +3,21 @@ import type {
     PartnerManagedCatalogCategory,
     PartnerManagedCatalogItem,
 } from '../models/partnerCatalogModels';
+import type { ServiceId } from '../data/services';
 import { ApiError } from '../services/apiClient';
 import {
+    createManagedCatalogCategory,
+    createManagedCatalogItem,
     getManagedPartnerCatalog,
     updateManagedCatalogCategory,
     updateManagedCatalogItem,
 } from '../services/partnerCatalogServices';
 import { getPartnerLaundries } from '../services/partnerConfigurationServices';
-import { PARTNER_CATALOG_COPY } from '../config/partnerCatalogConfig';
+import {
+    PARTNER_CATALOG_COPY,
+    PARTNER_SERVICE_IDS,
+    partnerServiceLabel,
+} from '../config/partnerCatalogConfig';
 import { useAsync } from './useAsync';
 
 interface CategoryDraft {
@@ -23,6 +30,18 @@ interface ItemDraft {
     priceRupees: string;
     isActive: boolean;
 }
+
+interface NewCategoryDraft {
+    service: ServiceId;
+    name: string;
+}
+
+const blankItemDraft = (): ItemDraft => ({
+    name: '',
+    description: '',
+    priceRupees: '',
+    isActive: true,
+});
 
 const priceInput = (amount: number) =>
     (amount / 100)
@@ -56,6 +75,11 @@ export const usePartnerCatalog = () => {
     );
     const [categoryDrafts, setCategoryDrafts] = useState<Record<string, CategoryDraft>>({});
     const [itemDrafts, setItemDrafts] = useState<Record<string, ItemDraft>>({});
+    const [newCategoryDraft, setNewCategoryDraft] = useState<NewCategoryDraft>({
+        service: PARTNER_SERVICE_IDS[0],
+        name: partnerServiceLabel(PARTNER_SERVICE_IDS[0]),
+    });
+    const [newItemDrafts, setNewItemDrafts] = useState<Record<string, ItemDraft>>({});
     const [savingKey, setSavingKey] = useState<string | null>(null);
     const [successKey, setSuccessKey] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -72,6 +96,15 @@ export const usePartnerCatalog = () => {
                     category.items.map((item) => [item.id, itemDraft(item)])
                 )
             )
+        );
+        const available = PARTNER_SERVICE_IDS.find(
+            (service) => !categories.some((category) => category.service === service)
+        );
+        if (available) {
+            setNewCategoryDraft({ service: available, name: partnerServiceLabel(available) });
+        }
+        setNewItemDrafts(
+            Object.fromEntries(categories.map((category) => [category.id, blankItemDraft()]))
         );
         setSavingKey(null);
         setSuccessKey(null);
@@ -100,12 +133,73 @@ export const usePartnerCatalog = () => {
         setCategoryDrafts((current) => ({ ...current, [categoryId]: { name } }));
     };
 
+    const updateNewCategoryService = (service: ServiceId) => {
+        clearOutcome('new-category');
+        setNewCategoryDraft((current) => ({
+            service,
+            name:
+                !current.name.trim() || current.name === partnerServiceLabel(current.service)
+                    ? partnerServiceLabel(service)
+                    : current.name,
+        }));
+    };
+
+    const updateNewCategoryName = (name: string) => {
+        clearOutcome('new-category');
+        setNewCategoryDraft((current) => ({ ...current, name }));
+    };
+
     const updateItem = (itemId: string, value: Partial<ItemDraft>) => {
         clearOutcome(`item:${itemId}`);
         setItemDrafts((current) => ({
             ...current,
             [itemId]: { ...current[itemId]!, ...value },
         }));
+    };
+
+    const updateNewItem = (categoryId: string, value: Partial<ItemDraft>) => {
+        const key = `new-item:${categoryId}`;
+        clearOutcome(key);
+        setNewItemDrafts((current) => ({
+            ...current,
+            [categoryId]: { ...(current[categoryId] ?? blankItemDraft()), ...value },
+        }));
+    };
+
+    const parsePrice = (key: string, priceRupees: string) => {
+        const normalizedPrice = priceRupees.trim();
+        const isValidPrice = /^\d+(\.\d{1,2})?$/.test(normalizedPrice);
+        const price = Number(normalizedPrice);
+        if (!isValidPrice || !Number.isFinite(price) || price > 1_000_000) {
+            setErrors((current) => ({ ...current, [key]: PARTNER_CATALOG_COPY.priceError }));
+            setInvalidFields((current) => ({ ...current, [key]: 'price' }));
+            return null;
+        }
+        return Math.round(price * 100);
+    };
+
+    const createCategory = async () => {
+        const key = 'new-category';
+        if (!effectiveId || savingKey) return;
+        if (!newCategoryDraft.name.trim()) {
+            setErrors((current) => ({
+                ...current,
+                [key]: PARTNER_CATALOG_COPY.categoryNameError,
+            }));
+            setInvalidFields((current) => ({ ...current, [key]: 'name' }));
+            return;
+        }
+
+        setSavingKey(key);
+        clearOutcome(key);
+        try {
+            await createManagedCatalogCategory(effectiveId, newCategoryDraft);
+            catalogState.reload();
+        } catch (error) {
+            setErrors((current) => ({ ...current, [key]: saveError(error) }));
+        } finally {
+            setSavingKey(null);
+        }
     };
 
     const saveCategory = async (categoryId: string) => {
@@ -143,14 +237,8 @@ export const usePartnerCatalog = () => {
             return;
         }
 
-        const normalizedPrice = draft.priceRupees.trim();
-        const isValidPrice = /^\d+(\.\d{1,2})?$/.test(normalizedPrice);
-        const price = Number(normalizedPrice);
-        if (!isValidPrice || !Number.isFinite(price) || price > 1_000_000) {
-            setErrors((current) => ({ ...current, [key]: PARTNER_CATALOG_COPY.priceError }));
-            setInvalidFields((current) => ({ ...current, [key]: 'price' }));
-            return;
-        }
+        const price = parsePrice(key, draft.priceRupees);
+        if (price === null) return;
 
         setSavingKey(key);
         clearOutcome(key);
@@ -158,7 +246,7 @@ export const usePartnerCatalog = () => {
             const saved = await updateManagedCatalogItem(effectiveId, itemId, {
                 name: draft.name,
                 description: draft.description.trim() || null,
-                price: { amount: Math.round(price * 100), currency: 'INR' },
+                price: { amount: price, currency: 'INR' },
                 isActive: draft.isActive,
             });
             setItemDrafts((current) => ({ ...current, [itemId]: itemDraft(saved) }));
@@ -170,6 +258,39 @@ export const usePartnerCatalog = () => {
         }
     };
 
+    const createItem = async (categoryId: string) => {
+        const key = `new-item:${categoryId}`;
+        const draft = newItemDrafts[categoryId];
+        if (!effectiveId || !draft || savingKey) return;
+        if (!draft.name.trim()) {
+            setErrors((current) => ({ ...current, [key]: PARTNER_CATALOG_COPY.itemNameError }));
+            setInvalidFields((current) => ({ ...current, [key]: 'name' }));
+            return;
+        }
+        const price = parsePrice(key, draft.priceRupees);
+        if (price === null) return;
+
+        setSavingKey(key);
+        clearOutcome(key);
+        try {
+            await createManagedCatalogItem(effectiveId, categoryId, {
+                name: draft.name,
+                description: draft.description.trim() || null,
+                price: { amount: price, currency: 'INR' },
+                isActive: draft.isActive,
+            });
+            catalogState.reload();
+        } catch (error) {
+            setErrors((current) => ({ ...current, [key]: saveError(error) }));
+        } finally {
+            setSavingKey(null);
+        }
+    };
+
+    const availableServices = PARTNER_SERVICE_IDS.filter(
+        (service) => !catalogState.data?.some((category) => category.service === service)
+    );
+
     return {
         laundriesState,
         laundries,
@@ -178,13 +299,21 @@ export const usePartnerCatalog = () => {
         catalogState,
         categoryDrafts,
         itemDrafts,
+        newCategoryDraft,
+        newItemDrafts,
+        availableServices,
         savingKey,
         successKey,
         errors,
         invalidFields,
         selectLaundry: (partnerId: string) => setSelectedId(partnerId),
         updateCategoryName,
+        updateNewCategoryService,
+        updateNewCategoryName,
         updateItem,
+        updateNewItem,
+        createCategory,
+        createItem,
         saveCategory,
         saveItem,
     };

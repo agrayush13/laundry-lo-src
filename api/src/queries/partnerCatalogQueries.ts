@@ -28,6 +28,11 @@ export interface PartnerCatalogItemInput {
     isActive: boolean;
 }
 
+export interface PartnerCatalogCategoryInput {
+    service: ServiceId;
+    name: string;
+}
+
 const toCatalog = (rows: PartnerCatalogRow[]): PartnerCatalogCategory[] => {
     const categories = new Map<string, PartnerCatalogCategory>();
 
@@ -104,6 +109,23 @@ export const updateOwnedCatalogCategory = async (
     );
 };
 
+export const createOwnedCatalogCategory = async (
+    client: Client,
+    partnerId: string,
+    input: PartnerCatalogCategoryInput
+): Promise<PartnerCatalogCategory | null> => {
+    const { rows } = await client.query<{ category_id: string }>(
+        `select public.create_partner_catalog_category($1, $2, $3) as category_id`,
+        [partnerId, input.service, input.name]
+    );
+    const categoryId = rows[0]?.category_id;
+    if (!categoryId) return null;
+    return (
+        (await getOwnedPartnerCatalog(client, partnerId))?.find(({ id }) => id === categoryId) ??
+        null
+    );
+};
+
 export const updateOwnedCatalogItem = async (
     client: Client,
     partnerId: string,
@@ -127,6 +149,22 @@ export const updateOwnedCatalogItem = async (
         [partnerId, itemId, input.name, input.description, input.price.amount, input.isActive]
     );
     if (result.rowCount === 0) return null;
+    const catalog = await getOwnedPartnerCatalog(client, partnerId);
+    return catalog?.flatMap(({ items }) => items).find(({ id }) => id === itemId) ?? null;
+};
+
+export const createOwnedCatalogItem = async (
+    client: Client,
+    partnerId: string,
+    categoryId: string,
+    input: PartnerCatalogItemInput
+): Promise<PartnerCatalogItem | null> => {
+    const { rows } = await client.query<{ item_id: string }>(
+        `select public.create_partner_catalog_item($1, $2, $3, $4, $5, $6) as item_id`,
+        [partnerId, categoryId, input.name, input.description, input.price.amount, input.isActive]
+    );
+    const itemId = rows[0]?.item_id;
+    if (!itemId) return null;
     const catalog = await getOwnedPartnerCatalog(client, partnerId);
     return catalog?.flatMap(({ items }) => items).find(({ id }) => id === itemId) ?? null;
 };

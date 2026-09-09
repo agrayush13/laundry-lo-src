@@ -588,6 +588,45 @@
     gap: 1.25rem;
 }
 
+.catalogCreate {
+    margin-bottom: 1.25rem;
+    padding: 1.5rem;
+
+    > header {
+        margin-bottom: 1.25rem;
+
+        h2 {
+            margin: 0 0 0.25rem;
+            font-size: t.$font-size-h4;
+        }
+
+        p {
+            margin: 0;
+            color: t.$color-text-muted;
+        }
+    }
+
+    > p {
+        margin: 0;
+        color: t.$color-text-muted;
+    }
+}
+
+.createCategoryForm {
+    display: grid;
+    grid-template-columns: minmax(10rem, 0.65fr) minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 0.75rem 1rem;
+
+    .formField {
+        margin: 0;
+    }
+
+    .saveMessage {
+        grid-column: 1 / -1;
+    }
+}
+
 .catalogCategory {
     padding: 1.75rem;
 }
@@ -639,6 +678,40 @@
 
     .saveMessage {
         grid-column: 1 / -1;
+    }
+}
+
+.createItem {
+    margin-bottom: 1.25rem;
+    border: 1px solid t.$color-border;
+    border-radius: t.$radius-md;
+    background: t.$color-surface;
+
+    summary {
+        padding: 1rem 1.25rem;
+        color: t.$color-primary;
+        font-weight: t.$font-weight-bold;
+        cursor: pointer;
+    }
+
+    form {
+        padding: 0 1.25rem 1.25rem;
+        border-top: 1px solid t.$color-border;
+    }
+
+    form > header {
+        padding: 1.25rem 0;
+
+        h3 {
+            margin: 0 0 0.25rem;
+            font-size: t.$font-size-body-lg;
+        }
+
+        p {
+            margin: 0;
+            color: t.$color-text-muted;
+            font-size: t.$font-size-md;
+        }
     }
 }
 
@@ -1169,6 +1242,19 @@
 
     .categoryEditor {
         grid-template-columns: 1fr;
+
+        button {
+            width: 100%;
+        }
+    }
+
+    .createCategoryForm {
+        grid-template-columns: 1fr;
+
+        button,
+        .saveMessage {
+            grid-column: auto;
+        }
 
         button {
             width: 100%;
