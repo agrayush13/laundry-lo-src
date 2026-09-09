@@ -97,12 +97,16 @@ export const usePartnerCatalog = () => {
                 )
             )
         );
-        const available = PARTNER_SERVICE_IDS.find(
+        const availableServices = PARTNER_SERVICE_IDS.filter(
             (service) => !categories.some((category) => category.service === service)
         );
-        if (available) {
-            setNewCategoryDraft({ service: available, name: partnerServiceLabel(available) });
-        }
+        setNewCategoryDraft((current) => {
+            if (availableServices.includes(current.service)) return current;
+            const available = availableServices[0];
+            return available
+                ? { service: available, name: partnerServiceLabel(available) }
+                : current;
+        });
         setNewItemDrafts(
             Object.fromEntries(categories.map((category) => [category.id, blankItemDraft()]))
         );
