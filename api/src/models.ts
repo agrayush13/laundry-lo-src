@@ -248,3 +248,12 @@ export interface PartnerOrderSummary {
     delivery: { startsAt: string; endsAt: string };
     latestEvent: { type: OrderEventType; occurredAt: string };
 }
+
+export interface PartnerOperationsSummary {
+    activeOrders: number;
+    awaitingConfirmation: number;
+    pickupsToday: number;
+    deliveriesToday: number;
+    completedToday: number;
+    generatedAt: string;
+}

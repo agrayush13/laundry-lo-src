@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { SignJWT } from 'jose';
 import { asCaller } from '../src/db/pool.js';
-import type { Order, Page, PartnerOrderSummary } from '../src/models.js';
+import type { Order, Page, PartnerOperationsSummary, PartnerOrderSummary } from '../src/models.js';
 import { get, pool, request, requireDatabase } from './helpers.js';
 
 const CUSTOMER = 'eeeeeeee-0000-4000-8000-000000000005';
@@ -171,6 +171,31 @@ describe('partner order lifecycle', () => {
         expect((noDelivered.body as Page<PartnerOrderSummary>).data).toEqual([]);
 
         const wrongLaundry = await get('/api/v1/partner/orders?partnerId=1002', ownerAuthorization);
+        expect(wrongLaundry.status).toBe(404);
+    });
+
+    it('summarizes only the owner-scoped operational queue', async () => {
+        const anonymous = await get('/api/v1/partner/orders/summary');
+        expect(anonymous.status).toBe(401);
+
+        const customer = await get('/api/v1/partner/orders/summary', customerAuthorization);
+        expect(customer.status).toBe(403);
+
+        const response = await get('/api/v1/partner/orders/summary', ownerAuthorization);
+        expect(response.status).toBe(200);
+        expect(response.body as PartnerOperationsSummary).toMatchObject({
+            activeOrders: 2,
+            awaitingConfirmation: 2,
+            pickupsToday: 0,
+            deliveriesToday: 0,
+            completedToday: 0,
+            generatedAt: expect.any(String),
+        });
+
+        const wrongLaundry = await get(
+            '/api/v1/partner/orders/summary?partnerId=1002',
+            ownerAuthorization
+        );
         expect(wrongLaundry.status).toBe(404);
     });
 

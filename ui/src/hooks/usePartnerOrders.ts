@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PartnerOrderSummary } from '../models/partnerOrderModels';
+import type { PartnerOperationsSummary, PartnerOrderSummary } from '../models/partnerOrderModels';
 import { ApiError } from '../services/apiClient';
-import { getPartnerOrders } from '../services/partnerOrderServices';
+import { getPartnerOperationsSummary, getPartnerOrders } from '../services/partnerOrderServices';
 import type { PartnerOrderFilter } from '../config/partnerOrdersConfig';
 
 const PAGE_SIZE = 20;
@@ -18,6 +18,7 @@ export interface PartnerOrdersState {
     error: ApiError | null;
     loadMoreError: ApiError | null;
     nextCursor: string | null;
+    summary: PartnerOperationsSummary | null;
     reload: () => void;
     loadMore: () => Promise<void>;
 }
@@ -25,6 +26,7 @@ export interface PartnerOrdersState {
 export const usePartnerOrders = (filter: PartnerOrderFilter): PartnerOrdersState => {
     const [data, setData] = useState<PartnerOrderSummary[] | null>(null);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [summary, setSummary] = useState<PartnerOperationsSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState<ApiError | null>(null);
@@ -37,22 +39,27 @@ export const usePartnerOrders = (filter: PartnerOrderFilter): PartnerOrdersState
         loadMoreController.current?.abort();
         setData(null);
         setNextCursor(null);
+        setSummary(null);
         setIsLoading(true);
         setIsLoadingMore(false);
         setError(null);
         setLoadMoreError(null);
 
-        getPartnerOrders(
-            {
-                ...(filter === 'all' ? {} : { status: filter }),
-                limit: PAGE_SIZE,
-            },
-            controller.signal
-        ).then(
-            (page) => {
+        Promise.all([
+            getPartnerOrders(
+                {
+                    ...(filter === 'all' ? {} : { status: filter }),
+                    limit: PAGE_SIZE,
+                },
+                controller.signal
+            ),
+            getPartnerOperationsSummary(controller.signal).catch(() => null),
+        ]).then(
+            ([page, loadedSummary]) => {
                 if (controller.signal.aborted) return;
                 setData(page.data);
                 setNextCursor(page.nextCursor);
+                setSummary(loadedSummary);
                 setIsLoading(false);
             },
             (loadError: unknown) => {
@@ -107,6 +114,7 @@ export const usePartnerOrders = (filter: PartnerOrderFilter): PartnerOrdersState
         error,
         loadMoreError,
         nextCursor,
+        summary,
         reload: useCallback(() => setAttempt((value) => value + 1), []),
         loadMore,
     };

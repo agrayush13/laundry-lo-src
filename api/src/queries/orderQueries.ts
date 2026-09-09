@@ -4,6 +4,7 @@ import type {
     Order,
     OrderEventType,
     OrderStatus,
+    PartnerOperationsSummary,
     PartnerOrderSummary,
     PriceUnit,
 } from '../models.js';
@@ -59,6 +60,15 @@ export interface PartnerOrderFilters {
     cursorKey?: number;
     cursorId?: string;
     limit: number;
+}
+
+interface PartnerOperationsSummaryRow {
+    active_orders: number;
+    awaiting_confirmation: number;
+    pickups_today: number;
+    deliveries_today: number;
+    completed_today: number;
+    generated_at: Date;
 }
 
 const dateInIst = (value: Date): string =>
@@ -230,6 +240,65 @@ export const listPartnerOrders = async (
         ]
     );
     return rows;
+};
+
+export const getPartnerOperationsSummary = async (
+    client: Client,
+    partnerId?: string
+): Promise<PartnerOperationsSummary> => {
+    const { rows } = await client.query<PartnerOperationsSummaryRow>(
+        `select
+             count(*) filter (
+                 where o.status in ('processing', 'out_for_delivery')
+             )::integer as active_orders,
+             count(*) filter (
+                 where o.status = 'processing' and latest.type = 'placed'
+             )::integer as awaiting_confirmation,
+             count(*) filter (
+                 where o.status in ('processing', 'out_for_delivery')
+                   and (pickup.starts_at at time zone 'Asia/Kolkata')::date =
+                       (now() at time zone 'Asia/Kolkata')::date
+             )::integer as pickups_today,
+             count(*) filter (
+                 where o.status in ('processing', 'out_for_delivery')
+                   and (delivery.starts_at at time zone 'Asia/Kolkata')::date =
+                       (now() at time zone 'Asia/Kolkata')::date
+             )::integer as deliveries_today,
+             count(*) filter (
+                 where o.status = 'delivered'
+                   and (delivered.occurred_at at time zone 'Asia/Kolkata')::date =
+                       (now() at time zone 'Asia/Kolkata')::date
+             )::integer as completed_today,
+             now() as generated_at
+         from public.orders o
+         join public.partners p on p.id = o.partner_id
+         join public.slots pickup on pickup.id = o.pickup_slot_id
+         join public.slots delivery on delivery.id = o.delivery_slot_id
+         join lateral (
+             select type
+             from public.order_events
+             where order_id = o.id
+             order by occurred_at desc, id desc limit 1
+         ) latest on true
+         left join lateral (
+             select occurred_at
+             from public.order_events
+             where order_id = o.id and type = 'delivered'
+             order by occurred_at desc, id desc limit 1
+         ) delivered on true
+         where p.owner_id = auth.uid()
+           and ($1::text is null or o.partner_id = $1)`,
+        [partnerId ?? null]
+    );
+    const row = rows[0]!;
+    return {
+        activeOrders: row.active_orders,
+        awaitingConfirmation: row.awaiting_confirmation,
+        pickupsToday: row.pickups_today,
+        deliveriesToday: row.deliveries_today,
+        completedToday: row.completed_today,
+        generatedAt: row.generated_at.toISOString(),
+    };
 };
 
 export const serializePartnerOrderSummary = (row: PartnerOrderSummaryRow): PartnerOrderSummary => ({

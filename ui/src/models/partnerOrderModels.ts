@@ -15,7 +15,19 @@ export interface PartnerOrderSummary {
     latestEvent: OrderEvent;
 }
 
-export interface PartnerOrderDetail extends Omit<Order, 'deliveryAddress' | 'canCancel'> {
+export interface PartnerOperationsSummary {
+    activeOrders: number;
+    awaitingConfirmation: number;
+    pickupsToday: number;
+    deliveriesToday: number;
+    completedToday: number;
+    generatedAt: string;
+}
+
+export interface PartnerOrderDetail extends Omit<
+    Order,
+    'deliveryAddress' | 'canCancel' | 'canReschedule'
+> {
     deliveryAddress: Order['deliveryAddress'] & {
         recipientName: string;
         phone: string;

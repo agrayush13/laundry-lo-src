@@ -79,6 +79,34 @@
     font-size: t.$font-size-md;
 }
 
+.operationsSummary {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0 0 1.5rem;
+
+    > div {
+        min-width: 0;
+        padding: 1rem;
+    }
+
+    strong,
+    span {
+        display: block;
+    }
+
+    strong {
+        margin-bottom: 0.25rem;
+        font-size: t.$font-size-h3;
+    }
+
+    span {
+        color: t.$color-text-muted;
+        font-size: t.$font-size-sm;
+        line-height: t.$line-height-base;
+    }
+}
+
 .queueList {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1200,6 +1228,10 @@
     .locationPicker select {
         width: 100%;
         min-width: 0;
+    }
+
+    .operationsSummary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .queueFacts,

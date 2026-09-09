@@ -1,5 +1,6 @@
 import type { Page } from '../models/apiModels';
 import type {
+    PartnerOperationsSummary,
     PartnerOrderDetail,
     PartnerOrderEventResult,
     PartnerOrderEventType,
@@ -23,6 +24,9 @@ export const getPartnerOrders = (query: PartnerOrderQuery, signal?: AbortSignal)
         },
         signal,
     });
+
+export const getPartnerOperationsSummary = (signal?: AbortSignal) =>
+    apiGet<PartnerOperationsSummary>('/partner/orders/summary', { signal });
 
 export const getPartnerOrder = (id: string, signal?: AbortSignal) =>
     apiGet<PartnerOrderDetail>(`/partner/orders/${encodeURIComponent(id)}`, { signal });

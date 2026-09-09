@@ -74,6 +74,7 @@ const initialDetail = (): PartnerOrderDetail => ({
     pickup,
     delivery,
     events: [{ type: 'placed', occurredAt: FIRST_ORDER.placedAt }],
+    reschedules: [],
 });
 
 const json = (body: unknown, status = 200) =>
@@ -105,6 +106,17 @@ const installPartnerApi = ({ failPagination = false, failTransition = false } = 
                     : json({ data: [SECOND_ORDER], nextCursor: null });
             }
             return json({ data: [FIRST_ORDER], nextCursor: 'next-page' });
+        }
+
+        if (path === '/partner/orders/summary' && method === 'GET') {
+            return json({
+                activeOrders: 4,
+                awaitingConfirmation: 2,
+                pickupsToday: 3,
+                deliveriesToday: 1,
+                completedToday: 5,
+                generatedAt: '2026-09-09T06:00:00.000Z',
+            });
         }
 
         if (path === `/partner/orders/${FIRST_ORDER.id}` && method === 'GET') {
@@ -166,6 +178,16 @@ describe('laundry-partner order portal', () => {
         renderApp('/partner/orders');
 
         expect(await screen.findByText(FIRST_ORDER.recipient.name)).toBeInTheDocument();
+        const summary = screen.getByRole('region', { name: 'Today at a glance' });
+        expect(within(summary).getByText('Active orders').previousElementSibling).toHaveTextContent(
+            '4'
+        );
+        expect(
+            within(summary).getByText('Awaiting confirmation').previousElementSibling
+        ).toHaveTextContent('2');
+        expect(
+            within(summary).getByText('Completed today').previousElementSibling
+        ).toHaveTextContent('5');
         await user.click(screen.getByRole('button', { name: 'Load more orders' }));
         expect(await screen.findByText(SECOND_ORDER.recipient.name)).toBeInTheDocument();
         expect(screen.getByText('2 orders loaded')).toBeInTheDocument();

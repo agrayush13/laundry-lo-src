@@ -170,6 +170,38 @@ const PartnerOrdersPage: React.FC = () => {
                             </select>
                         </div>
 
+                        {orders.summary && (
+                            <section
+                                className={styles.operationsSummary}
+                                aria-label={PARTNER_PORTAL_COPY.summaryLabel}
+                            >
+                                {[
+                                    [PARTNER_PORTAL_COPY.activeOrders, orders.summary.activeOrders],
+                                    [
+                                        PARTNER_PORTAL_COPY.awaitingConfirmation,
+                                        orders.summary.awaitingConfirmation,
+                                    ],
+                                    [PARTNER_PORTAL_COPY.pickupsToday, orders.summary.pickupsToday],
+                                    [
+                                        PARTNER_PORTAL_COPY.deliveriesToday,
+                                        orders.summary.deliveriesToday,
+                                    ],
+                                    [
+                                        PARTNER_PORTAL_COPY.completedToday,
+                                        orders.summary.completedToday,
+                                    ],
+                                ].map(([label, value]) => (
+                                    <div
+                                        className="card"
+                                        key={label}
+                                    >
+                                        <strong>{value}</strong>
+                                        <span>{label}</span>
+                                    </div>
+                                ))}
+                            </section>
+                        )}
+
                         <AsyncBoundary
                             state={orders}
                             label={PARTNER_PORTAL_COPY.loadingQueue}

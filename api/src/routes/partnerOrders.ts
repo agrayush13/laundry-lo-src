@@ -9,6 +9,7 @@ import { parse } from '../http/validation.js';
 import type { OrderEventType, OrderStatus, Page, PartnerOrderSummary } from '../models.js';
 import {
     getPartnerOrder,
+    getPartnerOperationsSummary,
     listPartnerOrders,
     serializePartnerOrderSummary,
 } from '../queries/orderQueries.js';
@@ -29,6 +30,8 @@ const lifecycleBody = z
         type: z.enum(['confirmed', 'picked_up', 'in_progress', 'out_for_delivery', 'delivered']),
     })
     .strict();
+
+const summaryQuery = z.object({ partnerId: z.string().min(1).optional() }).strict();
 
 interface LifecycleRow {
     order_id: string;
@@ -94,6 +97,15 @@ export const partnerOrderRoutes = new Hono<AppEnv>()
             return body;
         });
         return c.json(page);
+    })
+    .get('/summary', async (c) => {
+        const userId = requireUser(c.get('userId'));
+        const query = parse(summaryQuery, c.req.query());
+        const summary = await asCaller(c.get('pool'), userId, async (client) => {
+            await requirePartnerOwner(client, query.partnerId);
+            return getPartnerOperationsSummary(client, query.partnerId);
+        });
+        return c.json(summary);
     })
     .get('/:id', async (c) => {
         const userId = requireUser(c.get('userId'));
