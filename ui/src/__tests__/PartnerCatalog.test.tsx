@@ -209,7 +209,10 @@ describe('laundry-partner catalogue management', () => {
         const fetch = installCatalogApi();
         renderApp('/partner/catalogue');
 
-        await user.selectOptions(await screen.findByLabelText('Service type'), 'premium-care');
+        const service = await screen.findByLabelText('Service type');
+        await waitFor(() => expect(service).toHaveValue('wash-iron'));
+        await user.selectOptions(service, 'premium-care');
+        expect(service).toHaveValue('premium-care');
         const name = screen.getByLabelText('Customer-facing service name', {
             selector: '#new-category-name',
         });
