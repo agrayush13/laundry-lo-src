@@ -31,7 +31,10 @@ class EmitHostRewrites {
                     // Netlify
                     compilation.emitAsset(
                         '_redirects',
-                        new sources.RawSource('/*    /index.html    200\n')
+                        new sources.RawSource(
+                            '/api/*    https://laundrylo-api.onrender.com/api/:splat    200\n' +
+                                '/*        /index.html                                      200\n'
+                        )
                     );
                     // Netlify must revalidate the worker on every visit. Hashed
                     // bundles stay immutable, but caching this stable filename
