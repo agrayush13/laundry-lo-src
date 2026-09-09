@@ -46,6 +46,8 @@ export interface PartnerConfiguration {
     servicePincodes: string[];
     /** Today and future exceptional closure dates in the laundry's local zone. */
     holidayClosures: HolidayClosure[];
+    /** Today and future per-slot limits for exceptional operating dates. */
+    capacityOverrides: CapacityOverride[];
     turnaroundHours: number;
     /** Manual master switch controlled by the laundry owner. */
     acceptingOrders: boolean;
@@ -59,6 +61,12 @@ export interface PartnerConfiguration {
 export interface HolidayClosure {
     date: string;
     reason: string;
+}
+
+export interface CapacityOverride {
+    date: string;
+    capacity: number;
+    note: string;
 }
 
 export interface OpeningHours {

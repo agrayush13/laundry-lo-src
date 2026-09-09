@@ -50,6 +50,17 @@ export const PARTNER_SETTINGS_COPY = {
     closureReasonPlaceholder: 'For example, public holiday',
     addClosure: 'Add holiday closure',
     removeClosure: (position: number) => `Remove holiday closure ${position}`,
+    capacityTitle: 'Date-specific capacity',
+    capacityIntro:
+        'Set how many orders each pickup window can accept on an exceptional date. The usual limit is 8.',
+    capacityWarning:
+        'A limit cannot be reduced below orders already booked. Removing an override restores the usual limit.',
+    capacityDate: (position: number) => `Capacity date ${position}`,
+    capacityLimit: (position: number) => `Orders per pickup window ${position}`,
+    capacityNote: (position: number) => `Capacity note ${position} (optional)`,
+    capacityNotePlaceholder: 'For example, festival demand',
+    addCapacity: 'Add capacity override',
+    removeCapacity: (position: number) => `Remove capacity override ${position}`,
     hoursTitle: 'Weekly opening hours',
     hoursIntro: 'Overnight hours are not supported. Mark a day closed instead.',
     closed: 'Closed',

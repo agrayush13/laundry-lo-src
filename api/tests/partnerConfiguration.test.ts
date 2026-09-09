@@ -39,6 +39,7 @@ const input = (overrides: Partial<Omit<PartnerConfiguration, 'id' | 'currentlyOp
     },
     servicePincodes: ['560103'],
     holidayClosures: [],
+    capacityOverrides: [],
     turnaroundHours: 24,
     acceptingOrders: true,
     useOpeningHours: true,
@@ -87,6 +88,9 @@ beforeAll(async () => {
 beforeEach(async () => {
     await pool.query('delete from public.slots where partner_id = $1', [PARTNER_ID]);
     await pool.query('delete from public.partner_holiday_closures where partner_id = $1', [
+        PARTNER_ID,
+    ]);
+    await pool.query('delete from public.partner_capacity_overrides where partner_id = $1', [
         PARTNER_ID,
     ]);
     await pool.query('delete from public.partner_hours where partner_id = $1', [PARTNER_ID]);
@@ -145,6 +149,7 @@ describe('partner laundry configuration', () => {
                     address: { pincode: '560103' },
                     servicePincodes: ['560103'],
                     holidayClosures: [],
+                    capacityOverrides: [],
                     acceptingOrders: true,
                     useOpeningHours: true,
                     currentlyOpen: expect.any(Boolean),
@@ -188,6 +193,7 @@ describe('partner laundry configuration', () => {
                 },
                 servicePincodes: ['560102', '560104'],
                 holidayClosures: [{ date: '2099-12-24', reason: 'Public holiday' }],
+                capacityOverrides: [{ date: '2099-12-26', capacity: 12, note: 'Festival demand' }],
                 turnaroundHours: 36,
                 acceptingOrders: false,
                 openingHours: closedHours,
@@ -203,6 +209,7 @@ describe('partner laundry configuration', () => {
             address: { line1: '42 New Road', line2: '', pincode: '560001' },
             servicePincodes: ['560102', '560104'],
             holidayClosures: [{ date: '2099-12-24', reason: 'Public holiday' }],
+            capacityOverrides: [{ date: '2099-12-26', capacity: 12, note: 'Festival demand' }],
             turnaroundHours: 36,
             acceptingOrders: false,
             useOpeningHours: true,
@@ -252,10 +259,20 @@ describe('partner laundry configuration', () => {
             input({ servicePincodes: ['56010x'] }),
             input({ holidayClosures: [{ date: '2000-01-01', reason: '' }] }),
             input({ holidayClosures: [{ date: '2099-02-29', reason: '' }] }),
+            input({ capacityOverrides: [{ date: '2000-01-01', capacity: 8, note: '' }] }),
+            input({ capacityOverrides: [{ date: '2099-12-26', capacity: 0, note: '' }] }),
+            input({ capacityOverrides: [{ date: '2099-12-26', capacity: 101, note: '' }] }),
+            input({ capacityOverrides: [{ date: '2099-02-29', capacity: 8, note: '' }] }),
             input({
                 holidayClosures: [
                     { date: '2099-12-24', reason: '' },
                     { date: '2099-12-24', reason: 'Duplicate' },
+                ],
+            }),
+            input({
+                capacityOverrides: [
+                    { date: '2099-12-26', capacity: 8, note: '' },
+                    { date: '2099-12-26', capacity: 12, note: 'Duplicate' },
                 ],
             }),
         ];
@@ -305,6 +322,83 @@ describe('partner laundry configuration', () => {
             [BOOKED_SLOT_ID]
         );
         expect(slot.rows[0]).toEqual({ state: 'open', booked: 1 });
+    });
+
+    it('changes per-date capacity without dropping or overbooking existing orders', async () => {
+        const dateResult = await pool.query<{ date: string }>(
+            `select to_char(timezone('Asia/Kolkata', now())::date + 7, 'YYYY-MM-DD') as date`
+        );
+        const capacityDate = dateResult.rows[0]!.date;
+        await pool.query(
+            `insert into public.slots
+                (id, partner_id, starts_at, ends_at, capacity, booked, state)
+             values
+                ($1, $3,
+                 timezone('Asia/Kolkata', ($4::date + time '08:00')::timestamp),
+                 timezone('Asia/Kolkata', ($4::date + time '10:00')::timestamp),
+                 8, 3, 'open'),
+                ($2, $3,
+                 timezone('Asia/Kolkata', ($4::date + time '10:00')::timestamp),
+                 timezone('Asia/Kolkata', ($4::date + time '12:00')::timestamp),
+                 8, 4, 'open')`,
+            [UNBOOKED_SLOT_ID, BOOKED_SLOT_ID, PARTNER_ID, capacityDate]
+        );
+
+        const changed = await request(
+            'PUT',
+            `/api/v1/partner/laundries/${PARTNER_ID}`,
+            input({
+                capacityOverrides: [{ date: capacityDate, capacity: 4, note: 'Reduced team' }],
+            }),
+            ownerAuthorization
+        );
+        expect(changed.status).toBe(200);
+        expect(changed.body).toMatchObject({
+            capacityOverrides: [{ date: capacityDate, capacity: 4, note: 'Reduced team' }],
+        });
+        const limited = await pool.query<{
+            id: string;
+            capacity: number;
+            booked: number;
+            state: string;
+        }>(
+            `select id, capacity, booked, state from public.slots
+             where id = any($1::text[]) order by id`,
+            [[UNBOOKED_SLOT_ID, BOOKED_SLOT_ID]]
+        );
+        expect(limited.rows).toEqual([
+            { id: BOOKED_SLOT_ID, capacity: 4, booked: 4, state: 'full' },
+            { id: UNBOOKED_SLOT_ID, capacity: 4, booked: 3, state: 'open' },
+        ]);
+
+        const tooLow = await request(
+            'PUT',
+            `/api/v1/partner/laundries/${PARTNER_ID}`,
+            input({
+                capacityOverrides: [{ date: capacityDate, capacity: 2, note: 'Too few spaces' }],
+            }),
+            ownerAuthorization
+        );
+        expect(tooLow.status).toBe(409);
+        expect(tooLow.body).toMatchObject({ error: { code: 'CAPACITY_BELOW_BOOKED' } });
+
+        const restored = await request(
+            'PUT',
+            `/api/v1/partner/laundries/${PARTNER_ID}`,
+            input(),
+            ownerAuthorization
+        );
+        expect(restored.status).toBe(200);
+        expect(restored.body).toMatchObject({ capacityOverrides: [] });
+        const defaults = await pool.query<{ capacity: number; booked: number; state: string }>(
+            `select capacity, booked, state from public.slots
+             where id = any($1::text[]) order by id`,
+            [[UNBOOKED_SLOT_ID, BOOKED_SLOT_ID]]
+        );
+        expect(defaults.rows).toEqual([
+            { capacity: 8, booked: 4, state: 'open' },
+            { capacity: 8, booked: 3, state: 'open' },
+        ]);
     });
 
     it('removes unbooked slots, blocks booked slots and safely reopens a closure date', async () => {
@@ -514,6 +608,53 @@ describe('partner laundry configuration', () => {
                     `insert into public.partner_holiday_closures
                         (partner_id, closure_date, reason)
                      values ($1, '2099-12-25', 'Direct write')`,
+                    [PARTNER_ID]
+                )
+            )
+        ).rejects.toThrow(/permission denied|row-level security/i);
+
+        await asCaller(pool, OWNER, (client) =>
+            client.query('select public.replace_partner_capacity_overrides($1, $2::jsonb)', [
+                PARTNER_ID,
+                JSON.stringify([{ date: '2099-12-26', capacity: 12, note: 'Festival demand' }]),
+            ])
+        );
+        const capacities = await pool.query<{
+            capacity_date: string;
+            capacity: number;
+            note: string;
+        }>(
+            `select to_char(capacity_date, 'YYYY-MM-DD') as capacity_date, capacity, note
+             from public.partner_capacity_overrides where partner_id = $1`,
+            [PARTNER_ID]
+        );
+        expect(capacities.rows).toEqual([
+            { capacity_date: '2099-12-26', capacity: 12, note: 'Festival demand' },
+        ]);
+        await pool.query(`select public.generate_slots($1, '2099-12-26'::date, 1)`, [PARTNER_ID]);
+        const generatedCapacities = await pool.query<{ capacity: number }>(
+            `select distinct capacity from public.slots
+             where partner_id = $1
+               and timezone('Asia/Kolkata', starts_at)::date = '2099-12-26'::date`,
+            [PARTNER_ID]
+        );
+        expect(generatedCapacities.rows).toEqual([{ capacity: 12 }]);
+
+        await expect(
+            asCaller(pool, OTHER_OWNER, (client) =>
+                client.query('select public.replace_partner_capacity_overrides($1, $2::jsonb)', [
+                    PARTNER_ID,
+                    '[]',
+                ])
+            )
+        ).rejects.toThrow(/PARTNER_NOT_FOUND/);
+
+        await expect(
+            asCaller(pool, OWNER, (client) =>
+                client.query(
+                    `insert into public.partner_capacity_overrides
+                        (partner_id, capacity_date, capacity, note)
+                     values ($1, '2099-12-27', 10, 'Direct write')`,
                     [PARTNER_ID]
                 )
             )

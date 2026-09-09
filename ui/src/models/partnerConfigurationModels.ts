@@ -5,6 +5,12 @@ export interface HolidayClosure {
     reason: string;
 }
 
+export interface CapacityOverride {
+    date: string;
+    capacity: number;
+    note: string;
+}
+
 export interface PartnerLaundryConfiguration {
     id: string;
     name: string;
@@ -12,6 +18,7 @@ export interface PartnerLaundryConfiguration {
     address: PartnerAddress;
     servicePincodes: string[];
     holidayClosures: HolidayClosure[];
+    capacityOverrides: CapacityOverride[];
     turnaroundHours: number;
     acceptingOrders: boolean;
     useOpeningHours: boolean;

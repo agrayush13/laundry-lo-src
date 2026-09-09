@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import type {
+    CapacityOverride,
     HolidayClosure,
     PartnerLaundryConfiguration,
     PartnerLaundryConfigurationInput,
@@ -19,6 +20,7 @@ const toDraft = ({
     address,
     servicePincodes,
     holidayClosures,
+    capacityOverrides,
     turnaroundHours,
     acceptingOrders,
     useOpeningHours,
@@ -29,6 +31,7 @@ const toDraft = ({
     address: { ...address },
     servicePincodes: [...servicePincodes],
     holidayClosures: holidayClosures.map((closure) => ({ ...closure })),
+    capacityOverrides: capacityOverrides.map((override) => ({ ...override })),
     turnaroundHours,
     acceptingOrders,
     useOpeningHours,
@@ -150,6 +153,43 @@ export const usePartnerSettings = () => {
                 : current
         );
 
+    const updateCapacityOverride = (index: number, value: Partial<CapacityOverride>) =>
+        setDraft((current) =>
+            current
+                ? {
+                      ...current,
+                      capacityOverrides: current.capacityOverrides.map((override, position) =>
+                          position === index ? { ...override, ...value } : override
+                      ),
+                  }
+                : current
+        );
+
+    const addCapacityOverride = () =>
+        setDraft((current) =>
+            current && current.capacityOverrides.length < 60
+                ? {
+                      ...current,
+                      capacityOverrides: [
+                          ...current.capacityOverrides,
+                          { date: '', capacity: 8, note: '' },
+                      ],
+                  }
+                : current
+        );
+
+    const removeCapacityOverride = (index: number) =>
+        setDraft((current) =>
+            current
+                ? {
+                      ...current,
+                      capacityOverrides: current.capacityOverrides.filter(
+                          (_, position) => position !== index
+                      ),
+                  }
+                : current
+        );
+
     const updateHours = (weekday: number, value: Partial<OpeningHours>) =>
         setDraft((current) =>
             current
@@ -205,6 +245,9 @@ export const usePartnerSettings = () => {
         updateHolidayClosure,
         addHolidayClosure,
         removeHolidayClosure,
+        updateCapacityOverride,
+        addCapacityOverride,
+        removeCapacityOverride,
         updateHours,
         setDayClosed,
         save,

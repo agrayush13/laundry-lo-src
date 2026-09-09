@@ -10,7 +10,7 @@ import styles from './partnerPortal.module.scss';
 
 const PartnerSettingsPage: React.FC = () => {
     const settings = usePartnerSettings();
-    const minimumClosureDate = todayInPartnerTimezone();
+    const minimumOperatingDate = todayInPartnerTimezone();
 
     return (
         <div className={styles.portalPage}>
@@ -382,7 +382,7 @@ const PartnerSettingsPage: React.FC = () => {
                                                                     <input
                                                                         id={dateId}
                                                                         type="date"
-                                                                        min={minimumClosureDate}
+                                                                        min={minimumOperatingDate}
                                                                         value={closure.date}
                                                                         required
                                                                         onChange={(event) =>
@@ -448,6 +448,136 @@ const PartnerSettingsPage: React.FC = () => {
                                                 onClick={settings.addHolidayClosure}
                                             >
                                                 {PARTNER_SETTINGS_COPY.addClosure}
+                                            </button>
+                                        </div>
+
+                                        <div className={styles.capacitySection}>
+                                            <h3>{PARTNER_SETTINGS_COPY.capacityTitle}</h3>
+                                            <p>{PARTNER_SETTINGS_COPY.capacityIntro}</p>
+                                            <p className={styles.capacityWarning}>
+                                                {PARTNER_SETTINGS_COPY.capacityWarning}
+                                            </p>
+                                            {draft.capacityOverrides.length > 0 && (
+                                                <ul className={styles.capacityList}>
+                                                    {draft.capacityOverrides.map(
+                                                        (override, index) => {
+                                                            const position = index + 1;
+                                                            const dateId = `partner-capacity-date-${position}`;
+                                                            const limitId = `partner-capacity-limit-${position}`;
+                                                            const noteId = `partner-capacity-note-${position}`;
+                                                            return (
+                                                                <li key={index}>
+                                                                    <p className={styles.formField}>
+                                                                        <label htmlFor={dateId}>
+                                                                            {PARTNER_SETTINGS_COPY.capacityDate(
+                                                                                position
+                                                                            )}
+                                                                        </label>
+                                                                        <input
+                                                                            id={dateId}
+                                                                            type="date"
+                                                                            min={
+                                                                                minimumOperatingDate
+                                                                            }
+                                                                            value={override.date}
+                                                                            required
+                                                                            onChange={(event) =>
+                                                                                settings.updateCapacityOverride(
+                                                                                    index,
+                                                                                    {
+                                                                                        date: event
+                                                                                            .target
+                                                                                            .value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </p>
+                                                                    <p className={styles.formField}>
+                                                                        <label htmlFor={limitId}>
+                                                                            {PARTNER_SETTINGS_COPY.capacityLimit(
+                                                                                position
+                                                                            )}
+                                                                        </label>
+                                                                        <input
+                                                                            id={limitId}
+                                                                            type="number"
+                                                                            min={1}
+                                                                            max={100}
+                                                                            step={1}
+                                                                            value={
+                                                                                override.capacity
+                                                                            }
+                                                                            required
+                                                                            onChange={(event) =>
+                                                                                settings.updateCapacityOverride(
+                                                                                    index,
+                                                                                    {
+                                                                                        capacity:
+                                                                                            Number(
+                                                                                                event
+                                                                                                    .target
+                                                                                                    .value
+                                                                                            ),
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </p>
+                                                                    <p className={styles.formField}>
+                                                                        <label htmlFor={noteId}>
+                                                                            {PARTNER_SETTINGS_COPY.capacityNote(
+                                                                                position
+                                                                            )}
+                                                                        </label>
+                                                                        <input
+                                                                            id={noteId}
+                                                                            value={override.note}
+                                                                            maxLength={120}
+                                                                            placeholder={
+                                                                                PARTNER_SETTINGS_COPY.capacityNotePlaceholder
+                                                                            }
+                                                                            onChange={(event) =>
+                                                                                settings.updateCapacityOverride(
+                                                                                    index,
+                                                                                    {
+                                                                                        note: event
+                                                                                            .target
+                                                                                            .value,
+                                                                                    }
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </p>
+                                                                    <button
+                                                                        className={`button ${styles.removeCapacity}`}
+                                                                        type="button"
+                                                                        aria-label={PARTNER_SETTINGS_COPY.removeCapacity(
+                                                                            position
+                                                                        )}
+                                                                        onClick={() =>
+                                                                            settings.removeCapacityOverride(
+                                                                                index
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            PARTNER_SETTINGS_COPY.remove
+                                                                        }
+                                                                    </button>
+                                                                </li>
+                                                            );
+                                                        }
+                                                    )}
+                                                </ul>
+                                            )}
+                                            <button
+                                                className={`button ${styles.addCapacity}`}
+                                                type="button"
+                                                disabled={draft.capacityOverrides.length >= 60}
+                                                onClick={settings.addCapacityOverride}
+                                            >
+                                                {PARTNER_SETTINGS_COPY.addCapacity}
                                             </button>
                                         </div>
 

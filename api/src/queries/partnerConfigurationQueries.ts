@@ -1,5 +1,10 @@
 import type { Client } from '../db/pool.js';
-import type { HolidayClosure, OpeningHours, PartnerConfiguration } from '../models.js';
+import type {
+    CapacityOverride,
+    HolidayClosure,
+    OpeningHours,
+    PartnerConfiguration,
+} from '../models.js';
 
 interface PartnerConfigurationRow {
     id: string;
@@ -11,6 +16,7 @@ interface PartnerConfigurationRow {
     pincode: string;
     service_pincodes: string[];
     holiday_closures: HolidayClosure[];
+    capacity_overrides: CapacityOverride[];
     turnaround_hours: number;
     is_open: boolean;
     auto_schedule: boolean;
@@ -33,6 +39,7 @@ export interface PartnerConfigurationInput {
     };
     servicePincodes: string[];
     holidayClosures: HolidayClosure[];
+    capacityOverrides: CapacityOverride[];
     turnaroundHours: number;
     acceptingOrders: boolean;
     useOpeningHours: boolean;
@@ -66,6 +73,21 @@ const baseQuery = `
                '[]'::jsonb
            ) as holiday_closures,
            coalesce(
+               (
+                   select jsonb_agg(
+                       jsonb_build_object(
+                           'date', to_char(override.capacity_date, 'YYYY-MM-DD'),
+                           'capacity', override.capacity,
+                           'note', coalesce(override.note, '')
+                       ) order by override.capacity_date
+                   )
+                   from public.partner_capacity_overrides override
+                   where override.partner_id = p.id
+                     and override.capacity_date >= timezone('Asia/Kolkata', now())::date
+               ),
+               '[]'::jsonb
+           ) as capacity_overrides,
+           coalesce(
                jsonb_agg(
                    jsonb_build_object(
                        'weekday', h.weekday,
@@ -94,6 +116,7 @@ const toConfiguration = (row: PartnerConfigurationRow): PartnerConfiguration => 
     },
     servicePincodes: row.service_pincodes,
     holidayClosures: row.holiday_closures,
+    capacityOverrides: row.capacity_overrides,
     turnaroundHours: row.turnaround_hours,
     acceptingOrders: row.is_open,
     useOpeningHours: row.auto_schedule,
@@ -169,6 +192,10 @@ export const updateOwnedPartnerConfiguration = async (
     await client.query('select public.replace_partner_holiday_closures($1, $2::jsonb)', [
         partnerId,
         JSON.stringify(input.holidayClosures),
+    ]);
+    await client.query('select public.replace_partner_capacity_overrides($1, $2::jsonb)', [
+        partnerId,
+        JSON.stringify(input.capacityOverrides),
     ]);
     return getOwnedPartnerConfiguration(client, partnerId);
 };

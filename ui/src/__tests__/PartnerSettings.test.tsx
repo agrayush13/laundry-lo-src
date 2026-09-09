@@ -15,6 +15,7 @@ const configuration = (): PartnerLaundryConfiguration => ({
     },
     servicePincodes: ['560103'],
     holidayClosures: [],
+    capacityOverrides: [],
     turnaroundHours: 24,
     acceptingOrders: true,
     useOpeningHours: true,
@@ -100,6 +101,13 @@ describe('laundry-partner settings', () => {
         await user.type(screen.getByLabelText('Closure date 1'), '2099-12-24');
         await user.type(screen.getByLabelText('Closure reason 1 (optional)'), 'Public holiday');
 
+        await user.click(screen.getByRole('button', { name: 'Add capacity override' }));
+        await user.type(screen.getByLabelText('Capacity date 1'), '2099-12-26');
+        const capacity = screen.getByLabelText('Orders per pickup window 1');
+        await user.clear(capacity);
+        await user.type(capacity, '12');
+        await user.type(screen.getByLabelText('Capacity note 1 (optional)'), 'Festival demand');
+
         const turnaround = screen.getByLabelText('Typical turnaround (hours)');
         await user.clear(turnaround);
         await user.type(turnaround, '36');
@@ -120,6 +128,7 @@ describe('laundry-partner settings', () => {
             address: { pincode: '560001' },
             servicePincodes: ['560102', '560104'],
             holidayClosures: [{ date: '2099-12-24', reason: 'Public holiday' }],
+            capacityOverrides: [{ date: '2099-12-26', capacity: 12, note: 'Festival demand' }],
             turnaroundHours: 36,
             acceptingOrders: false,
             useOpeningHours: true,
@@ -144,6 +153,20 @@ describe('laundry-partner settings', () => {
         await user.click(screen.getByRole('button', { name: 'Remove holiday closure 1' }));
 
         expect(screen.queryByLabelText('Closure date 1')).toBeNull();
+    });
+
+    it('lets an owner remove a date-specific capacity before saving', async () => {
+        const user = userEvent.setup();
+        authenticateTestUser();
+        installSettingsApi();
+        renderApp('/partner/settings');
+
+        await screen.findByDisplayValue('SparkleWash Express');
+        await user.click(screen.getByRole('button', { name: 'Add capacity override' }));
+        await user.type(screen.getByLabelText('Capacity date 1'), '2099-12-26');
+        await user.click(screen.getByRole('button', { name: 'Remove capacity override 1' }));
+
+        expect(screen.queryByLabelText('Capacity date 1')).toBeNull();
     });
 
     it('keeps at least one service pincode while allowing obsolete areas to be removed', async () => {

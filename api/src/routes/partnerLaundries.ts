@@ -44,11 +44,18 @@ const calendarDate = z
             parsed.getUTCDate() === day
         );
     }, 'Use a real calendar date.')
-    .refine((value) => value >= todayInIst(), 'Closure dates cannot be in the past.');
+    .refine((value) => value >= todayInIst(), 'Dates cannot be in the past.');
 const holidayClosure = z
     .object({
         date: calendarDate,
         reason: z.string().trim().max(120),
+    })
+    .strict();
+const capacityOverride = z
+    .object({
+        date: calendarDate,
+        capacity: z.number().int().min(1).max(100),
+        note: z.string().trim().max(120),
     })
     .strict();
 
@@ -89,6 +96,7 @@ const configurationBody = z
             .strict(),
         servicePincodes: z.array(pincode).min(1).max(50),
         holidayClosures: z.array(holidayClosure).max(60),
+        capacityOverrides: z.array(capacityOverride).max(60),
         turnaroundHours: z.number().int().min(1).max(336),
         acceptingOrders: z.boolean(),
         useOpeningHours: z.boolean(),
@@ -121,6 +129,15 @@ const configurationBody = z
                 path: ['holidayClosures'],
             });
         }
+
+        const capacityDates = value.capacityOverrides.map(({ date }) => date);
+        if (new Set(capacityDates).size !== capacityDates.length) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Each capacity-override date must be unique.',
+                path: ['capacityOverrides'],
+            });
+        }
     });
 
 const categoryBody = z
@@ -149,6 +166,30 @@ const itemBody = z
     .strict();
 
 const notFound = () => new ApiError('NOT_FOUND', 'That laundry was not found.');
+const translateConfigurationFailure = (error: unknown): never => {
+    if (error instanceof Error && error.message === 'PARTNER_CAPACITY_BELOW_BOOKED') {
+        throw new ApiError(
+            'CAPACITY_BELOW_BOOKED',
+            'Capacity cannot be lower than the orders already booked for that date.'
+        );
+    }
+    throw error;
+};
+const translateCatalogFailure = (error: unknown): never => {
+    if (error instanceof Error && error.message === 'PARTNER_SERVICE_EXISTS') {
+        throw new ApiError(
+            'SERVICE_ALREADY_EXISTS',
+            'This laundry already has that service in its catalogue.'
+        );
+    }
+    if (
+        error instanceof Error &&
+        ['PARTNER_NOT_FOUND', 'PARTNER_CATEGORY_NOT_FOUND'].includes(error.message)
+    ) {
+        throw notFound();
+    }
+    throw error;
+};
 
 export const partnerLaundryRoutes = new Hono<AppEnv>()
     .get('/', async (c) => {
@@ -172,7 +213,7 @@ export const partnerLaundryRoutes = new Hono<AppEnv>()
         const input = parse(configurationBody, await c.req.json().catch(() => ({})));
         const configuration = await asCaller(c.get('pool'), userId, (client) =>
             updateOwnedPartnerConfiguration(client, c.req.param('id'), input)
-        );
+        ).catch(translateConfigurationFailure);
         if (!configuration) throw notFound();
         return c.json(configuration);
     })
