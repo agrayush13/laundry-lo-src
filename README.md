@@ -32,16 +32,19 @@ bookings and order tracking on both desktop and mobile.
 - Per-partner catalogues and a one-partner cart
 - Pickup and delivery slot selection
 - Persistent profiles and saved addresses, server-backed carts and order tracking
-- Customer cancellation before pickup with atomic tracking and slot-capacity release
-- Protected laundry-owner order queue with filters, fulfilment detail and confirmed status updates
-- Owner-managed laundry profile, service pincodes, booking state, weekly hours and holiday closures
-- Owner-managed catalogue names, item details, per-piece prices and customer availability
+- Customer cancellation and rescheduling before pickup with atomic slot-capacity updates
+- Protected laundry-owner order queue with a daily operations summary, filters,
+  fulfilment detail and confirmed status updates
+- Owner-managed laundry profile, service pincodes, booking state, weekly hours,
+  holiday closures and date-specific capacity
+- Owner-created catalogue services and items, with editable names, per-piece prices
+  and customer availability
 - Plus membership selection with server-computed pricing and discounts
 - Supabase email/password authentication, email confirmation, password recovery,
   Google OAuth with PKCE, session restoration and current-session sign-out
 - Installable PWA shell with offline caching for safe public reads
 - Hono API for partners, catalogues, slots, profiles, addresses, carts, customer orders,
-  laundry-owner fulfilment, configuration and catalogue management, and membership
+  laundry-owner fulfilment summaries, configuration and catalogue management, and membership
 - PostgreSQL migrations, seed data, Row Level Security and API integration tests
 - Privacy-conscious Umami page views, product funnels and server-confirmed order events
 - CI gates for frontend and backend types, lint, tests and production builds

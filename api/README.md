@@ -122,32 +122,36 @@ For a production deployment:
 
 ## Endpoints
 
-| Method       | Path                                                             | Notes                                                                            |
-| ------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| GET          | `/health`                                                        | Fails when Postgres is unreachable                                               |
-| GET          | `/api/v1/partners`                                               | `pincode`, `services`, `tags`, `sort`, `limit`, `cursor`, `latitude`/`longitude` |
-| GET          | `/api/v1/partners/{id}`                                          | Adds `about` and `openingHours`                                                  |
-| GET          | `/api/v1/partners/{id}/catalog`                                  | Per-partner categories and items                                                 |
-| GET          | `/api/v1/partners/{id}/slots`                                    | `from` (YYYY-MM-DD), `days` (1-14)                                               |
-| GET/PATCH    | `/api/v1/me`                                                     | Profile fields owned by the application                                          |
-| GET          | `/api/v1/me/membership`                                          | Current membership or `null`                                                     |
-| GET/POST     | `/api/v1/addresses`                                              | List or create saved addresses                                                   |
-| PATCH/DELETE | `/api/v1/addresses/{id}`                                         | Update or remove an owned address                                                |
-| GET/DELETE   | `/api/v1/cart`                                                   | Read or clear the signed-in cart                                                 |
-| PUT          | `/api/v1/cart/items/{itemId}`                                    | Set quantity; zero removes                                                       |
-| POST/DELETE  | `/api/v1/cart/membership`                                        | Add or remove Plus from the cart                                                 |
-| GET/POST     | `/api/v1/orders`                                                 | Paginated history or idempotent placement                                        |
-| GET          | `/api/v1/orders/{id}`                                            | Owned order snapshot and tracking events                                         |
-| POST         | `/api/v1/orders/{id}/cancellation`                               | Eligible customer cancellation before pickup                                     |
-| GET          | `/api/v1/partner/orders`                                         | Owner-scoped queue with partner/status filters and cursor pagination             |
-| GET          | `/api/v1/partner/orders/{id}`                                    | Owner-scoped operational order detail                                            |
-| POST         | `/api/v1/partner/orders/{id}/events`                             | Advance one valid fulfilment stage                                               |
-| GET          | `/api/v1/partner/laundries`                                      | Configurations for every laundry owned by the caller                             |
-| GET/PUT      | `/api/v1/partner/laundries/{id}`                                 | Profile, coverage, hours, state and holiday closures                             |
-| GET          | `/api/v1/partner/laundries/{id}/catalog`                         | Complete owner catalogue, including hidden items                                 |
-| PATCH        | `/api/v1/partner/laundries/{id}/catalog/categories/{categoryId}` | Rename an owned category                                                         |
-| PATCH        | `/api/v1/partner/laundries/{id}/catalog/items/{itemId}`          | Edit an owned item and its customer availability                                 |
-| GET          | `/api/v1/membership/plans`                                       | Public plan catalogue                                                            |
+| Method       | Path                                                                   | Notes                                                                            |
+| ------------ | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| GET          | `/health`                                                              | Fails when Postgres is unreachable                                               |
+| GET          | `/api/v1/partners`                                                     | `pincode`, `services`, `tags`, `sort`, `limit`, `cursor`, `latitude`/`longitude` |
+| GET          | `/api/v1/partners/{id}`                                                | Adds `about` and `openingHours`                                                  |
+| GET          | `/api/v1/partners/{id}/catalog`                                        | Per-partner categories and items                                                 |
+| GET          | `/api/v1/partners/{id}/slots`                                          | `from` (YYYY-MM-DD), `days` (1-14)                                               |
+| GET/PATCH    | `/api/v1/me`                                                           | Profile fields owned by the application                                          |
+| GET          | `/api/v1/me/membership`                                                | Current membership or `null`                                                     |
+| GET/POST     | `/api/v1/addresses`                                                    | List or create saved addresses                                                   |
+| PATCH/DELETE | `/api/v1/addresses/{id}`                                               | Update or remove an owned address                                                |
+| GET/DELETE   | `/api/v1/cart`                                                         | Read or clear the signed-in cart                                                 |
+| PUT          | `/api/v1/cart/items/{itemId}`                                          | Set quantity; zero removes                                                       |
+| POST/DELETE  | `/api/v1/cart/membership`                                              | Add or remove Plus from the cart                                                 |
+| GET/POST     | `/api/v1/orders`                                                       | Paginated history or idempotent placement                                        |
+| GET          | `/api/v1/orders/{id}`                                                  | Owned order snapshot and tracking events                                         |
+| POST         | `/api/v1/orders/{id}/cancellation`                                     | Eligible customer cancellation before pickup                                     |
+| POST         | `/api/v1/orders/{id}/rescheduling`                                     | Atomically move an eligible order to another available slot pair                 |
+| GET          | `/api/v1/partner/orders`                                               | Owner-scoped queue with partner/status filters and cursor pagination             |
+| GET          | `/api/v1/partner/orders/summary`                                       | Owner-scoped active work and local-day operational counts                        |
+| GET          | `/api/v1/partner/orders/{id}`                                          | Owner-scoped operational order detail                                            |
+| POST         | `/api/v1/partner/orders/{id}/events`                                   | Advance one valid fulfilment stage                                               |
+| GET          | `/api/v1/partner/laundries`                                            | Configurations for every laundry owned by the caller                             |
+| GET/PUT      | `/api/v1/partner/laundries/{id}`                                       | Profile, coverage, hours, closures and date capacity                             |
+| GET          | `/api/v1/partner/laundries/{id}/catalog`                               | Complete owner catalogue, including hidden items                                 |
+| POST         | `/api/v1/partner/laundries/{id}/catalog/categories`                    | Add one unused canonical service                                                 |
+| PATCH        | `/api/v1/partner/laundries/{id}/catalog/categories/{categoryId}`       | Rename an owned category                                                         |
+| POST         | `/api/v1/partner/laundries/{id}/catalog/categories/{categoryId}/items` | Add an owned per-piece INR item                                                  |
+| PATCH        | `/api/v1/partner/laundries/{id}/catalog/items/{itemId}`                | Edit an owned item and its customer availability                                 |
+| GET          | `/api/v1/membership/plans`                                             | Public plan catalogue                                                            |
 
 `services=` and `tags=` are conjunctive - `services=wash-fold,dry-cleaning`
 matches partners offering both - and accept either a comma list or a repeated
@@ -158,8 +162,25 @@ the cart, locks and reserves both slots, snapshots the lines and address,
 records the order event, activates Plus when selected and clears the cart in one
 transaction. A replay returns the original order.
 
+Before pickup, an eligible customer can move both appointments through the
+`reschedule_order` database function. It locks the order and all old/new slots,
+moves capacity once, updates the order and records immutable before/after slot
+references in one transaction. Full, blocked, elapsed and other-laundry slots
+are rejected, and concurrent retries cannot double-release capacity.
+
+The partner order summary is calculated in the laundry's Asia/Kolkata operating
+day and stays owner-scoped in the same RLS transaction as the queue. It reports
+active orders, unconfirmed work, today's pickups/deliveries and completions.
+
 Laundry settings replace the public profile, exact service-pincode set, weekly
-hours and today/future holiday closures atomically. Closure dates use the
-laundry's Asia/Kolkata operating calendar. Adding one removes unbooked
-availability and blocks reserved slots without breaking existing orders;
-removing one refills safe windows in the rolling 14-day horizon.
+hours, today/future holiday closures and date-specific per-slot capacity
+atomically. Dates use the laundry's Asia/Kolkata operating calendar. Adding a
+closure removes unbooked availability and blocks reserved slots without
+breaking existing orders; removing one refills safe windows in the rolling
+14-day horizon. A capacity override accepts 1 to 100 orders per pickup window
+and cannot be reduced below demand already booked on that date.
+
+Catalogue creation accepts each canonical service at most once per laundry.
+Database functions verify ownership and assign order while forcing new items to
+the launch defaults of INR, per-piece pricing and a safe generic icon. Direct
+catalogue inserts remain unavailable to authenticated clients.

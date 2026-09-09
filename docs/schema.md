@@ -139,6 +139,25 @@ future unbooked slots on that date and blocks reserved slots without breaking
 their order references. Removing one refills safe windows in the 14-day
 horizon. `generate_slots` and `is_partner_open` both consult the same table.
 
+### partner_capacity_overrides
+
+Exceptional per-slot order limits for a local operating date. Owners replace
+today and future overrides through `replace_partner_capacity_overrides`;
+historical rows are retained and direct writes remain unavailable to
+application roles.
+
+| Column          | Type    | Notes                             |
+| --------------- | ------- | --------------------------------- |
+| `partner_id`    | text FK | -> partners, cascade delete       |
+| `capacity_date` | date    | local Asia/Kolkata operating date |
+| `capacity`      | integer | 1-100 orders per generated window |
+| `note`          | text    | optional, at most 120 characters  |
+
+`(partner_id, capacity_date)` is the primary key. An override updates all
+future windows on that date and future slot generation. Removing it restores
+the default capacity of eight. Reductions below existing booked demand are
+rejected before any setting changes, and blocked windows remain blocked.
+
 ### partner_tags
 
 Many-to-many; tags are slugs (`free-pickup`), never display strings.
@@ -163,11 +182,13 @@ separate so a partner can call a category "Express Dry Clean" without falling ou
 of a `services=dry-cleaning` filter, and so the homepage service cards keep working
 when partners rename things. `Partner.services` in the API is the distinct set of
 `service` values across a partner's categories. A database check rejects values
-outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`.
-Authenticated owners receive column-level update permission for `name` only;
-RLS still requires ownership. Names are trimmed by the API and constrained to
-1-80 characters by PostgreSQL. Insert, delete, partner reassignment, canonical
-service and display order are not exposed to an authenticated browser.
+outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`; a unique
+index allows each service once per partner. Authenticated owners receive
+column-level update permission for `name` only. Creation goes through
+`create_partner_catalog_category`, which rechecks ownership under lock and
+assigns the next display position. Names are trimmed by the API and constrained
+to 1-80 characters by PostgreSQL. Direct insert/delete, partner reassignment,
+canonical-service changes and display-order edits are not exposed to a browser.
 
 ### catalog_items
 
@@ -188,12 +209,15 @@ The service is encoded in the item: _Wash & Fold - Shirt_ and _Dry Clean - Shirt
 are separate rows under separate categories.
 
 Owners may update only `name`, `description`, `price` and `is_active`, with RLS
-resolving ownership through the parent category. PostgreSQL bounds names to
+resolving ownership through the parent category. `create_partner_catalog_item`
+rechecks category ownership under lock, assigns the next position and fixes new
+rows to INR, `piece` and a safe generic icon. PostgreSQL bounds names to
 1-120 characters, descriptions to 500, prices to ₹1,000,000 in paise, icon keys
 to 40 characters and positions to non-negative values. Currency, unit, icon,
-category assignment and position stay platform-managed. Items are deactivated,
-not deleted: cart foreign keys remain valid, public reads filter them out, and
-order placement reports an inactive cart line as `CART_CHANGED`.
+category assignment and position stay platform-managed; direct inserts remain
+unavailable. Items are deactivated, not deleted: cart foreign keys remain
+valid, public reads filter them out, and order placement reports an inactive
+cart line as `CART_CHANGED`.
 
 ### slots
 
@@ -315,6 +339,27 @@ scheduled pickup, appends `cancelled`, updates status and decrements both slot
 reservations atomically. A full slot becomes open again; a blocked slot remains
 blocked. Repeated or concurrent attempts cannot release capacity twice.
 
+### order_reschedules
+
+An immutable schedule-change audit kept separate from fulfilment events. Each
+row records the actor and the old/new pickup and delivery slot references; the
+current pair remains on `orders`.
+
+| Column                                              | Type        |
+| --------------------------------------------------- | ----------- |
+| `id`                                                | bigint PK   |
+| `order_id`                                          | text FK     |
+| `actor_user_id`                                     | uuid snapshot |
+| `previous_pickup_id` / `previous_delivery_id`       | text FK     |
+| `new_pickup_id` / `new_delivery_id`                 | text FK     |
+| `created_at`                                        | timestamptz |
+
+Authenticated roles can read audit rows only when they can read the order and
+cannot write them directly. `reschedule_order` locks the order and every old/new
+slot in stable id order, accepts only the owning customer before pickup, moves
+capacity, updates the order and inserts the audit row atomically. Repeated and
+concurrent requests cannot decrement an old reservation twice.
+
 ### memberships
 
 | Column       | Type            | Notes |
@@ -357,12 +402,14 @@ auth.users 1--1 profiles 1--* addresses
                          1--* orders 1--* order_items
                                      1--1 order_addresses
                                      1--* order_events
+                                     1--* order_reschedules *--4 slots
                                      1--? reviews
                          1--? memberships
 
 partners 1--* partner_hours
          1--* partner_service_areas
          1--* partner_holiday_closures
+         1--* partner_capacity_overrides
          1--* partner_tags
          1--* catalog_categories 1--* catalog_items
          1--* slots
@@ -373,6 +420,7 @@ partners 1--* partner_hours
 
 - `partner_service_areas (pincode, partner_id)` - marketplace coverage lookup
 - `partner_holiday_closures (closure_date, partner_id)` - closure and slot-generation lookup
+- `partner_capacity_overrides (capacity_date, partner_id)` - generated and existing slot limits
 - `catalog_categories (service, partner_id)` - filtering the listing by service
 - `slots (partner_id, starts_at)` - the slot picker
 - `orders (user_id, placed_at desc)` - order history pagination
@@ -380,6 +428,7 @@ partners 1--* partner_hours
   `orders (partner_id, status, placed_at desc, id desc)` - owner lookup and
   filtered fulfilment queues
 - `order_events (order_id, occurred_at)` - timeline
+- `order_reschedules (order_id, created_at, id)` - schedule-change audit
 - unique `order_events (order_id, type)` - one fact per lifecycle stage
 - `addresses (user_id)`
 - unique `orders (user_id, idempotency_key)` - double-tap protection
@@ -395,12 +444,12 @@ Bengaluru demo set.
   scales one base rate card by a per-partner factor, which is a seeding
   convenience rather than a schema the platform enforces.
 - **Slots are generated ahead**, one row per slot per day, by
-  `generate_slots(partner_id, from_date, days)` reading `partner_hours` and
-  skipping `partner_holiday_closures`. Derived windows would leave reserved
-  capacity and operational blocking with nowhere to live; the stored `booked`
-  count makes `409 SLOT_UNAVAILABLE` truthful under concurrency. The table is
-  small - one partner-fortnight is roughly 80 rows - and old rows can be pruned
-  once orders reference a snapshot.
+  `generate_slots(partner_id, from_date, days)` reading `partner_hours`, skipping
+  `partner_holiday_closures` and applying `partner_capacity_overrides`. Derived
+  windows would leave reserved capacity and operational blocking with nowhere
+  to live; the stored `booked` count makes `409 SLOT_UNAVAILABLE` truthful under
+  concurrency. The table is small - one partner-fortnight is roughly 80 rows -
+  and old rows can be pruned once orders reference a snapshot.
 - **Distance is haversine from a pincode centroid**, not PostGIS.
   `pincode_centroids` maps a searched pincode to a point, `haversine_meters`
   measures from it, and `GET /partners` accepts explicit `latitude`/`longitude`
@@ -423,4 +472,5 @@ Umami analytics uses a separate PostgreSQL database and does not add tables,
 identifiers or retention concerns to this application schema. Application
 orders, not analytics events, remain the authoritative transaction record.
 
-Still open: pruning. `slots` and `order_events` both grow without bound.
+Still open: pruning. `slots`, `order_events` and `order_reschedules` grow without
+bound. Slots referenced by an order or reschedule audit must be retained.

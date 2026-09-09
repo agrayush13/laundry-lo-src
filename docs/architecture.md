@@ -86,18 +86,18 @@ Naming: components PascalCase, directories kebab-case, styles
 
 ### State
 
-| Concern                    | Where it lives | Persistence                                               |
-| -------------------------- | -------------- | --------------------------------------------------------- |
-| Guest cart                 | `CartContext`  | Versioned `localStorage`, merged after authentication     |
-| Signed-in cart and totals  | API/PostgreSQL | One active cart per account                               |
-| Profile, addresses, orders | API/PostgreSQL | Protected by user-scoped RLS                              |
-| Partner fulfilment queue   | API/PostgreSQL | Restricted to each partner's owner by RLS and API checks  |
-| Laundry configuration      | API/PostgreSQL | Owner-scoped profile, coverage, weekly hours and closures |
-| Partner catalogue editing  | API/PostgreSQL | Owner-scoped names, prices and item availability          |
-| Auth                       | Supabase Auth  | Short-lived access token plus rotated refresh session     |
-| Theme                      | `ThemeContext` | `localStorage`                                            |
-| Partners, slots            | API/PostgreSQL | Partner reads cached 5 min by the SW; slots never cached  |
-| Anonymous product usage    | Umami          | Sanitized routes/events in a separate analytics database  |
+| Concern                    | Where it lives | Persistence                                                  |
+| -------------------------- | -------------- | ------------------------------------------------------------ |
+| Guest cart                 | `CartContext`  | Versioned `localStorage`, merged after authentication        |
+| Signed-in cart and totals  | API/PostgreSQL | One active cart per account                                  |
+| Profile, addresses, orders | API/PostgreSQL | Protected by user-scoped RLS                                 |
+| Partner fulfilment queue   | API/PostgreSQL | Restricted to each partner's owner by RLS and API checks     |
+| Laundry configuration      | API/PostgreSQL | Owner-scoped profile, coverage, hours, closures and capacity |
+| Partner catalogue          | API/PostgreSQL | Owner-scoped service/item creation, pricing and visibility   |
+| Auth                       | Supabase Auth  | Short-lived access token plus rotated refresh session        |
+| Theme                      | `ThemeContext` | `localStorage`                                               |
+| Partners, slots            | API/PostgreSQL | Partner reads cached 5 min by the SW; slots never cached     |
+| Anonymous product usage    | Umami          | Sanitized routes/events in a separate analytics database     |
 
 `AuthContext` subscribes to Supabase's session lifecycle. It restores the
 session on startup, follows token refreshes, keeps the current access token in
@@ -339,29 +339,36 @@ look like a site that simply says two different things. See
 
 `PartnerPortal.test.tsx` drives the owner operations slice through its route
 guard, server-authorized access state, status filters, cursor pagination,
-fulfilment detail and two-step lifecycle mutation. A conflict refreshes the
-order from the server instead of leaving the operator on stale state.
+daily operational summary, fulfilment detail and two-step lifecycle mutation. A
+conflict refreshes the order from the server instead of leaving the operator on
+stale state.
 
 `PartnerSettings.test.tsx` drives the owner configuration slice through the
 same route and server authorization boundaries, edits the listing and multiple
-service pincodes, changes availability, weekly hours and holiday closures, and
-proves that failed saves preserve the operator's draft.
+service pincodes, changes availability, weekly hours, holiday closures and
+date-specific capacity, and proves that failed saves preserve the operator's
+draft.
 
 `PartnerCatalog.test.tsx` drives the owner catalogue slice through the protected
-route, updates category and item copy, converts editable rupee values to integer
-paise, hides items without deleting them, rejects invalid local input and proves
-that failed saves preserve the operator's draft.
+route, creates canonical services and per-piece items, updates category and item
+copy, converts editable rupee values to integer paise, hides items without
+deleting them, rejects invalid local input and proves that failed saves preserve
+the operator's draft.
 
 `CustomerCancellation.test.tsx` verifies that only server-eligible orders show
 the cancellation action, requires an explicit confirmation, refreshes tracking
 after success and preserves the confirmation with a visible retryable error when
 the mutation fails.
 
+`CustomerRescheduling.test.tsx` drives the available-slot picker from tracking,
+requires both appointments and verifies the exact slot pair sent before the
+page refreshes to the new audited schedule.
+
 ## 3. Backend
 
 The deployed Hono service in [`api/`](../api/) serves partners, catalogues,
 slots, profiles, addresses, carts, orders, laundry-owner order queues,
-fulfilment events, laundry configuration and catalogue maintenance, and
+fulfilment events, laundry configuration and catalogue creation/maintenance, and
 membership from PostgreSQL.
 
 ### Why Supabase
@@ -404,10 +411,11 @@ Built by `supabase/migrations/`, filled by `supabase/seed.sql`, documented in
 [schema.md](./schema.md). The migrations build tables and RLS first, then the
 derived listing and slot functions, catalogue and id hardening, the atomic
 customer write path, the partner order lifecycle, owner-managed laundry
-configuration and catalogue maintenance, and shared multi-pincode service areas
-for discovery and checkout. The latest availability migration adds owner-scoped
-holiday closures and makes both slot generation and effective opening state
-consult them.
+configuration and catalogue maintenance, shared multi-pincode service areas
+for discovery and checkout. The availability migrations add owner-scoped
+holiday closures and date-specific capacity. Slot generation consults both;
+effective opening state also consults closures. A later catalogue migration
+adds owner-scoped category/item creation and one canonical service per laundry.
 
 Two things are derived rather than stored, and that is the point of them:
 `Partner.services` is the distinct set of `catalog_categories.service`, and
@@ -451,6 +459,13 @@ still in the future. Status, terminal tracking event and both slot reservations
 change atomically. The read model exposes `canCancel` from the same inputs; the
 mutation rechecks them under lock so a stale browser cannot override policy.
 
+Customer rescheduling uses `reschedule_order`. It locks the caller's order and
+all old/new slot rows in stable order, permits changes only at `placed` or
+`confirmed` before pickup, rejects unavailable or other-laundry slots, moves
+capacity and records immutable before/after slot references atomically. The
+read model exposes `canReschedule`; Plus-activation orders may reschedule because
+no membership or payment state is reversed.
+
 Fulfilment uses the equally narrow `advance_order` function. It verifies that
 the caller owns the order's laundry, locks the order, permits only the next event
 in the defined sequence, updates the denormalized status and appends the
@@ -461,7 +476,9 @@ workflow by bypassing the API.
 Laundry-owner order reads use the same caller-scoped transaction and RLS. The
 queue can span all laundries owned by the caller or filter by laundry and
 status, and uses opaque keyset cursors. It returns only the recipient name and
-pincode; phone and street details stay on the owner-checked detail endpoint.
+pincode; phone and street details stay on the owner-checked detail endpoint. A
+separate summary query reports active work, confirmations, local-day pickups,
+deliveries and completions across the same owner scope.
 
 Laundry configuration uses the same ownership boundary. Authenticated owners
 have column-level update privileges only for public profile, address,
@@ -475,13 +492,18 @@ Exceptional closures use a separate owner-scoped table and replacement
 function. The slot generator skips those local dates, the public listing closes
 for today's closure, and removing a closure safely refills the rolling horizon.
 Booked slots are retained but blocked so existing orders remain actionable.
+Date-specific capacity is another owner-scoped replacement set. It changes the
+limit on existing future windows and future generation, rejects reductions below
+booked demand, and restores the default of eight when removed.
 
-Catalogue maintenance is similarly narrow. Authenticated owners may update
+Catalogue writes are similarly narrow. Owners create an unused canonical
+service or add an item through security-definer functions that lock the owning
+partner/category and assign the next display position. New items are fixed to
+INR and the launch `piece` unit with a safe generic icon. Normal updates expose
 only category names and item names, descriptions, integer-paise prices and
-active state. They cannot change a category's canonical service, move an item,
-change currency/unit/icon/order, insert a new service or delete a referenced
-row. Deactivation removes an item from public catalogue reads while preserving
-cart foreign keys and historical order snapshots.
+active state. Canonical-service changes, moves, currency/unit/icon/order edits
+and deletion remain unavailable. Deactivation removes an item from public reads
+while preserving cart foreign keys and historical order snapshots.
 
 ### What the server owns
 
@@ -490,10 +512,11 @@ results rather than reimplementing them.
 
 - **Money.** Subtotals, tax, delivery fees and membership discounts are computed
   server-side and returned. The client renders what it is given.
-- **Availability.** Slot capacity, partner hours and holidays. Booking increments
-  the slot count inside the order transaction, so `409 SLOT_UNAVAILABLE` is
-  truthful under concurrency. A slot that has already started is reported
-  unavailable rather than hidden, so the client has one rule to render.
+- **Availability.** Slot capacity, owner date overrides, partner hours and
+  holidays. Booking increments the slot count inside the order transaction, so
+  `409 SLOT_UNAVAILABLE` is truthful under concurrency. A slot that has already
+  started is reported unavailable rather than hidden, so the client has one
+  rule to render.
 - **`isOpen`.** Manual toggle plus today's exceptional closure and optional
   auto-scheduling from opening hours, resolved by `is_partner_open` at query
   time.
@@ -503,6 +526,8 @@ results rather than reimplementing them.
   only one lifecycle step at a time; concurrent repeats create one event.
 - **Customer cancellation.** An eligible customer can cancel before pickup;
   concurrent attempts produce one terminal event and release capacity once.
+- **Customer rescheduling.** An eligible customer can move both appointments
+  before pickup; old/new capacity and the audit record change once.
 - **Fulfilment access.** Partner queues and order details are resolved against
   `owns_partner`; another partner and the customer-facing session cannot use
   those operational reads.
@@ -569,14 +594,14 @@ readiness probe and returns `503` when the database cannot be reached.
 - Analytics is implemented but still depends on a configured Umami production
   instance; no exception-reporting service is connected.
 - The partner portal covers fulfilment, profile, multi-pincode coverage,
-  `is_open`, turnaround, weekly hours, holiday closures and maintenance of
-  existing catalogue names/items/prices. New-service creation, capacity,
-  staffing and onboarding remain.
+  `is_open`, turnaround, weekly hours, holiday closures, date-specific capacity
+  and catalogue service/item creation and maintenance. Staffing, assignment,
+  other exceptions and onboarding remain.
 - Images are Unsplash URLs rather than owned assets.
 - Cash on pickup only; no payment integration.
-- Self-service cancellation covers service-only orders before pickup. Plus
-  reversal, rescheduling, partner cancellation and post-pickup exceptions
-  remain support/operations policy work.
+- Self-service cancellation covers service-only orders and rescheduling covers
+  eligible orders before pickup. Plus reversal, partner cancellation, failed
+  pickup and post-pickup exceptions remain support/operations policy work.
 - Serviceability uses the same owner-managed exact-pincode coverage table in
   marketplace search and order placement. Radius or polygon coverage remains a
   future option if exact pincodes become operationally insufficient.

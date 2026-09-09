@@ -39,7 +39,7 @@ otherwise guaranteed once discounts arrive.
 
 Instants are ISO 8601 timestamps in UTC. **No pre-formatted display strings.**
 The client receives `"2026-08-20T05:00:00Z"` and formats for the user's locale.
-Calendar-only fields use `YYYY-MM-DD`; partner schedules and holiday closures
+Calendar-only fields use `YYYY-MM-DD`; partner closures and capacity overrides
 interpret those dates in the Asia/Kolkata operating timezone.
 
 ### Errors
@@ -428,6 +428,7 @@ the customer to review the change.
   "reference": "LL-2026-001",
   "status": "processing",
   "canCancel": false,
+  "canReschedule": false,
   "placedAt": "2024-03-20T10:30:00Z",
   "partner": { "id": "1001", "name": "SparkleWash Express" },
   "lines": [
@@ -462,6 +463,19 @@ the customer to review the change.
     { "type": "placed", "occurredAt": "2024-03-20T10:30:00Z" },
     { "type": "confirmed", "occurredAt": "2024-03-20T10:45:00Z" },
     { "type": "picked_up", "occurredAt": "2024-03-20T14:00:00Z" }
+  ],
+  "reschedules": [
+    {
+      "occurredAt": "2024-03-19T12:00:00Z",
+      "previous": {
+        "pickup": { "startsAt": "...", "endsAt": "..." },
+        "delivery": { "startsAt": "...", "endsAt": "..." }
+      },
+      "updated": {
+        "pickup": { "startsAt": "...", "endsAt": "..." },
+        "delivery": { "startsAt": "...", "endsAt": "..." }
+      }
+    }
   ]
 }
 ```
@@ -477,6 +491,11 @@ copy changes and translations do not need a backend deploy.
 scheduled pickup, payment method and membership charge. The client shows the
 self-service action only when this value is true and still treats the mutation
 response as authoritative if eligibility changes after the read.
+
+`canReschedule` is evaluated from the current status, latest fulfilment event
+and scheduled pickup. Plus-activation orders remain eligible because moving a
+schedule does not reverse a charge or membership. `reschedules` is the
+immutable before/after history; it is not mixed into the fulfilment timeline.
 
 ### `POST /orders/{id}/cancellation`
 
@@ -503,8 +522,38 @@ missing id.
 Orders that have reached pickup, whose pickup time has elapsed, or that
 activated Plus return `409 CANCELLATION_NOT_ALLOWED`. Plus-activation orders
 remain a support case because the current membership table has no safe reversal
-or refund lifecycle. Rescheduling, partner-initiated cancellation and
-post-pickup exceptions remain separate policies.
+or refund lifecycle. Partner-initiated cancellation and post-pickup exceptions
+remain separate policies.
+
+### `POST /orders/{id}/rescheduling`
+
+Authenticated customer operation for the caller's own order while its latest
+fulfilment event is `placed` or `confirmed` and scheduled pickup has not begun.
+
+```json
+{
+  "pickupSlotId": "slt_new_pickup",
+  "deliverySlotId": "slt_new_delivery"
+}
+```
+
+→ `200`
+
+```json
+{
+  "orderId": "ord_01J8XR3K2W",
+  "rescheduledAt": "2026-09-09T06:30:00Z"
+}
+```
+
+The new pair must belong to the order's laundry, remain in the future, retain
+pickup-before-delivery ordering and have open capacity. The database locks the
+order and all old/new slots in stable id order, moves reservations, updates the
+order and writes an immutable before/after audit row in one transaction. A
+stale slot returns `409 SLOT_UNAVAILABLE`; an elapsed or progressed order
+returns `409 RESCHEDULING_NOT_ALLOWED`; another customer's order returns `404`.
+Concurrent equal requests produce one change and one controlled `409` without
+double-releasing capacity.
 
 ### `GET /partner/orders?partnerId=1001&status=processing&limit=20&cursor=...`
 
@@ -534,8 +583,28 @@ someone else returns `404`.
 The queue deliberately omits the phone and street address. Those operational
 details are returned only from `GET /partner/orders/{id}` after the same
 ownership check. Detail uses the existing `Order` shape, including snapshotted
-lines, totals, delivery address, slots and tracking events. A customer or a
+lines, totals, delivery address, current slots, reschedule audit and tracking events. A customer or a
 different laundry owner receives `404`.
+
+### `GET /partner/orders/summary?partnerId=1001`
+
+Authenticated laundry-owner operational summary. `partnerId` is optional; with
+no filter it covers every laundry owned by the caller. Counts use the
+Asia/Kolkata local operating date.
+
+```json
+{
+  "activeOrders": 12,
+  "awaitingConfirmation": 3,
+  "pickupsToday": 5,
+  "deliveriesToday": 4,
+  "completedToday": 7,
+  "generatedAt": "2026-09-09T06:30:00Z"
+}
+```
+
+The same owner/no-owner and concealed-laundry rules as the queue apply. The
+summary is operational state, not an analytics or financial report.
 
 ### `POST /partner/orders/{id}/events`
 
@@ -593,6 +662,9 @@ id receives the same `404`, so the endpoint does not disclose ownership.
   },
   "servicePincodes": ["560102", "560103"],
   "holidayClosures": [{ "date": "2026-10-02", "reason": "Public holiday" }],
+  "capacityOverrides": [
+    { "date": "2026-10-03", "capacity": 12, "note": "Festival demand" }
+  ],
   "turnaroundHours": 24,
   "acceptingOrders": true,
   "useOpeningHours": true,
@@ -608,6 +680,8 @@ id receives the same `404`, so the endpoint does not disclose ownership.
 applies that switch, today's exceptional closure and the current weekly schedule
 when `useOpeningHours` is enabled. `holidayClosures` contains only today and
 future dates in the laundry's Asia/Kolkata operating timezone.
+`capacityOverrides` contains current/future exceptional dates and the order
+limit applied to every pickup window on each date.
 
 ### `PUT /partner/laundries/{id}`
 
@@ -622,10 +696,14 @@ the physical business address and does not have to be in that set.
 are optional, trimmed and limited to 120 characters. A save replaces the
 laundry's complete current/future closure set while preserving historical
 closure records.
+`capacityOverrides` accepts up to 60 unique real dates from today onward. Each
+capacity is an integer from 1 to 100 and its optional trimmed note is limited to
+120 characters. A save replaces the complete current/future override set while
+preserving historical rows.
 
-Only profile, address, service areas, holiday closures, turnaround, manual state
-and schedule fields are owner writable. The owner cannot change `owner_id`,
-ratings or platform-managed media.
+Only profile, address, service areas, holiday closures, capacity overrides,
+turnaround, manual state and schedule fields are owner writable. The owner
+cannot change `owner_id`, ratings or platform-managed media.
 
 When hours change, future unbooked slots are regenerated and booked slots are
 preserved but blocked from further capacity. Saving unchanged hours does not
@@ -637,6 +715,12 @@ bookings, so the laundry can resolve those orders from its queue. Removing a
 closure regenerates safe windows within the rolling 14-day horizon. Slot
 generation and daily rollover continue to skip every active closure.
 
+A capacity override changes every existing and newly generated pickup window
+on its local date. Removing it restores the default of eight. A reduction below
+the highest already-booked window is rejected atomically with
+`409 CAPACITY_BELOW_BOOKED`; no reservation is dropped or overbooked. Holiday
+and schedule-blocked windows remain blocked independently of capacity.
+
 ### `GET /partner/laundries/{id}/catalog`
 
 Returns the complete catalogue for an owned laundry. It uses the public
@@ -644,6 +728,20 @@ catalogue shape from `GET /partners/{id}/catalog`, with an additional
 `isActive` boolean on every item. Hidden items are included here so an owner can
 restore them; public catalogue reads include active items only. A customer,
 another owner or a missing laundry receives the same `404`.
+
+### `POST /partner/laundries/{id}/catalog/categories`
+
+Creates one service category for an owned laundry:
+
+```json
+{ "service": "premium-care", "name": "Couture Care" }
+```
+
+→ `201` the new owner catalogue category with an empty `items` array. `service`
+must be one of `wash-fold`, `wash-iron`, `dry-cleaning` or `premium-care`, and a
+laundry may have each canonical service only once. A duplicate returns
+`409 SERVICE_ALREADY_EXISTS`. PostgreSQL verifies ownership and assigns the next
+display position; authenticated clients cannot insert a category directly.
 
 ### `PATCH /partner/laundries/{id}/catalog/categories/{categoryId}`
 
@@ -656,6 +754,25 @@ Updates an existing category's customer-facing name:
 → `200` the updated owner catalogue category, including active and hidden
 items. The canonical `service` slug is platform-owned and cannot be changed by
 this endpoint.
+
+### `POST /partner/laundries/{id}/catalog/categories/{categoryId}/items`
+
+Creates an item under an owned category. The request uses the same editable
+shape as the item patch endpoint:
+
+```json
+{
+  "name": "Silk saree",
+  "description": "Specialist cleaning and finishing.",
+  "price": { "amount": 39900, "currency": "INR" },
+  "isActive": true
+}
+```
+
+→ `201` the new item. The server fixes `currency` to INR, `unit` to `piece`,
+uses a safe generic `iconKey` and assigns the next display position. The item
+can be created hidden and published later. Another owner or a category outside
+the laundry receives the same `404`.
 
 ### `PATCH /partner/laundries/{id}/catalog/items/{itemId}`
 
@@ -680,8 +797,8 @@ There is deliberately no delete operation. Setting `isActive` to `false` hides
 an item from customer catalogue reads without removing the row, so saved carts
 retain their references and placed orders retain their snapshots. A stale cart
 containing a hidden item is rejected by order placement as `CART_CHANGED`.
-Category/item creation, category reassignment and new service creation remain
-part of partner onboarding rather than this maintenance surface.
+Category reassignment, canonical-slug changes and deletion remain
+platform-managed operations.
 
 ---
 
@@ -771,6 +888,9 @@ Implemented:
   local arrays are browser-test fixtures only.
 - Eligible order tracking exposes a confirmed customer cancellation and refreshes
   from the server after the atomic status/event/capacity change.
+- Eligible tracking also loads current laundry slots and reschedules both
+  appointments through one audited capacity transaction.
 - The protected laundry-owner portal consumes its order queue, detail and
-  lifecycle routes, and maintains profile, service areas, weekly hours, holiday
-  closures and existing catalogue entries through owner-scoped endpoints.
+  operational summary and lifecycle routes, and maintains profile, service areas, weekly hours, holiday
+  closures and date-specific capacity, and creates and maintains catalogue
+  services/items through owner-scoped endpoints.
