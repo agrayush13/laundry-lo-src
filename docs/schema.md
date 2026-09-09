@@ -1,6 +1,6 @@
 # laundrylo - data schema
 
-Status: **implemented**. Postgres on Supabase, built by
+Status: **implemented**. Reviewed on 2026-09-09. Postgres on Supabase, built by
 `supabase/migrations/` and filled by `supabase/seed.sql`. Pairs with
 [api-contract.md](./api-contract.md); this is the storage shape behind it.
 
@@ -18,9 +18,9 @@ Status: **implemented**. Postgres on Supabase, built by
 - **Enums** are Postgres enum types, lowercase snake case.
 - **Identity** lives in Supabase's `auth.users`. Our tables reference it by
   `auth.uid()`; we never store passwords.
-- **Row Level Security is on for every table.** Customers can only read and
-  write their own rows; partner-owned rows are readable publicly but writable
-  only by that partner.
+- **Row Level Security is on for every table.** Customer resources are scoped to
+  their user, owner-management resources to the laundry owner, and public
+  marketplace policies expose only the rows intended for anonymous discovery.
 
 ## 2. Enums
 
@@ -51,7 +51,7 @@ App-level user data. Supabase owns the credentials; this owns everything else.
 | `email_opt_in` | boolean     | default false             |
 | `created_at`   | timestamptz | doubles as "member since" |
 
-Created on first login by a trigger on `auth.users`.
+Created with the Supabase identity by a trigger on `auth.users`.
 
 ### addresses
 
@@ -74,21 +74,35 @@ Created on first login by a trigger on `auth.users`.
 | ------------------ | ------- | ---------------------------------------- |
 | `id`               | text PK |                                          |
 | `owner_id`         | uuid FK | -> profiles; who administers it          |
-| `name`             | text    |                                          |
-| `about`            | text    |                                          |
-| `line1` `line2`    | text    | structured address                       |
-| `city` `pincode`   | text    | pincode indexed for search               |
+| `name`             | text    | owner-editable, 1-120 trimmed characters |
+| `about`            | text    | owner-editable, nullable, max 1,000      |
+| `line1` `line2`    | text    | owner-editable structured address        |
+| `city` `pincode`   | text    | owner-editable physical business address |
 | `latitude`         | numeric | for distance and the future map view     |
 | `longitude`        | numeric |                                          |
-| `turnaround_hours` | integer |                                          |
-| `is_open`          | boolean | manual override for partner operations   |
-| `auto_schedule`    | boolean | when true, opening hours drive `is_open` |
+| `turnaround_hours` | integer | owner-editable, 1-336                    |
+| `is_open`          | boolean | owner-editable booking master switch     |
+| `auto_schedule`    | boolean | owner-editable; hours also gate opening  |
 | `image_url`        | text    |                                          |
 | `image_alt`        | text    |                                          |
 
 `rating` and `review_count` are currently denormalized columns seeded for the
 demo catalogue. The `partner_details` view is the API boundary, so they can move
 to an aggregate over `reviews` later without changing the route shape.
+
+### partner_service_areas
+
+One row per exact pincode served by a laundry, separate from its physical
+address. `(partner_id, pincode)` is the primary key, and `pincode` is indexed
+first for marketplace lookup. Owners replace the complete 1-50 pincode set
+through `replace_partner_service_areas`; direct writes remain unavailable to
+application roles. Existing laundries are migrated with their physical pincode
+as the initial service area.
+
+| Column       | Type    | Notes                             |
+| ------------ | ------- | --------------------------------- |
+| `partner_id` | text FK | -> partners, cascade delete       |
+| `pincode`    | text    | exactly six digits; indexed first |
 
 ### partner_hours
 
@@ -100,6 +114,49 @@ One row per weekday per partner. Drives `auto_schedule`.
 | `weekday`    | smallint | 0-6                  |
 | `opens_at`   | time     | nullable when closed |
 | `closes_at`  | time     | nullable when closed |
+
+Owner saves replace all seven rows through `replace_partner_hours`. The
+function requires ownership, rejects missing/duplicate weekdays and overnight
+hours, and resynchronizes only future slots when the schedule changed. Direct
+partner-table updates are restricted to the approved configuration columns;
+platform-managed ownership, ratings and imagery stay outside owner privileges.
+
+### partner_holiday_closures
+
+Exceptional local calendar days when a laundry cannot accept bookings. Weekly
+hours remain the default schedule. Owners replace today and future closures
+through `replace_partner_holiday_closures`; historical rows are retained, and
+direct writes remain unavailable to application roles.
+
+| Column         | Type    | Notes                             |
+| -------------- | ------- | --------------------------------- |
+| `partner_id`   | text FK | -> partners, cascade delete       |
+| `closure_date` | date    | local Asia/Kolkata operating date |
+| `reason`       | text    | optional, at most 120 characters  |
+
+`(partner_id, closure_date)` is the primary key. Adding a closure removes
+future unbooked slots on that date and blocks reserved slots without breaking
+their order references. Removing one refills safe windows in the 14-day
+horizon. `generate_slots` and `is_partner_open` both consult the same table.
+
+### partner_capacity_overrides
+
+Exceptional per-slot order limits for a local operating date. Owners replace
+today and future overrides through `replace_partner_capacity_overrides`;
+historical rows are retained and direct writes remain unavailable to
+application roles.
+
+| Column          | Type    | Notes                             |
+| --------------- | ------- | --------------------------------- |
+| `partner_id`    | text FK | -> partners, cascade delete       |
+| `capacity_date` | date    | local Asia/Kolkata operating date |
+| `capacity`      | integer | 1-100 orders per generated window |
+| `note`          | text    | optional, at most 120 characters  |
+
+`(partner_id, capacity_date)` is the primary key. An override updates all
+future windows on that date and future slot generation. Removing it restores
+the default capacity of eight. Reductions below existing booked demand are
+rejected before any setting changes, and blocked windows remain blocked.
 
 ### partner_tags
 
@@ -125,7 +182,13 @@ separate so a partner can call a category "Express Dry Clean" without falling ou
 of a `services=dry-cleaning` filter, and so the homepage service cards keep working
 when partners rename things. `Partner.services` in the API is the distinct set of
 `service` values across a partner's categories. A database check rejects values
-outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`.
+outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`; a unique
+index allows each service once per partner. Authenticated owners receive
+column-level update permission for `name` only. Creation goes through
+`create_partner_catalog_category`, which rechecks ownership under lock and
+assigns the next display position. Names are trimmed by the API and constrained
+to 1-80 characters by PostgreSQL. Direct insert/delete, partner reassignment,
+canonical-service changes and display-order edits are not exposed to a browser.
 
 ### catalog_items
 
@@ -145,19 +208,30 @@ outside `wash-fold`, `wash-iron`, `dry-cleaning` and `premium-care`.
 The service is encoded in the item: _Wash & Fold - Shirt_ and _Dry Clean - Shirt_
 are separate rows under separate categories.
 
+Owners may update only `name`, `description`, `price` and `is_active`, with RLS
+resolving ownership through the parent category. `create_partner_catalog_item`
+rechecks category ownership under lock, assigns the next position and fixes new
+rows to INR, `piece` and a safe generic icon. PostgreSQL bounds names to
+1-120 characters, descriptions to 500, prices to ₹1,000,000 in paise, icon keys
+to 40 characters and positions to non-negative values. Currency, unit, icon,
+category assignment and position stay platform-managed; direct inserts remain
+unavailable. Items are deactivated, not deleted: cart foreign keys remain
+valid, public reads filter them out, and order placement reports an inactive
+cart line as `CART_CHANGED`.
+
 ### slots
 
 Server-owned availability. The client must never invent these.
 
-| Column       | Type        | Notes                  |
-| ------------ | ----------- | ---------------------- |
-| `id`         | text PK     | `slt_...`              |
-| `partner_id` | text FK     |                        |
-| `starts_at`  | timestamptz |                        |
-| `ends_at`    | timestamptz |                        |
-| `capacity`   | integer     |                        |
-| `booked`     | integer     | default 0              |
-| `state`      | slot_state  | `blocked` for holidays |
+| Column       | Type        | Notes                                       |
+| ------------ | ----------- | ------------------------------------------- |
+| `id`         | text PK     | `slt_...`                                   |
+| `partner_id` | text FK     |                                             |
+| `starts_at`  | timestamptz |                                             |
+| `ends_at`    | timestamptz |                                             |
+| `capacity`   | integer     |                                             |
+| `booked`     | integer     | default 0                                   |
+| `state`      | slot_state  | `blocked` for closures or operational holds |
 
 Availability is `state = 'open' and booked < capacity`. The order transaction
 increments `booked` atomically, which is what makes
@@ -252,6 +326,39 @@ from the event sequence.
 | `note`        | text        |
 
 `orders.status` is a denormalized convenience derived from the latest event.
+Each event type is unique per order. Laundry-owner progression goes through the
+`advance_order` security-definer function, which locks the order and permits
+only `placed → confirmed → picked_up → in_progress → out_for_delivery →
+delivered`. Authenticated roles cannot update `orders` or insert
+`order_events` directly.
+
+Eligible customer cancellation goes through the separate `cancel_order`
+security-definer function. It locks the customer's order, accepts only
+service-only cash-on-pickup orders at `placed` or `confirmed` before the
+scheduled pickup, appends `cancelled`, updates status and decrements both slot
+reservations atomically. A full slot becomes open again; a blocked slot remains
+blocked. Repeated or concurrent attempts cannot release capacity twice.
+
+### order_reschedules
+
+An immutable schedule-change audit kept separate from fulfilment events. Each
+row records the actor and the old/new pickup and delivery slot references; the
+current pair remains on `orders`.
+
+| Column                                              | Type        |
+| --------------------------------------------------- | ----------- |
+| `id`                                                | bigint PK   |
+| `order_id`                                          | text FK     |
+| `actor_user_id`                                     | uuid snapshot |
+| `previous_pickup_id` / `previous_delivery_id`       | text FK     |
+| `new_pickup_id` / `new_delivery_id`                 | text FK     |
+| `created_at`                                        | timestamptz |
+
+Authenticated roles can read audit rows only when they can read the order and
+cannot write them directly. `reschedule_order` locks the order and every old/new
+slot in stable id order, accepts only the owning customer before pickup, moves
+capacity, updates the order and inserts the audit row atomically. Repeated and
+concurrent requests cannot decrement an old reservation twice.
 
 ### memberships
 
@@ -266,6 +373,11 @@ from the event sequence.
 The implemented 10% benefit is applied server-side in cart totals and order
 placement. Future pickup-fee or priority-capacity benefits belong at the same
 boundary; nothing in the UI decides a discount.
+
+Order placement uses the same `partner_service_areas` rows as marketplace
+search. A trigger checks the snapshotted order address against the selected
+partner's coverage set, so an unsupported address rolls back the order, slot
+reservations and cart deletion together without trusting the browser.
 
 ### reviews (deferred)
 
@@ -290,10 +402,14 @@ auth.users 1--1 profiles 1--* addresses
                          1--* orders 1--* order_items
                                      1--1 order_addresses
                                      1--* order_events
+                                     1--* order_reschedules *--4 slots
                                      1--? reviews
                          1--? memberships
 
 partners 1--* partner_hours
+         1--* partner_service_areas
+         1--* partner_holiday_closures
+         1--* partner_capacity_overrides
          1--* partner_tags
          1--* catalog_categories 1--* catalog_items
          1--* slots
@@ -302,11 +418,18 @@ partners 1--* partner_hours
 
 ## 5. Indexes worth having early
 
-- `partners (pincode)` and `partners (pincode, is_open)` - the listing query
+- `partner_service_areas (pincode, partner_id)` - marketplace coverage lookup
+- `partner_holiday_closures (closure_date, partner_id)` - closure and slot-generation lookup
+- `partner_capacity_overrides (capacity_date, partner_id)` - generated and existing slot limits
 - `catalog_categories (service, partner_id)` - filtering the listing by service
 - `slots (partner_id, starts_at)` - the slot picker
 - `orders (user_id, placed_at desc)` - order history pagination
+- `partners (owner_id) where owner_id is not null` and
+  `orders (partner_id, status, placed_at desc, id desc)` - owner lookup and
+  filtered fulfilment queues
 - `order_events (order_id, occurred_at)` - timeline
+- `order_reschedules (order_id, created_at, id)` - schedule-change audit
+- unique `order_events (order_id, type)` - one fact per lifecycle stage
 - `addresses (user_id)`
 - unique `orders (user_id, idempotency_key)` - double-tap protection
 
@@ -321,18 +444,19 @@ Bengaluru demo set.
   scales one base rate card by a per-partner factor, which is a seeding
   convenience rather than a schema the platform enforces.
 - **Slots are generated ahead**, one row per slot per day, by
-  `generate_slots(partner_id, from_date, days)` reading `partner_hours`. Derived
-  windows avoid a growing table but leave `booked` and holiday blocking with
-  nowhere to live, and it is `booked` that makes `409 SLOT_UNAVAILABLE` truthful
-  under concurrency. The table is small - one partner-fortnight is roughly 80
-  rows - and old rows can be pruned once orders reference a snapshot.
+  `generate_slots(partner_id, from_date, days)` reading `partner_hours`, skipping
+  `partner_holiday_closures` and applying `partner_capacity_overrides`. Derived
+  windows would leave reserved capacity and operational blocking with nowhere
+  to live; the stored `booked` count makes `409 SLOT_UNAVAILABLE` truthful under
+  concurrency. The table is small - one partner-fortnight is roughly 80 rows -
+  and old rows can be pruned once orders reference a snapshot.
 - **Distance is haversine from a pincode centroid**, not PostGIS.
   `pincode_centroids` maps a searched pincode to a point, `haversine_meters`
   measures from it, and `GET /partners` accepts explicit `latitude`/`longitude`
   to override. PostGIS earns its place when there is a map view and radius
   search; a scalar function costs no extension today.
 - **`owner_id` alone**, no `partner_staff`. One administrator per partner is
-  enough for the first admin panel, and the RLS policies all funnel through
+  enough for the first partner portal, and the RLS policies all funnel through
   `owns_partner(partner_id)`, so adding staff later changes that one function
   rather than every policy.
 - **`rating` and `review_count` are denormalised columns** for now, seeded from
@@ -344,4 +468,9 @@ Slot generation rolls forward daily through `refresh_scheduled_slots(14)` and a
 `pg_cron` job where that Supabase extension is available. The seed invokes the
 same underlying generator for local and preview data.
 
-Still open: pruning. `slots` and `order_events` both grow without bound.
+Umami analytics uses a separate PostgreSQL database and does not add tables,
+identifiers or retention concerns to this application schema. Application
+orders, not analytics events, remain the authoritative transaction record.
+
+Still open: pruning. `slots`, `order_events` and `order_reschedules` grow without
+bound. Slots referenced by an order or reschedule audit must be retained.

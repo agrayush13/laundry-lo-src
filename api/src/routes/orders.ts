@@ -7,7 +7,7 @@ import { ApiError } from '../http/errors.js';
 import { DEFAULT_LIMIT, MAX_LIMIT, decodeCursor, encodeCursor } from '../http/pagination.js';
 import { parse } from '../http/validation.js';
 import type { Order, Page } from '../models.js';
-import { getOrder } from '../queries/customerQueries.js';
+import { getOrder } from '../queries/orderQueries.js';
 
 const createOrderBody = z.object({
     cartId: z.string().min(1, 'Cart is required.'),
@@ -22,6 +22,13 @@ const listQuery = z.object({
     cursor: z.string().optional(),
 });
 
+const rescheduleOrderBody = z
+    .object({
+        pickupSlotId: z.string().min(1, 'Pickup slot is required.'),
+        deliverySlotId: z.string().min(1, 'Delivery slot is required.'),
+    })
+    .strict();
+
 const IDEMPOTENCY_KEY = z.string().uuid('Idempotency-Key must be a UUID.');
 const ORDER_CURSOR_SCOPE = 'orders:placed-at-desc';
 
@@ -30,11 +37,30 @@ interface PlacementRow {
     replayed: boolean;
 }
 
+interface CancellationRow {
+    order_id: string;
+    status: 'cancelled';
+    event_type: 'cancelled';
+    occurred_at: Date;
+}
+
+interface ReschedulingRow {
+    order_id: string;
+    rescheduled_at: Date;
+}
+
 const databaseFailures = new Map<string, ConstructorParameters<typeof ApiError>>([
     ['CART_NOT_FOUND', ['CART_NOT_FOUND', 'That cart no longer exists.']],
     ['CART_EMPTY', ['CART_EMPTY', 'Add at least one laundry item before placing the order.']],
     ['CART_CHANGED', ['CART_CHANGED', 'Your cart changed because an item is no longer available.']],
     ['ADDRESS_NOT_FOUND', ['ADDRESS_NOT_FOUND', 'That saved address was not found.']],
+    [
+        'ADDRESS_NOT_SERVICEABLE',
+        [
+            'ADDRESS_NOT_SERVICEABLE',
+            'That laundry does not currently serve the selected address pincode.',
+        ],
+    ],
     ['SLOT_UNAVAILABLE', ['SLOT_UNAVAILABLE', 'One of those time slots is no longer available.']],
     ['PARTNER_CLOSED', ['PARTNER_CLOSED', 'That laundry is not accepting orders right now.']],
     ['UNAUTHENTICATED', ['UNAUTHENTICATED', 'Please sign in to continue.']],
@@ -43,6 +69,49 @@ const databaseFailures = new Map<string, ConstructorParameters<typeof ApiError>>
 const translatePlacementFailure = (error: unknown): never => {
     const message = error instanceof Error ? error.message : '';
     const failure = databaseFailures.get(message);
+    if (failure) throw new ApiError(...failure);
+    throw error;
+};
+
+const cancellationFailures = new Map<string, ConstructorParameters<typeof ApiError>>([
+    ['ORDER_NOT_FOUND', ['NOT_FOUND', 'That order was not found.']],
+    [
+        'CANCELLATION_NOT_ALLOWED',
+        [
+            'CANCELLATION_NOT_ALLOWED',
+            'This order can no longer be cancelled online. Please contact support.',
+        ],
+    ],
+    ['UNAUTHENTICATED', ['UNAUTHENTICATED', 'Please sign in to continue.']],
+]);
+
+const translateCancellationFailure = (error: unknown): never => {
+    const message = error instanceof Error ? error.message : '';
+    const failure = cancellationFailures.get(message);
+    if (failure) throw new ApiError(...failure);
+    throw error;
+};
+
+const reschedulingFailures = new Map<string, ConstructorParameters<typeof ApiError>>([
+    ['ORDER_NOT_FOUND', ['NOT_FOUND', 'That order was not found.']],
+    [
+        'RESCHEDULING_NOT_ALLOWED',
+        [
+            'RESCHEDULING_NOT_ALLOWED',
+            'This order can no longer be rescheduled online. Please contact support.',
+        ],
+    ],
+    [
+        'RESCHEDULE_UNCHANGED',
+        ['RESCHEDULING_NOT_ALLOWED', 'Choose a different pickup or delivery schedule.'],
+    ],
+    ['SLOT_UNAVAILABLE', ['SLOT_UNAVAILABLE', 'One of those time slots is no longer available.']],
+    ['UNAUTHENTICATED', ['UNAUTHENTICATED', 'Please sign in to continue.']],
+]);
+
+const translateReschedulingFailure = (error: unknown): never => {
+    const message = error instanceof Error ? error.message : '';
+    const failure = reschedulingFailures.get(message);
     if (failure) throw new ApiError(...failure);
     throw error;
 };
@@ -101,6 +170,9 @@ export const orderRoutes = new Hono<AppEnv>()
             return { order, replayed: row.replayed };
         }).catch(translatePlacementFailure);
 
+        if (!result.replayed) {
+            c.get('analytics').trackOrderPlaced(result.order, c.req.header('User-Agent'));
+        }
         return result.replayed ? c.json(result.order) : c.json(result.order, 201);
     })
     .get('/', async (c) => {
@@ -138,6 +210,35 @@ export const orderRoutes = new Hono<AppEnv>()
             return body;
         });
         return c.json(page);
+    })
+    .post('/:id/cancellation', async (c) => {
+        const userId = requireUser(c.get('userId'));
+        const result = await asCaller(c.get('pool'), userId, async (client) => {
+            const cancellation = await client.query<CancellationRow>(
+                'select * from public.cancel_order($1)',
+                [c.req.param('id')]
+            );
+            const row = cancellation.rows[0]!;
+            return {
+                orderId: row.order_id,
+                status: row.status,
+                event: { type: row.event_type, occurredAt: row.occurred_at.toISOString() },
+            };
+        }).catch(translateCancellationFailure);
+        return c.json(result);
+    })
+    .post('/:id/rescheduling', async (c) => {
+        const userId = requireUser(c.get('userId'));
+        const input = parse(rescheduleOrderBody, await c.req.json().catch(() => ({})));
+        const result = await asCaller(c.get('pool'), userId, async (client) => {
+            const rescheduling = await client.query<ReschedulingRow>(
+                'select * from public.reschedule_order($1, $2, $3)',
+                [c.req.param('id'), input.pickupSlotId, input.deliverySlotId]
+            );
+            const row = rescheduling.rows[0]!;
+            return { orderId: row.order_id, rescheduledAt: row.rescheduled_at.toISOString() };
+        }).catch(translateReschedulingFailure);
+        return c.json(result);
     })
     .get('/:id', async (c) => {
         const userId = requireUser(c.get('userId'));

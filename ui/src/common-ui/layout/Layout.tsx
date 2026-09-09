@@ -1,6 +1,7 @@
 import React, { Suspense, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { ROUTES } from '../../config/navigationConfig';
+import { useAnalyticsPageView } from '../../hooks/useAnalyticsPageView';
 import { usePageAnnouncement } from '../../hooks/usePageAnnouncement';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 import ErrorBoundary from '../error-boundary/ErrorBoundary';
@@ -15,6 +16,7 @@ const Layout: React.FC = () => {
 
     useScrollToTop();
     const pageName = usePageAnnouncement(main);
+    useAnalyticsPageView();
 
     // The journey is one continuous cycle: it carries its own two-item header and
     // ends in its own footer, so the app chrome would be a third voice on a page

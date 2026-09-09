@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { analytics } from '../services/analyticsServices';
 import { authFailureMessage } from '../services/authServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import { useAuth } from '../context/AuthContext';
 import { authCallbackUrl, destinationFromState } from '../utils/authUtils';
 
@@ -39,6 +41,9 @@ export const useSignUpForm = () => {
                 const result = await signUp({
                     ...fields,
                     emailRedirectTo: authCallbackUrl(redirectTo),
+                });
+                analytics.trackEvent(ANALYTICS_EVENTS.passwordSignUp, {
+                    confirmation_required: result.requiresEmailConfirmation,
                 });
                 if (result.requiresEmailConfirmation) {
                     setConfirmationEmail(fields.email);

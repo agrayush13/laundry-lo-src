@@ -1,9 +1,6 @@
 import { unsplashImage } from '../utils/imagesUtils';
 import { IconName } from '../common-ui/icons/registry';
-import { DRY, SPIN } from './cycleConfig';
-
-/** Icons for the journey's figures, in the order it spins them. */
-const STAT_ICONS: IconName[] = ['clock', 'shield', 'pin'];
+import { DRY } from './cycleConfig';
 
 /**
  * What each of the journey's steps means, in a sentence. The step itself, and
@@ -24,7 +21,7 @@ const STEP_DETAIL = [
     },
     {
         icon: 'box' as IconName,
-        description: 'Clean, folded clothes delivered back within 24 hours.',
+        description: 'Follow each order from pickup through delivery.',
     },
 ];
 
@@ -50,28 +47,22 @@ export interface Testimonial {
 }
 
 export const HERO = {
-    badge: 'Now available in Bengaluru',
+    badge: 'Full-stack marketplace demo',
     title: { before: 'Fresh laundry, ', accent: 'delivered', after: ' to your door' },
     subtitle:
-        'Compare prices, read reviews, and book top-rated laundry services near you. ' +
-        'Pickup, wash, fold & deliver - all in one place.',
+        'Compare catalogues and book listed laundry services near you. ' +
+        'Choose pickup and delivery slots, then track the order in one place.',
     search: { label: 'Pin code', placeholder: 'Enter your pin code', submit: 'Find Services' },
     image: {
         src: unsplashImage('photo-1517677208171-0bc6725a3e60', 1200),
         alt: 'Neatly folded, freshly laundered clothes stacked beside a washing machine',
     },
-    floatingCard: { icon: 'clock' as IconName, title: 'Free pickup', detail: 'Within 2 hours' },
-    /**
-     * The same three figures the journey spins up, wearing icons. Quoted from
-     * one place because they were quoted from two: this page claimed five
-     * hundred partners while the journey counted fifty two, and the only way a
-     * demo statistic stays honest is by existing once.
-     */
-    stats: SPIN.stats.map((stat, index) => ({
-        icon: STAT_ICONS[index],
-        value: `${stat.value}${stat.suffix ?? ''}`,
-        label: stat.label,
-    })) as StatItem[],
+    floatingCard: { icon: 'clock' as IconName, title: 'Pickup slots', detail: 'Choose a time' },
+    stats: [
+        { icon: 'clock', value: 'Flexible', label: 'pickup scheduling' },
+        { icon: 'shield', value: 'Secure', label: 'account checkout' },
+        { icon: 'pin', value: 'Live', label: 'order tracking' },
+    ] as StatItem[],
 };
 
 export const SERVICES_SECTION = {
@@ -132,11 +123,11 @@ export const TESTIMONIALS_SECTION = {
 export const CTA_SECTION = {
     title: 'Ready to ditch laundry day?',
     guest: {
-        subtitle: 'Sign up today and get your first pickup free. No commitment, cancel anytime.',
-        primary: { label: 'Get Started Free', href: '/signup' },
+        subtitle: 'Create an account to save addresses, sync your cart and track orders.',
+        primary: { label: 'Create an account', href: '/signup' },
     },
     authenticated: {
-        subtitle: 'Pick a laundry near you and book a pickup - free collection on every order.',
+        subtitle: 'Compare nearby catalogues, choose your slots and track the order.',
         primary: { label: 'Find laundries near you', href: '/laundries' },
     },
     secondary: { label: 'Learn More', href: '/#how-it-works' },

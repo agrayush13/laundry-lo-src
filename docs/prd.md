@@ -1,6 +1,6 @@
 # laundrylo - product requirements
 
-Status: **living document**. Reviewed against the application on 2026-09-01.
+Status: **living document**. Reviewed against the application on 2026-09-09.
 
 ---
 
@@ -18,13 +18,16 @@ partners, order from one partner at a time, and track the order to their door.
 
 ## 3. Who it is for
 
-| Audience               | Needs                                                       | Status                |
-| ---------------------- | ----------------------------------------------------------- | --------------------- |
-| **Customer**           | Find a nearby laundry, know the price up front, book, track | Product surface built |
-| **Partner (laundry)**  | Receive orders, set prices, mark open/closed, manage hours  | Admin panel, later    |
-| **Fleet / operations** | Pickup and delivery runs                                    | Out of scope for now  |
+| Audience               | Needs                                                         | Status                                         |
+| ---------------------- | ------------------------------------------------------------- | ---------------------------------------------- |
+| **Customer**           | Find a nearby laundry, know the price up front, book, track   | Product surface built                          |
+| **Partner (laundry)**  | Receive orders, maintain listing and availability, set prices | Order, summary, configuration and catalogue tools built |
+| **Fleet / operations** | Pickup and delivery runs                                      | Out of scope for now                           |
 
-Only the customer surface is in the current build.
+The customer surface and the first laundry-owner operations slices are in the
+current build, including customer rescheduling, a daily owner summary,
+exceptional holiday closures, per-date capacity and catalogue creation. Partner
+onboarding and staff operations remain deferred.
 
 ## 4. Core flow
 
@@ -79,20 +82,30 @@ per-item pricing actually gives the customer (see
   service so the homepage cards can link into a filtered listing
 - Partner detail with a per-partner catalog
 - Cart (guest + signed-in), checkout with address and slot selection
-- Order placement, order history, order tracking timeline
+- Order placement, order history, order tracking timeline and eligible
+  self-service cancellation or rescheduling before pickup
 - Auth: email/password and Google, via Supabase Auth
 - Profile and saved addresses
 - laundrylo Plus membership, purchased through the cart
+- Protected laundry-owner order queue, daily operational summary, fulfilment
+  detail and ordered status progression
+- Protected laundry settings for the public profile, multiple service pincodes,
+  open/closed state, turnaround, weekly hours, holiday closures and date-specific
+  per-slot capacity
+- Protected catalogue creation and maintenance for services, item copy,
+  per-piece prices and customer availability
+- Anonymous, cookieless acquisition and product-funnel analytics with a
+  server-confirmed order conversion
 
 ### Deferred
 
-| Item                        | Why deferred                                        |
-| --------------------------- | --------------------------------------------------- |
-| Reviews (writing them)      | Ratings are shown read-only; write path comes later |
-| Order chat with the partner | Placeholder in the UI today                         |
-| Map view of partners        | Placeholder in the UI today                         |
-| Partner admin panel         | Needed before real partners can self-serve          |
-| Payments                    | Cash on pickup only at launch                       |
+| Item                                        | Why deferred                                                                                                                                                          |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reviews (writing them)                      | Ratings are shown read-only; write path comes later                                                                                                                   |
+| Order chat with the partner                 | Placeholder in the UI today                                                                                                                                           |
+| Map view of partners                        | Placeholder in the UI today                                                                                                                                           |
+| Partner onboarding and remaining operations | Profile, multi-pincode coverage, weekly hours, closures, date capacity and catalogue creation are available; business signup/review, assignments and staff come later |
+| Payments                                    | Cash on pickup only at launch                                                                                                                                         |
 
 ### Implementation snapshot
 
@@ -103,7 +116,13 @@ per-item pricing actually gives the customer (see
   sign-out.
 - **API source of truth:** partner search/details, per-partner catalogues, slot
   availability, profiles, addresses, server carts and totals, order
-  placement/history, and membership status.
+  placement/history/rescheduling, laundry-owner fulfilment queues, operational
+  summaries, status progression and
+  core laundry configuration, multi-pincode service areas, holiday closures,
+  date-specific capacity, catalogue creation/maintenance and membership status.
+- **Analytics boundary:** Umami receives sanitized route templates and
+  non-identifying funnel events; PostgreSQL remains authoritative for customers,
+  orders and revenue.
 
 ## 7. Product rules
 
@@ -112,16 +131,29 @@ per-item pricing actually gives the customer (see
   hours, so the client cannot invent slot lists. A full slot must be
   unselectable, and a slot that fills between selection and submit must fail
   loudly (`409 SLOT_UNAVAILABLE`).
+- **Capacity cannot erase demand.** An owner can change the order limit for a
+  local date, but cannot reduce it below orders already booked in any window.
 - **Delivery cannot precede pickup.** The client disables invalid choices and
   clears a delivery selection that a changed pickup invalidates; the order
   transaction verifies the slot ordering again.
 - **A closed partner cannot take orders.** `isOpen` is server-owned so partner
-  operations can toggle it manually or automate it from opening hours.
+  operations can toggle it manually, automate it from opening hours, or close
+  an exceptional local date without rewriting the weekly schedule.
 - **Checkout money is server-owned.** A signed-out guest cart can display a
   local preview from catalogue prices, but tax, delivery, discounts and the
   final total are recalculated and returned by the server before placement.
 - **Order ids are not guessable.** Customers see a friendly reference
   (`LL-2026-001`); the system uses an opaque id.
+- **Cancellation is server-owned.** A customer can cancel their own
+  service-only cash-on-pickup order while it is still at `placed` or `confirmed`
+  and before scheduled pickup. Tracking and both slot reservations change in
+  one transaction. Plus-activation orders and post-pickup exceptions go through
+  support until their reversal/refund policies exist.
+- **Rescheduling is server-owned.** Before scheduled or recorded pickup, a
+  customer can move both appointments only to available slots for the same
+  laundry. The order, old/new capacity and immutable before/after audit record
+  change in one transaction. This remains available to Plus-activation orders
+  because it does not reverse payment or membership state.
 
 ## 8. Non-functional expectations
 
@@ -132,12 +164,14 @@ per-item pricing actually gives the customer (see
 - Accessible forms: labelled inputs, `aria-invalid`, errors tied to fields
 - Validation explains itself - the confirm button stays enabled and scrolls to
   the first problem rather than silently disabling
+- Analytics sends no entered pincode, identity, contact/address data or record
+  identifier, respects Do Not Track and never blocks a product action
 
 ## 9. Open product questions
 
-- What is the cancellation window, and who absorbs the cost after pickup?
-- Do partners set their own prices, or does the platform set a rate card?
-- What are the actual Plus benefits, and how do they apply to per-item pricing?
+- What partner-cancellation, failed-pickup and post-pickup exception policy
+  should operations use?
+- Should Plus renew automatically, and what cancellation policy should apply?
 - Delivery fee: flat, distance-based, or free above a threshold?
 - Which city and pincodes launch first? (demo data is Bengaluru)
 
@@ -150,13 +184,14 @@ facts but keep separate navigation and presentation.
 - **The product must be legible in second one.** Both surfaces put the pin-code
   input in the first viewport; on `/journey` the cycle is the container, never a
   gate.
-- **Claims trace to a real surface.** No invented testimonials or customer
-  counts. The three figures in the spin section (52+ partners, 6 pin codes, 24h)
-  are demo figures rather than counts of the seed data, which is why the footer
-  carries "a demo project by ayush, not a real service." plainly and unmissably.
+- **Claims trace to a real surface.** The homepage labels the product as a demo
+  and uses implemented capability statements rather than invented customer,
+  partner, timing or cancellation promises. The unlinked journey retains its
+  illustrative figures as part of the preserved motion concept.
 - **Service vocabulary is shared.** Marketing cards and the journey use the same
   canonical service slugs; the API derives each partner's real starting price
   from its catalogue.
-- **Plus presents three plan benefits** (free pickup, 10% off, priority slots).
-  The discount is enforced in server totals; the operational meaning of free
-  pickup and priority capacity must be settled before taking paid memberships.
+- **Plus presents only implemented benefits.** It describes the server-enforced
+  10% service discount, one-month access period and itemized checkout pricing.
+  Pickup-fee or priority-capacity benefits stay out of public copy until the
+  placement transaction enforces them.

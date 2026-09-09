@@ -1,6 +1,19 @@
 const pad = (value: number) => String(value).padStart(2, '0');
 const PARTNER_TIME_ZONE = 'Asia/Kolkata';
 
+/** Current YYYY-MM-DD operating date for Bengaluru partner settings. */
+export const todayInPartnerTimezone = () => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: PARTNER_TIME_ZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date());
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((candidate) => candidate.type === type)?.value ?? '';
+    return `${part('year')}-${part('month')}-${part('day')}`;
+};
+
 /** ISO date (yyyy-mm-dd) in local time, so it doesn't shift across timezones. */
 const toIsoDate = (date: Date) =>
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;

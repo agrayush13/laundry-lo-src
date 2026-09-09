@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import PageFallback from '../../common-ui/page-fallback/PageFallback';
+import { ANALYTICS_EVENTS } from '../../config/analyticsConfig';
 import { AUTH_COPY } from '../../config/authConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { useAuth } from '../../context/AuthContext';
+import { analytics } from '../../services/analyticsServices';
 import { hasAuthCallbackError, safeAuthDestination } from '../../utils/authUtils';
 import AuthCard from './AuthCard';
 import styles from './auth.module.scss';
@@ -20,6 +22,7 @@ const AuthCallback: React.FC = () => {
 
     useEffect(() => {
         if (!isLoading && user && !providerError) {
+            analytics.trackEvent(ANALYTICS_EVENTS.authCallbackCompleted);
             navigate(destination, { replace: true });
         }
     }, [destination, isLoading, navigate, providerError, user]);

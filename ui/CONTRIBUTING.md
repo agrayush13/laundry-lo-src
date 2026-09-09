@@ -43,5 +43,9 @@ Enforced by `import/order`:
 - One component per file; hooks declared first, `return` last.
 - No literal colours, fonts or sizes - use `src/styles/_tokens.scss`.
 - No hardcoded data - copy and constants live in `src/config`; `src/data` is
-  limited to fixtures for resources whose write routes are staged.
+  limited to static product vocabulary, shared wire types and browser-test
+  fixtures. Production resource screens load through `src/services`.
+- Product measurement goes through `analyticsServices`. Events may contain only
+  aggregate/categorical properties, never entered pincodes, identity/contact
+  data, addresses or record identifiers.
 - Strict equality only, no `console.*`, `const`/`let` only, max 100 columns.

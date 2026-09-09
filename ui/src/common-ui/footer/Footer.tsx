@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { BRAND, ICON_SIZE } from '../../config/brandConfig';
-import { EXTERNAL_LINKS, ROUTES } from '../../config/navigationConfig';
+import { EXTERNAL_LINKS, FOOTER_LINKS, ROUTES } from '../../config/navigationConfig';
 import Icon from '../icons/Icon';
 import Logo from '../logo/Logo';
 import styles from './footer.module.scss';
@@ -25,6 +26,11 @@ const Footer: React.FC = () => (
                     © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
                 </p>
                 <ul className={styles.footerSocial}>
+                    {FOOTER_LINKS.map(({ label, href }) => (
+                        <li key={label}>
+                            <Link to={href}>{label}</Link>
+                        </li>
+                    ))}
                     {EXTERNAL_LINKS.map(({ label, href, icon }) => (
                         <li key={label}>
                             <a

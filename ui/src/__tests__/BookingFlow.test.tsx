@@ -1,5 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { analytics } from '../services/analyticsServices';
+import { ANALYTICS_EVENTS } from '../config/analyticsConfig';
 import { upcomingDates } from '../utils/datesUtils';
 import { authenticateTestUser, renderApp } from '../__mocks__/renderWithProviders';
 import { dayButton, pickSlot, slotButtons, waitForSchedule } from '../__mocks__/scheduleQueries';
@@ -29,6 +31,7 @@ const renderSignedIn = (path: string) => {
 describe('order flow', () => {
     it('takes a customer from pin code search to a confirmed order', async () => {
         const user = userEvent.setup();
+        const track = vi.spyOn(analytics, 'trackEvent');
         renderApp();
 
         await user.type(screen.getByLabelText(/pin code/i), '560103');
@@ -83,6 +86,26 @@ describe('order flow', () => {
         // The friendly reference, not the lookup id: `LL-2026-4821`. The two are
         // separate values now, and only this one is ever shown.
         expect(screen.getByText(/^Order #LL-\d{4}-\d{4}$/)).toBeInTheDocument();
+
+        const events = track.mock.calls.map(([name]) => name);
+        expect(events).toEqual(
+            expect.arrayContaining([
+                ANALYTICS_EVENTS.partnerSearch,
+                ANALYTICS_EVENTS.partnerResults,
+                ANALYTICS_EVENTS.laundryViewed,
+                ANALYTICS_EVENTS.cartItemAdded,
+                ANALYTICS_EVENTS.cartViewed,
+                ANALYTICS_EVENTS.passwordSignIn,
+                ANALYTICS_EVENTS.checkoutStarted,
+                ANALYTICS_EVENTS.orderPlaced,
+            ])
+        );
+        expect(track).toHaveBeenCalledWith(ANALYTICS_EVENTS.orderPlaced, {
+            source: 'browser_fixture',
+            item_count: 1,
+            has_plus: false,
+        });
+        track.mockRestore();
     });
 
     it('moves focus to the first missing field when confirming early', async () => {

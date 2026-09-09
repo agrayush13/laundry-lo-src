@@ -175,6 +175,9 @@ module.exports = (env, argv) => {
                 __SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(
                     process.env.SUPABASE_PUBLISHABLE_KEY ?? ''
                 ),
+                __UMAMI_HOST_URL__: JSON.stringify(process.env.UMAMI_HOST_URL ?? ''),
+                __UMAMI_WEBSITE_ID__: JSON.stringify(process.env.UMAMI_WEBSITE_ID ?? ''),
+                __UMAMI_DOMAINS__: JSON.stringify(process.env.UMAMI_DOMAINS ?? ''),
             }),
             new EmitHostRewrites(),
             new EmitPublicAssets(),

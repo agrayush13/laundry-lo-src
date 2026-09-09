@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Icon from '../../common-ui/icons/Icon';
+import { ANALYTICS_EVENTS } from '../../config/analyticsConfig';
 import { AUTH_COPY } from '../../config/authConfig';
 import { ICON_SIZE } from '../../config/brandConfig';
 import { useAuth } from '../../context/AuthContext';
+import { analytics } from '../../services/analyticsServices';
 import { authFailureMessage } from '../../services/authServices';
 import { authCallbackUrl, destinationFromState } from '../../utils/authUtils';
 import styles from './auth.module.scss';
@@ -18,6 +20,7 @@ const OAuthButton: React.FC = () => {
         setError(null);
         setIsSubmitting(true);
         try {
+            analytics.trackEvent(ANALYTICS_EVENTS.googleSignInStarted);
             await signInWithGoogle(authCallbackUrl(destinationFromState(state)));
         } catch (submitError) {
             setError(authFailureMessage(submitError));

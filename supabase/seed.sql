@@ -8,11 +8,13 @@
 -- This is a destructive demo reset, not an incremental staging seed. Name the
 -- entire affected graph so adding a new foreign key makes this fail visibly
 -- rather than letting CASCADE erase a table nobody knew was in scope.
-truncate table public.order_events, public.order_addresses, public.order_items,
+truncate table public.order_reschedules, public.order_events, public.order_addresses, public.order_items,
                public.reviews, public.orders, public.memberships,
                public.cart_items, public.carts,
                public.slots, public.catalog_items, public.catalog_categories,
-               public.partner_tags, public.partner_hours, public.partners,
+               public.partner_tags, public.partner_hours, public.partner_service_areas,
+               public.partner_holiday_closures, public.partner_capacity_overrides,
+               public.partners,
                public.pincode_centroids restart identity;
 
 -- Pincode centroids: distance is measured from the searched pincode.
@@ -30,6 +32,11 @@ insert into public.partners (id, name, about, line1, line2, city, pincode, latit
     ('1004', 'FreshPress Studio', 'A pressing-first studio: everything comes back on a hanger, crease sharp.', '22, Station Road', '', 'Bengaluru', '560102', 12.913083, 77.666294, 36, false, false, 'https://images.unsplash.com/photo-1604176354204-9268737828e4?auto=format&fit=crop&w=600&q=80', 'A steam iron pressing a shirt', 4.6, 98),
     ('1005', 'AquaClean Services', 'Plant-based detergents and a water reclamation loop, without a premium for it.', '67, Green Avenue', 'Phase 2', 'Bengaluru', '560103', 12.911573, 77.65506, 24, true, false, 'https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?auto=format&fit=crop&w=600&q=80', 'Clothes tumbling inside a washing machine drum', 4.5, 156),
     ('1006', 'QuickWash Hub', 'A high-volume plant. Bulk loads welcome, priced by the piece all the same.', '101, Industrial Area', '', 'Bengaluru', '560104', 12.950168, 77.621718, 48, true, false, 'https://images.unsplash.com/photo-1545173168-9f1947eebb7f?auto=format&fit=crop&w=600&q=80', 'Industrial washing machines lined up in a row', 4.4, 73);
+
+-- Seeded laundries initially cover their own address pincode. Owner settings
+-- can add more without changing the public business address.
+insert into public.partner_service_areas (partner_id, pincode)
+select id, pincode from public.partners;
 
 insert into public.partner_tags (partner_id, tag) values
     ('1001', 'eco-friendly'),

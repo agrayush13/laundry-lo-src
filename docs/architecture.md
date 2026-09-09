@@ -1,7 +1,7 @@
 # laundrylo - architecture
 
-Status: **living document**. Describes the deployed full-stack topology,
-including authenticated customer writes. Pairs with
+Status: **living document**. Reviewed on 2026-09-09. Describes the deployed
+full-stack topology, including authenticated customer and owner writes. Pairs with
 [api-contract.md](./api-contract.md) and [schema.md](./schema.md).
 
 ---
@@ -18,6 +18,9 @@ flowchart LR
     SPA -->|sign in and refresh| Auth[Supabase Auth]
     Auth -->|access JWT| SPA
     SPA -->|Bearer JWT| API
+    SPA -->|sanitized page views and events| Analytics[Umami]
+    API -->|committed order event| Analytics
+    Analytics --> AnalyticsDB[(Analytics PostgreSQL)]
 ```
 
 The frontend is a static bundle - no server rendering. Dynamic marketplace data
@@ -30,7 +33,8 @@ verifies sessions but never receives or stores a password.
 
 React 18 + TypeScript, bundled with Webpack 5. Routing is react-router-dom v7,
 authentication uses `@supabase/supabase-js`, styling is SCSS Modules, and icons
-are lucide-react. No state library - React context covers what we need.
+are lucide-react. Cookieless product analytics uses a self-hosted Umami tracker.
+No state library - React context covers what we need.
 
 The journey at `/journey` adds GSAP with ScrollTrigger and Lenis, and a
 self-hosted Fraunces variable font. All three are scoped to that one route: the
@@ -82,14 +86,18 @@ Naming: components PascalCase, directories kebab-case, styles
 
 ### State
 
-| Concern                    | Where it lives | Persistence                                              |
-| -------------------------- | -------------- | -------------------------------------------------------- |
-| Guest cart                 | `CartContext`  | Versioned `localStorage`, merged after authentication    |
-| Signed-in cart and totals  | API/PostgreSQL | One active cart per account                              |
-| Profile, addresses, orders | API/PostgreSQL | Protected by user-scoped RLS                             |
-| Auth                       | Supabase Auth  | Short-lived access token plus rotated refresh session    |
-| Theme                      | `ThemeContext` | `localStorage`                                           |
-| Partners, slots            | API/PostgreSQL | Partner reads cached 5 min by the SW; slots never cached |
+| Concern                    | Where it lives | Persistence                                                  |
+| -------------------------- | -------------- | ------------------------------------------------------------ |
+| Guest cart                 | `CartContext`  | Versioned `localStorage`, merged after authentication        |
+| Signed-in cart and totals  | API/PostgreSQL | One active cart per account                                  |
+| Profile, addresses, orders | API/PostgreSQL | Protected by user-scoped RLS                                 |
+| Partner fulfilment queue   | API/PostgreSQL | Restricted to each partner's owner by RLS and API checks     |
+| Laundry configuration      | API/PostgreSQL | Owner-scoped profile, coverage, hours, closures and capacity |
+| Partner catalogue          | API/PostgreSQL | Owner-scoped service/item creation, pricing and visibility   |
+| Auth                       | Supabase Auth  | Short-lived access token plus rotated refresh session        |
+| Theme                      | `ThemeContext` | `localStorage`                                               |
+| Partners, slots            | API/PostgreSQL | Partner reads cached 5 min by the SW; slots never cached     |
+| Anonymous product usage    | Umami          | Sanitized routes/events in a separate analytics database     |
 
 `AuthContext` subscribes to Supabase's session lifecycle. It restores the
 session on startup, follows token refreshes, keeps the current access token in
@@ -125,11 +133,16 @@ matching carts take the larger quantity for each line.
 
 The homepage ships in the initial bundle; every other route, the journey
 included, is `React.lazy` behind a Suspense boundary in `Layout`. Webpack `splitChunks` separates vendor
-code. Protected routes (`profile`, `bookings`) sit behind a `ProtectedRoute`
-wrapper that waits for session restoration before redirecting. Sign-in and
-sign-up use the inverse guest-only guard. `/auth/callback` completes email and
-Google sign-in and permits only same-origin return paths; `/update-password`
-accepts only a Supabase password-recovery session.
+code. Protected routes (`profile`, `bookings`, `partner/orders`,
+`partner/settings` and `partner/catalogue`) sit behind a `ProtectedRoute`
+wrapper that waits for session
+restoration before redirecting. The partner portal does not trust a browser-side
+role: its first resource request is authorized by the API against
+`partners.owner_id`, and a signed-in non-owner receives a dedicated access
+state. Sign-in and sign-up use
+the inverse guest-only guard. `/auth/callback` completes email and Google sign-in
+and permits only same-origin return paths; `/update-password` accepts only a
+Supabase password-recovery session.
 
 `Layout` renders the shared header and footer for every route except
 `/journey`. The journey carries its own minimal header and its own footer, which
@@ -286,6 +299,22 @@ A class-component error boundary wraps the app and renders a branded fallback
 rather than a blank page. It uses the same design tokens as the rest of the app,
 so a crash still looks like laundrylo.
 
+### Analytics and privacy
+
+The Umami script is injected only when its host and website id are present. SPA
+page views are sent manually so order, address and partner ids can be replaced
+with route templates and all search input can be discarded except restricted
+standard UTM campaign tags. Product events contain only bounded aggregate or
+categorical properties. The app never identifies a Supabase user to Umami and
+respects the browser's Do Not Track setting.
+
+The client funnel explains discovery and drop-off. A separate API reporter emits
+`order_placed_server` only after a new idempotent database transaction commits,
+without account, order, partner, address or pincode identifiers. The call is
+best-effort and cannot change checkout. Application PostgreSQL remains the
+authority for orders and revenue; Umami is an operational view. See
+[analytics.md](./analytics.md) for the event catalogue and bot-analysis boundary.
+
 ### Testing
 
 Vitest + Testing Library, integration-first: tests drive real user journeys
@@ -308,10 +337,39 @@ one story twice, and them drifting apart would not look like a failure: it would
 look like a site that simply says two different things. See
 [journey.md](./journey.md) section 20.
 
+`PartnerPortal.test.tsx` drives the owner operations slice through its route
+guard, server-authorized access state, status filters, cursor pagination,
+daily operational summary, fulfilment detail and two-step lifecycle mutation. A
+conflict refreshes the order from the server instead of leaving the operator on
+stale state.
+
+`PartnerSettings.test.tsx` drives the owner configuration slice through the
+same route and server authorization boundaries, edits the listing and multiple
+service pincodes, changes availability, weekly hours, holiday closures and
+date-specific capacity, and proves that failed saves preserve the operator's
+draft.
+
+`PartnerCatalog.test.tsx` drives the owner catalogue slice through the protected
+route, creates canonical services and per-piece items, updates category and item
+copy, converts editable rupee values to integer paise, hides items without
+deleting them, rejects invalid local input and proves that failed saves preserve
+the operator's draft.
+
+`CustomerCancellation.test.tsx` verifies that only server-eligible orders show
+the cancellation action, requires an explicit confirmation, refreshes tracking
+after success and preserves the confirmation with a visible retryable error when
+the mutation fails.
+
+`CustomerRescheduling.test.tsx` drives the available-slot picker from tracking,
+requires both appointments and verifies the exact slot pair sent before the
+page refreshes to the new audited schedule.
+
 ## 3. Backend
 
 The deployed Hono service in [`api/`](../api/) serves partners, catalogues,
-slots, profiles, addresses, carts, orders and membership from PostgreSQL.
+slots, profiles, addresses, carts, orders, laundry-owner order queues,
+fulfilment events, laundry configuration and catalogue creation/maintenance, and
+membership from PostgreSQL.
 
 ### Why Supabase
 
@@ -350,13 +408,14 @@ mapping lives beside its transactional reads in `customerQueries.ts`.
 ### Database
 
 Built by `supabase/migrations/`, filled by `supabase/seed.sql`, documented in
-[schema.md](./schema.md). Six migrations: tables and enums, then RLS, then the
-derived pieces the listing needs - `pincode_centroids` and a haversine function
-for distance, the `partner_details` view deriving `services` and `startingPrice`
-from the catalogue, and `generate_slots`, which turns a partner's opening hours
-into bookable rows - followed by the constraints and grants that harden slot
-generation, followed by the catalogue vocabulary and opaque-id hardening, and
-finally the atomic customer write path and slot-rollover schedule.
+[schema.md](./schema.md). The migrations build tables and RLS first, then the
+derived listing and slot functions, catalogue and id hardening, the atomic
+customer write path, the partner order lifecycle, owner-managed laundry
+configuration and catalogue maintenance, shared multi-pincode service areas
+for discovery and checkout. The availability migrations add owner-scoped
+holiday closures and date-specific capacity. Slot generation consults both;
+effective opening state also consults closures. A later catalogue migration
+adds owner-scoped category/item creation and one canonical service per laundry.
 
 Two things are derived rather than stored, and that is the point of them:
 `Partner.services` is the distinct set of `catalog_categories.service`, and
@@ -393,6 +452,59 @@ both slots, snapshots the address and catalogue lines, records the first event,
 activates Plus when selected and clears the cart in one transaction. Direct
 order inserts remain unavailable to API roles.
 
+Customer cancellation uses `cancel_order`, another narrow database operation.
+It locks the caller's order and permits only service-only cash-on-pickup orders
+whose latest event is `placed` or `confirmed` and whose scheduled pickup is
+still in the future. Status, terminal tracking event and both slot reservations
+change atomically. The read model exposes `canCancel` from the same inputs; the
+mutation rechecks them under lock so a stale browser cannot override policy.
+
+Customer rescheduling uses `reschedule_order`. It locks the caller's order and
+all old/new slot rows in stable order, permits changes only at `placed` or
+`confirmed` before pickup, rejects unavailable or other-laundry slots, moves
+capacity and records immutable before/after slot references atomically. The
+read model exposes `canReschedule`; Plus-activation orders may reschedule because
+no membership or payment state is reversed.
+
+Fulfilment uses the equally narrow `advance_order` function. It verifies that
+the caller owns the order's laundry, locks the order, permits only the next event
+in the defined sequence, updates the denormalized status and appends the
+customer-visible tracking event atomically. Direct order updates and event
+inserts are unavailable to authenticated roles, so a browser cannot skip the
+workflow by bypassing the API.
+
+Laundry-owner order reads use the same caller-scoped transaction and RLS. The
+queue can span all laundries owned by the caller or filter by laundry and
+status, and uses opaque keyset cursors. It returns only the recipient name and
+pincode; phone and street details stay on the owner-checked detail endpoint. A
+separate summary query reports active work, confirmations, local-day pickups,
+deliveries and completions across the same owner scope.
+
+Laundry configuration uses the same ownership boundary. Authenticated owners
+have column-level update privileges only for public profile, address,
+turnaround and availability fields; ownership, ratings, imagery and other
+platform-managed columns remain unwritable. Weekly hours are replaced by a
+narrow security-definer function that validates ownership and the complete
+seven-day calendar. A changed calendar removes only future unbooked slots,
+blocks already-booked future capacity and generates a fresh 14-day window; an
+unchanged save leaves existing reservations and capacity untouched.
+Exceptional closures use a separate owner-scoped table and replacement
+function. The slot generator skips those local dates, the public listing closes
+for today's closure, and removing a closure safely refills the rolling horizon.
+Booked slots are retained but blocked so existing orders remain actionable.
+Date-specific capacity is another owner-scoped replacement set. It changes the
+limit on existing future windows and future generation, rejects reductions below
+booked demand, and restores the default of eight when removed.
+
+Catalogue writes are similarly narrow. Owners create an unused canonical
+service or add an item through security-definer functions that lock the owning
+partner/category and assign the next display position. New items are fixed to
+INR and the launch `piece` unit with a safe generic icon. Normal updates expose
+only category names and item names, descriptions, integer-paise prices and
+active state. Canonical-service changes, moves, currency/unit/icon/order edits
+and deletion remain unavailable. Deactivation removes an item from public reads
+while preserving cart foreign keys and historical order snapshots.
+
 ### What the server owns
 
 The server owns the following business invariants; the browser renders their
@@ -400,14 +512,25 @@ results rather than reimplementing them.
 
 - **Money.** Subtotals, tax, delivery fees and membership discounts are computed
   server-side and returned. The client renders what it is given.
-- **Availability.** Slot capacity, partner hours and holidays. Booking increments
-  the slot count inside the order transaction, so `409 SLOT_UNAVAILABLE` is
-  truthful under concurrency. A slot that has already started is reported
-  unavailable rather than hidden, so the client has one rule to render.
-- **`isOpen`.** Manual toggle plus optional auto-scheduling from opening hours,
-  resolved by `is_partner_open` at query time.
+- **Availability.** Slot capacity, owner date overrides, partner hours and
+  holidays. Booking increments the slot count inside the order transaction, so
+  `409 SLOT_UNAVAILABLE` is truthful under concurrency. A slot that has already
+  started is reported unavailable rather than hidden, so the client has one
+  rule to render.
+- **`isOpen`.** Manual toggle plus today's exceptional closure and optional
+  auto-scheduling from opening hours, resolved by `is_partner_open` at query
+  time.
 - **Order history.** Item names, prices and addresses are snapshotted onto the
   order at placement so later edits never rewrite the past.
+- **Order progression.** Laundry owners can advance only their own orders and
+  only one lifecycle step at a time; concurrent repeats create one event.
+- **Customer cancellation.** An eligible customer can cancel before pickup;
+  concurrent attempts produce one terminal event and release capacity once.
+- **Customer rescheduling.** An eligible customer can move both appointments
+  before pickup; old/new capacity and the audit record change once.
+- **Fulfilment access.** Partner queues and order details are resolved against
+  `owns_partner`; another partner and the customer-facing session cannot use
+  those operational reads.
 
 ### What the client owns
 
@@ -446,15 +569,20 @@ The production system has three deployable parts:
 1. **Frontend:** build `ui/` and publish `ui/dist` to Netlify. The generated
    `_redirects` contains the SPA fallback; the edge configuration must forward
    `/api/*` to the Node service before that fallback runs. The build receives
-   only `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`.
+   Supabase browser values plus `UMAMI_HOST_URL`, `UMAMI_WEBSITE_ID` and
+   `UMAMI_DOMAINS`.
 2. **API:** run the compiled `api/dist/index.js` as a long-lived Node 22 service.
    Set `DATABASE_URL`, `SUPABASE_URL`, `NODE_ENV=production`, the platform's
    `PORT`, and the permitted `CORS_ORIGINS`. Hosted Supabase uses JWKS, so
-   `SUPABASE_JWT_SECRET` stays unset.
+   `SUPABASE_JWT_SECRET` stays unset. Give it the Umami host, website id and
+   public app hostname for server-confirmed order events.
 3. **Supabase:** apply migrations before the API version that requires them,
    set the production site and callback/recovery redirects, configure SMTP,
    enable email confirmation and Google, and keep provider secrets in Supabase
    rather than the repository.
+4. **Umami:** run the open-source service against a separate PostgreSQL
+   database, keep its bot check enabled, restrict its dashboard and apply the
+   retention/backup policy in [analytics.md](./analytics.md).
 
 The API database login is not the schema owner. It is granted only the ability
 to assume `anon` and `authenticated`, so every request must pass through
@@ -463,11 +591,19 @@ readiness probe and returns `503` when the database cannot be reached.
 
 ## 6. Known gaps
 
-- No analytics, no error reporting service.
-- No partner admin panel, so `is_open`, hours and catalogs have no editor.
+- Analytics is implemented but still depends on a configured Umami production
+  instance; no exception-reporting service is connected.
+- The partner portal covers fulfilment, profile, multi-pincode coverage,
+  `is_open`, turnaround, weekly hours, holiday closures, date-specific capacity
+  and catalogue service/item creation and maintenance. Staffing, assignment,
+  other exceptions and onboarding remain.
 - Images are Unsplash URLs rather than owned assets.
 - Cash on pickup only; no payment integration.
-- Serviceability still needs the operational choice between exact-pincode and
-  distance-radius coverage before checkout can enforce it.
+- Self-service cancellation covers service-only orders and rescheduling covers
+  eligible orders before pickup. Plus reversal, partner cancellation, failed
+  pickup and post-pickup exceptions remain support/operations policy work.
+- Serviceability uses the same owner-managed exact-pincode coverage table in
+  marketplace search and order placement. Radius or polygon coverage remains a
+  future option if exact pincodes become operationally insufficient.
 - The API has a per-instance order-write limiter; production should also keep a
   shared edge limiter across instances.

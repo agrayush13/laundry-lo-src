@@ -284,6 +284,130 @@ describe('cart, membership and order placement', () => {
         await request('DELETE', '/api/v1/cart', undefined, authorization);
     });
 
+    it('rejects an uncovered address and accepts it after that pincode enters the service area', async () => {
+        const cartResponse = await request(
+            'PUT',
+            '/api/v1/cart/items/itm_1001_wf-shirt',
+            { quantity: 1 },
+            authorization
+        );
+        const cart = cartResponse.body as Cart;
+        const addressResponse = await request(
+            'POST',
+            '/api/v1/addresses',
+            {
+                label: 'Outside service area',
+                recipientName: 'Customer One',
+                phone: '+91 90000 00000',
+                building: '10',
+                street: 'HSR Layout',
+                landmark: '',
+                pincode: '560102',
+                isDefault: false,
+            },
+            authorization
+        );
+        const addressId = (addressResponse.body as SavedAddress).id;
+        const key = '22222222-3333-4444-8555-666666666666';
+        let placedOrderId: string | null = null;
+
+        await pool.query(
+            `insert into public.slots
+                (id, partner_id, starts_at, ends_at, capacity, booked, state)
+             values
+                ('slt_test_service_pickup', '1001', now() + interval '39 days',
+                 now() + interval '39 days 2 hours', 1, 0, 'open'),
+                ('slt_test_service_delivery', '1001', now() + interval '39 days 4 hours',
+                 now() + interval '39 days 6 hours', 1, 0, 'open')`
+        );
+
+        try {
+            const failed = await request(
+                'POST',
+                '/api/v1/orders',
+                {
+                    cartId: cart.id,
+                    addressId,
+                    pickupSlotId: 'slt_test_service_pickup',
+                    deliverySlotId: 'slt_test_service_delivery',
+                    paymentMethod: 'cash_on_pickup',
+                },
+                { ...authorization, 'Idempotency-Key': key }
+            );
+            expect(failed.status).toBe(409);
+            expect(failed.body).toMatchObject({
+                error: {
+                    code: 'ADDRESS_NOT_SERVICEABLE',
+                    message: 'That laundry does not currently serve the selected address pincode.',
+                },
+            });
+
+            const preserved = await get('/api/v1/cart', authorization);
+            expect(preserved.body).toMatchObject({ id: cart.id, items: [{ quantity: 1 }] });
+            const slots = await pool.query<{ booked: number }>(
+                `select booked from public.slots
+                 where id in ('slt_test_service_pickup', 'slt_test_service_delivery')
+                 order by id`
+            );
+            expect(slots.rows).toEqual([{ booked: 0 }, { booked: 0 }]);
+            const orders = await pool.query<{ count: string }>(
+                'select count(*) from public.orders where user_id = $1 and idempotency_key = $2',
+                [CUSTOMER, key]
+            );
+            expect(orders.rows[0]?.count).toBe('0');
+
+            await pool.query(
+                `insert into public.partner_service_areas (partner_id, pincode)
+                 values ('1001', '560102')`
+            );
+            const accepted = await request(
+                'POST',
+                '/api/v1/orders',
+                {
+                    cartId: cart.id,
+                    addressId,
+                    pickupSlotId: 'slt_test_service_pickup',
+                    deliverySlotId: 'slt_test_service_delivery',
+                    paymentMethod: 'cash_on_pickup',
+                },
+                {
+                    ...authorization,
+                    'Idempotency-Key': '22222222-3333-4444-8555-777777777777',
+                }
+            );
+            expect(accepted.status).toBe(201);
+            expect(accepted.body).toMatchObject({
+                deliveryAddress: { pincode: '560102' },
+                partner: { id: '1001' },
+            });
+            placedOrderId = (accepted.body as Order).id;
+
+            const reserved = await pool.query<{ booked: number; state: string }>(
+                `select booked, state from public.slots
+                 where id in ('slt_test_service_pickup', 'slt_test_service_delivery')
+                 order by id`
+            );
+            expect(reserved.rows).toEqual([
+                { booked: 1, state: 'full' },
+                { booked: 1, state: 'full' },
+            ]);
+        } finally {
+            if (placedOrderId) {
+                await pool.query('delete from public.orders where id = $1', [placedOrderId]);
+            }
+            await pool.query(
+                `delete from public.partner_service_areas
+                 where partner_id = '1001' and pincode = '560102'`
+            );
+            await request('DELETE', '/api/v1/cart', undefined, authorization);
+            await request('DELETE', `/api/v1/addresses/${addressId}`, undefined, authorization);
+            await pool.query(
+                `delete from public.slots
+                 where id in ('slt_test_service_pickup', 'slt_test_service_delivery')`
+            );
+        }
+    });
+
     it('keeps the cart and rolls back every write when a slot is unavailable', async () => {
         const cartResponse = await request(
             'PUT',
@@ -338,12 +462,10 @@ describe('cart, membership and order placement', () => {
 
     it('refuses to silently omit a cart item that became unavailable', async () => {
         await pool.query(
-            `insert into public.catalog_categories (id, partner_id, service, name, position)
-             values ('cat_test_stale', '1001', 'wash-fold', 'Temporary test category', 999);
-             insert into public.catalog_items
+            `insert into public.catalog_items
                  (id, category_id, name, price, unit, icon_key, position)
              values
-                 ('itm_test_stale', 'cat_test_stale', 'Temporary test item', 2500,
+                 ('itm_test_stale', 'cat_1001_wash-fold', 'Temporary test item', 2500,
                   'piece', 'shirt', 999)`
         );
 
@@ -405,7 +527,7 @@ describe('cart, membership and order placement', () => {
             await pool.query(
                 `delete from public.slots
                  where id in ('slt_test_stale_pickup', 'slt_test_stale_delivery');
-                 delete from public.catalog_categories where id = 'cat_test_stale'`
+                 delete from public.catalog_items where id = 'itm_test_stale'`
             );
         }
     });

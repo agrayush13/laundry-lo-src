@@ -24,6 +24,10 @@ export const TERMS_COPY = {
             'physical pickup, laundry service, payment or partner fulfilment takes place.',
         'Account, address and order details are stored through Supabase and PostgreSQL. ' +
             'Use demonstration details rather than sensitive personal information.',
+        'Anonymous, cookieless usage analytics records sanitized page paths and product-flow ' +
+            'events when configured. Entered pincodes, names, email addresses, phone numbers, ' +
+            'delivery addresses and order identifiers are not sent, and browser Do Not Track ' +
+            'preferences are respected.',
     ],
 } as const;
 

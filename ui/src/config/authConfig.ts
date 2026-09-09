@@ -5,7 +5,7 @@ export const AUTH_COPY = {
     genericError: 'Authentication failed. Please try again.',
     signIn: {
         title: 'Welcome back',
-        subtitle: 'Sign in to manage your bookings',
+        subtitle: 'Sign in to manage your account',
         submit: 'Sign In',
         forgot: 'Forgot password?',
         switchPrompt: "Don't have an account?",
@@ -14,7 +14,7 @@ export const AUTH_COPY = {
     },
     signUp: {
         title: 'Create your account',
-        subtitle: 'Book your first pickup in under a minute',
+        subtitle: 'Create your account and continue to booking',
         submit: 'Create Account',
         switchPrompt: 'Already have an account?',
         switchAction: 'Sign in',

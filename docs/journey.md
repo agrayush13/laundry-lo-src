@@ -4,7 +4,7 @@ Status: **living document**. Design decisions settled 2026-07-21, build decision
 settled 2026-08-24, split out of the homepage 2026-08-25. This is the
 authoritative reference for the journey: it supersedes the v1 design doc, the six
 section briefs and the three iteration docs, whose surviving content is merged
-here.
+here. Reviewed against the current implementation on 2026-09-09.
 
 The journey lives at `/journey`. It was built as a replacement homepage and is
 not one: the marketing homepage at `/` stays exactly as it was, and this is the
@@ -44,12 +44,17 @@ slowed further than that on their own account, and the detergent now dissolves
 instead of staying in the drum (section 6.3.6). The scroll no longer touches the
 S3 figures at all (section 8.2).
 
+**v2.6 changes:** the fold documents the three benefits actually enforced by
+checkout, the fold and delivery descriptions reflect their scrubbed holds, and
+the product summary says ratings rather than promising review content that is
+not yet available.
+
 ---
 
 ## 1. Product context
 
 laundrylo is a laundry marketplace for Bengaluru, Zomato-shaped: compare local
-laundries, read reviews, book a pickup. The platform owns delivery, partner
+laundries and ratings, book a pickup. The platform owns delivery, partner
 laundries clean. The app (listings, booking flow, My Bookings) lives behind
 "Find laundries"; the marketing homepage at `/` is the front door, and this
 journey is the URL-only design showcase beside it.
@@ -182,16 +187,16 @@ navigation and remains available by direct URL.
 ```
 DESKTOP (rest state)
 +-------------------------------------------------------------+
-| laundrylo.                              how it works   o    |
+| laundrylo.                                     tour   o    |
 |                                                             |
 |   BENGALURU . PICKUP & DELIVERY         +----------------+  |
 |                                         |  o          .  |  |
 |   Another weekend,                      |                |  |
 |   los[TEE] to [SOCK]aundry.             |    ,------.    |  |
 |                                         |   ( glass  )   |  |
-|   Compare local laundries, read         |    `------'    |  |
-|   reviews, book a pickup. Clean         |                |  |
-|   clothes back in 24 hours.             |  ==========    |  |
+|   Compare local laundries and ratings,  |    `------'    |  |
+|   book a pickup. Clean clothes back     |                |  |
+|   in 24 hours.                          |  ==========    |  |
 |                                         +----------------+  |
 |   [ 560103 ] [ Find laundries -> ]         ~~~ shadow ~~~   |
 |   free pickup . 24h turnaround . price shown up front       |
@@ -204,7 +209,7 @@ DESKTOP (rest state)
 ### 6.1 Rest state (static, instant paint)
 
 Two columns, left roughly 55 to 60%: eyebrow "BENGALURU · PICKUP & DELIVERY";
-headline; sub-line "Compare local laundries, read reviews, book a pickup. Clean
+headline; sub-line "Compare local laundries and ratings, book a pickup. Clean
 clothes back in 24 hours."; pin input (placeholder 560103) and "Find laundries";
 micro-line "free pickup · 24h turnaround · price shown up front".
 
@@ -554,8 +559,8 @@ DESKTOP beat 1 (press)          DESKTOP beat 3 (folded)
 |   +--------------------+ |    |                          |
 |   | ~ wrinkled shirt ~ | |    |      +-----------+       |
 |   | +----+----+------+ | |    |      | laundrylo |       |
-|   | |free|10% |prior-| | |    |      |   plus    |       |
-|   | |pick|off |ity   | | |    |      +-----+-----+       |
+|   | |10% |one |clear | | |    |      |   plus    |       |
+|   | |off |month|price| | |    |      +-----+-----+       |
 |   | +----+----+------+ | |    |            | (string)    |
 |   | |  CHEST PANEL   | | |    |         +--+---+         |
 |   | +----------------+ | |    |         |₹99/mo|  tag    |
@@ -595,19 +600,19 @@ the iron's own body, on its own repeating loop rather than on the scrubbed
 timeline. It was drawn above the handle and scrubbed, which made it a wisp glued
 to a lump of metal that shrank back into the nozzle on the way up.
 
-**10.3 Beat 2, the fold (trigger based, about 800ms).** The pressed shirt lies as
-four visible panels: **three carry one benefit each** (free pickup on every
-order, 10% off all services, priority pickup slots) and **the fourth is the chest
-panel.** Fold order as with a real shirt: left in, right over, bottom up, each a
-clean rotation on its crease with flat-tone underside shading, landing with a
-tiny crease-press settle. **Folded, the chest shows "laundrylo plus"** like a
-printed tee, with "laundrylo" in the logo treatment and "plus" in Fraunces italic
-amber. Creases stay faintly visible.
+**10.3 Beat 2, the fold (pinned, scrubbed and reversible).** The pressed shirt
+lies as four visible panels: **three carry one implemented benefit each** (10%
+off eligible services, one-month access and clear itemized checkout pricing)
+and **the fourth is the chest panel.** Fold order as with a real shirt: left in,
+right over, bottom up, each a clean rotation on its crease with flat-tone
+underside shading, landing with a tiny crease-press settle. **Folded, the chest
+shows "laundrylo plus"** like a printed tee, with "laundrylo" in the logo
+treatment and "plus" in Fraunces italic amber. Creases stay faintly visible.
 
-Trigger based rather than scrubbed: three sequential folds inside a single
-viewport scrub badly, and the fold reads as a mechanism rather than a scroll
-readout. Reversal on scroll up still unfolds, and irons the creases back in;
-steam does not rewind, because it never sat on the timeline in the first place.
+The fold shares the page's pin-and-scrub model. Its hold is the longest because
+three iron crossings and three sequential folds need room to remain legible.
+Scrolling up unfolds the panels and irons the creases back in; steam does not
+rewind because it runs on its own clock only while the section is active.
 
 Per rule 4.9, **no content straddles a crease.** The v2.1 design had ₹99/month
 and the CTA split across the vertical crease; in the shirt version they move to
@@ -641,8 +646,8 @@ DESKTOP (full viewport, scene block vertically centred)
 |                                        +-----------+ +---+  |
 |                                          ~~ shadow ~~       |
 | ----------------------------------------------------------- |
-| laundrylo.   how it works . services . plus . terms .       |
-|                                              github         |
+| laundrylo.   home . services . plus . terms . github        |
+|                                                             |
 | a demo project by ayush, not a real service.                |
 |                        (o)  (c) 2026 laundrylo . back to top|
 +-------------------------------------------------------------+
@@ -691,21 +696,22 @@ once more (the same component, section 5.4). The tag reads "built by ayush",
 links to GitHub, with an outbound arrow.
 
 **11.4 Zone 2, the footer row.** One hairline rule (the page's only divider, rule
-4.8); a small logo lockup; links with real destinations only: how it works
-(anchors to S4), services (`/laundries`), plus (`/plus`), terms (`/terms`, a stub
-page), github. The disclaimer is set plainly and unmissably:
+4.8); a small logo lockup; links with real destinations only: home (`/`),
+services (`/laundries`), plus (`/plus`), terms (`/terms`) and github. The
+disclaimer is set plainly and unmissably:
 **"a demo project by ayush, not a real service."** It is the honesty rule's
 counterweight to the S3 figures, so it does not get set in fine print. Then
 (c) 2026 laundrylo and a "back to the start" text link. No socials, no careers,
 blog or press, no newsletter, no app badges, no invented company info.
 
-**11.5 Arrival (trigger based, about 1s, plays once).** The box eases in from the
+**11.5 Arrival (pinned, scrubbed and reversible).** The box eases in from the
 right and settles, the stack builds layer by layer with quick crease-press drops
 (top last), the tag swings down through one pendulum swing and the peg clicks,
 the sign-off resolves, and **the progress dial completes** with a quiet settle.
-Rest: still, except the tag's 2-degree idle drift. Hovers: the tag lifts and
-straightens, the top stack layer gives a tiny press, standard link underlines. No
-back-to-top rocket; scrolling back up through the cycle IS the return trip.
+Reversing through the short final hold returns the scene cleanly. Rest is still;
+hovers lift and straighten the tag, press the top stack layer, and underline
+links. No back-to-top rocket; scrolling back up through the cycle IS the return
+trip.
 
 ---
 
@@ -784,11 +790,11 @@ it stays legible. Assembly still scrubs, and the breeze runs while the section
 is held exactly as it does on a desktop: it is weather, not an interaction, so
 there is nothing to make discoverable. Shadows persist but are static.
 
-**14.6 S5 mobile.** The shirt folds in a simpler **two-step** (halves, not
-quarters) if four panels crowd the narrow screen: benefits ride the upper half,
-the chest panel the lower. The iron pass shortens to one sweep. The swing tag
-hangs below and to the right of the folded shirt rather than beside it. The CTA
-is full width beneath the tag if the tag's own button falls below 44px.
+**14.6 S5 mobile.** The same three iron crossings and left, right, bottom fold
+sequence remain, with a shorter mobile hold and the stage scaled to the narrow
+screen. The swing tag moves below the folded shirt rather than sitting beside
+it, while every benefit remains available as real hidden text for assistive
+technology.
 
 **14.7 S6 mobile.** Vertical order: eyebrow, "Cycle complete.", sub-line, input,
 CTA, box scene (centred, about 70% width), hairline, footer links (two rows,
@@ -885,7 +891,8 @@ key without jumping.
 
 **S6:** full viewport, the stack sits inside the box (the front panel occludes),
 flaps read as separate planes, the sock is recognizable, tag, peg and string are
-connected, arrival plays once, the dial completes, every link resolves.
+connected, arrival scrubs and reverses cleanly, the dial completes, every link
+resolves.
 
 **Global:** no separators anywhere, reduced-motion parity, 60fps, no real blur in
 motion, the mobile spec (section 14) satisfied per section, and the journey
@@ -925,9 +932,9 @@ Settled 2026-08-24, before implementation.
    payload unchanged.
 9. **S4 wind: a verlet rope with path displacement.** Roughly 80% of a cloth sim
    at a fraction of the cost, and it degrades cleanly to CSS sway.
-10. **S5 fold: trigger based, about 800ms.** Three sequential folds inside one
-    viewport scrub badly, and the fold reads better as a mechanism than as a
-    scroll readout.
+10. **Superseded: the S5 fold was initially trigger based.** Decision 16 replaced
+    that mixed model with the shared pin-and-scrub timeline. The longer hold now
+    gives the three crossings and sequential folds enough room to read.
 11. **S3 keeps the drum at its centre**, and the corner dial hides while S3 is in
     view. The drum is the centrifuge's axis; two water circles at once read as a
     bug.
