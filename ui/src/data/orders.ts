@@ -54,12 +54,27 @@ export interface Order {
     status: OrderStatus;
     /** Server-evaluated cancellation policy; never inferred from display state. */
     canCancel: boolean;
+    /** Server-evaluated schedule-change policy; never inferred from display state. */
+    canReschedule: boolean;
     placedAt: string;
     partner: { id: string; name: string };
     lines: OrderLine[];
     totals: OrderTotals;
     deliveryAddress: OrderAddress;
+    pickup: { date: string; startsAt: string; endsAt: string };
+    delivery: { date: string; startsAt: string; endsAt: string };
     events: OrderEvent[];
+    reschedules: Array<{
+        occurredAt: string;
+        previous: {
+            pickup: { startsAt: string; endsAt: string };
+            delivery: { startsAt: string; endsAt: string };
+        };
+        updated: {
+            pickup: { startsAt: string; endsAt: string };
+            delivery: { startsAt: string; endsAt: string };
+        };
+    }>;
 }
 
 // Matches the account's saved Home address, and sits in a pincode the seeded
@@ -89,6 +104,7 @@ export const ORDERS: Order[] = [
         reference: 'LL-2026-001',
         status: 'processing',
         canCancel: false,
+        canReschedule: false,
         placedAt: '2026-08-20T05:00:00Z',
         partner: { id: '1001', name: 'SparkleWash Express' },
         lines: [
@@ -109,17 +125,29 @@ export const ORDERS: Order[] = [
         ],
         totals: totalsFor(rupees(498)),
         deliveryAddress: HOME,
+        pickup: {
+            date: '2026-08-20',
+            startsAt: '2026-08-20T08:30:00Z',
+            endsAt: '2026-08-20T10:30:00Z',
+        },
+        delivery: {
+            date: '2026-08-22',
+            startsAt: '2026-08-22T08:30:00Z',
+            endsAt: '2026-08-22T10:30:00Z',
+        },
         events: [
             { type: 'placed', occurredAt: '2026-08-20T05:00:00Z' },
             { type: 'confirmed', occurredAt: '2026-08-20T05:15:00Z' },
             { type: 'picked_up', occurredAt: '2026-08-20T08:30:00Z' },
         ],
+        reschedules: [],
     },
     {
         id: 'ord_01J8XR7M5BD9',
         reference: 'LL-2026-002',
         status: 'out_for_delivery',
         canCancel: false,
+        canReschedule: false,
         placedAt: '2026-08-19T06:20:00Z',
         partner: { id: '1003', name: 'Royal Dry Cleaners' },
         lines: [
@@ -140,6 +168,16 @@ export const ORDERS: Order[] = [
         ],
         totals: totalsFor(rupees(846)),
         deliveryAddress: HOME,
+        pickup: {
+            date: '2026-08-19',
+            startsAt: '2026-08-19T10:00:00Z',
+            endsAt: '2026-08-19T12:00:00Z',
+        },
+        delivery: {
+            date: '2026-08-21',
+            startsAt: '2026-08-21T03:30:00Z',
+            endsAt: '2026-08-21T05:30:00Z',
+        },
         events: [
             { type: 'placed', occurredAt: '2026-08-19T06:20:00Z' },
             { type: 'confirmed', occurredAt: '2026-08-19T06:40:00Z' },
@@ -147,12 +185,14 @@ export const ORDERS: Order[] = [
             { type: 'in_progress', occurredAt: '2026-08-20T07:30:00Z' },
             { type: 'out_for_delivery', occurredAt: '2026-08-21T03:30:00Z' },
         ],
+        reschedules: [],
     },
     {
         id: 'ord_01J8XRB1N4TC',
         reference: 'LL-2026-003',
         status: 'delivered',
         canCancel: false,
+        canReschedule: false,
         placedAt: '2026-08-15T05:30:00Z',
         partner: { id: '1002', name: 'CleanFold Laundry' },
         lines: [
@@ -166,6 +206,16 @@ export const ORDERS: Order[] = [
         ],
         totals: totalsFor(rupees(160)),
         deliveryAddress: HOME,
+        pickup: {
+            date: '2026-08-15',
+            startsAt: '2026-08-15T09:30:00Z',
+            endsAt: '2026-08-15T11:30:00Z',
+        },
+        delivery: {
+            date: '2026-08-17',
+            startsAt: '2026-08-17T10:30:00Z',
+            endsAt: '2026-08-17T12:30:00Z',
+        },
         events: [
             { type: 'placed', occurredAt: '2026-08-15T05:30:00Z' },
             { type: 'confirmed', occurredAt: '2026-08-15T05:50:00Z' },
@@ -174,6 +224,7 @@ export const ORDERS: Order[] = [
             { type: 'out_for_delivery', occurredAt: '2026-08-17T03:30:00Z' },
             { type: 'delivered', occurredAt: '2026-08-17T12:10:00Z' },
         ],
+        reschedules: [],
     },
 ];
 

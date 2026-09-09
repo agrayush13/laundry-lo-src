@@ -462,12 +462,10 @@ describe('cart, membership and order placement', () => {
 
     it('refuses to silently omit a cart item that became unavailable', async () => {
         await pool.query(
-            `insert into public.catalog_categories (id, partner_id, service, name, position)
-             values ('cat_test_stale', '1001', 'wash-fold', 'Temporary test category', 999);
-             insert into public.catalog_items
+            `insert into public.catalog_items
                  (id, category_id, name, price, unit, icon_key, position)
              values
-                 ('itm_test_stale', 'cat_test_stale', 'Temporary test item', 2500,
+                 ('itm_test_stale', 'cat_1001_wash-fold', 'Temporary test item', 2500,
                   'piece', 'shirt', 999)`
         );
 
@@ -529,7 +527,7 @@ describe('cart, membership and order placement', () => {
             await pool.query(
                 `delete from public.slots
                  where id in ('slt_test_stale_pickup', 'slt_test_stale_delivery');
-                 delete from public.catalog_categories where id = 'cat_test_stale'`
+                 delete from public.catalog_items where id = 'itm_test_stale'`
             );
         }
     });

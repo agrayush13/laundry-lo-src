@@ -131,6 +131,34 @@ const readOrder = async (
          where order_id = $1 order by occurred_at, id`,
         [orderId]
     );
+    const reschedules = await client.query<{
+        created_at: Date;
+        previous_pickup_starts_at: Date;
+        previous_pickup_ends_at: Date;
+        previous_delivery_starts_at: Date;
+        previous_delivery_ends_at: Date;
+        new_pickup_starts_at: Date;
+        new_pickup_ends_at: Date;
+        new_delivery_starts_at: Date;
+        new_delivery_ends_at: Date;
+    }>(
+        `select r.created_at,
+                previous_pickup.starts_at as previous_pickup_starts_at,
+                previous_pickup.ends_at as previous_pickup_ends_at,
+                previous_delivery.starts_at as previous_delivery_starts_at,
+                previous_delivery.ends_at as previous_delivery_ends_at,
+                new_pickup.starts_at as new_pickup_starts_at,
+                new_pickup.ends_at as new_pickup_ends_at,
+                new_delivery.starts_at as new_delivery_starts_at,
+                new_delivery.ends_at as new_delivery_ends_at
+         from public.order_reschedules r
+         join public.slots previous_pickup on previous_pickup.id = r.previous_pickup_id
+         join public.slots previous_delivery on previous_delivery.id = r.previous_delivery_id
+         join public.slots new_pickup on new_pickup.id = r.new_pickup_id
+         join public.slots new_delivery on new_delivery.id = r.new_delivery_id
+         where r.order_id = $1 order by r.created_at, r.id`,
+        [orderId]
+    );
     const address = addresses.rows[0];
     if (!address) return null;
     const latestEvent = events.rows[events.rows.length - 1]?.type;
@@ -140,12 +168,17 @@ const readOrder = async (
         row.pickup_not_started &&
         row.payment_method === 'cash_on_pickup' &&
         row.membership_fee === 0;
+    const canReschedule =
+        row.status === 'processing' &&
+        (latestEvent === 'placed' || latestEvent === 'confirmed') &&
+        row.pickup_not_started;
 
     return {
         id: row.id,
         reference: row.reference,
         status: row.status,
         canCancel,
+        canReschedule,
         placedAt: row.placed_at.toISOString(),
         partner: { id: row.partner_id, name: row.partner_name },
         lines: lines.rows.map((line) => ({
@@ -185,6 +218,29 @@ const readOrder = async (
         events: events.rows.map((event) => ({
             type: event.type,
             occurredAt: event.occurred_at.toISOString(),
+        })),
+        reschedules: reschedules.rows.map((reschedule) => ({
+            occurredAt: reschedule.created_at.toISOString(),
+            previous: {
+                pickup: {
+                    startsAt: reschedule.previous_pickup_starts_at.toISOString(),
+                    endsAt: reschedule.previous_pickup_ends_at.toISOString(),
+                },
+                delivery: {
+                    startsAt: reschedule.previous_delivery_starts_at.toISOString(),
+                    endsAt: reschedule.previous_delivery_ends_at.toISOString(),
+                },
+            },
+            updated: {
+                pickup: {
+                    startsAt: reschedule.new_pickup_starts_at.toISOString(),
+                    endsAt: reschedule.new_pickup_ends_at.toISOString(),
+                },
+                delivery: {
+                    startsAt: reschedule.new_delivery_starts_at.toISOString(),
+                    endsAt: reschedule.new_delivery_ends_at.toISOString(),
+                },
+            },
         })),
     };
 };

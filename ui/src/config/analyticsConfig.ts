@@ -34,6 +34,7 @@ export const ANALYTICS_EVENTS = {
     orderPlaced: 'order_placed',
     orderTrackingViewed: 'order_tracking_viewed',
     orderCancelled: 'order_cancelled',
+    orderRescheduled: 'order_rescheduled',
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

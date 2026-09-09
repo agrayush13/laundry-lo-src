@@ -47,6 +47,23 @@ export const ORDERS_COPY = {
     confirmCancellation: 'Yes, cancel order',
     cancelling: 'Cancelling…',
     cancellationFallback: 'The order could not be cancelled. Try again.',
+    scheduleTitle: 'Pickup and delivery',
+    pickup: 'Pickup',
+    delivery: 'Delivery',
+    scheduleChanged: 'Schedule last changed',
+    reschedulingTitle: 'Need a different time?',
+    reschedulingPolicy: 'You can move both appointments to available times until pickup begins.',
+    changeSchedule: 'Change schedule',
+    choosePickup: 'Choose a new pickup',
+    chooseDelivery: 'Choose a new delivery',
+    loadingSchedule: 'Loading available times…',
+    noReschedulingSlots: 'No alternate times are available in the next two weeks.',
+    chooseReschedulingSlots: 'Choose both a pickup and delivery time.',
+    saveSchedule: 'Save new schedule',
+    savingSchedule: 'Saving…',
+    keepSchedule: 'Keep current schedule',
+    retrySchedule: 'Try loading times again',
+    reschedulingFallback: 'The schedule could not be changed. Try again.',
 } as const;
 
 export const PLUS_COPY = {

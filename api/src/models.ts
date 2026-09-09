@@ -211,6 +211,7 @@ export interface Order {
     reference: string;
     status: OrderStatus;
     canCancel: boolean;
+    canReschedule: boolean;
     placedAt: string;
     partner: { id: string; name: string };
     lines: Array<{
@@ -233,6 +234,17 @@ export interface Order {
     pickup: { date: string; startsAt: string; endsAt: string };
     delivery: { date: string; startsAt: string; endsAt: string };
     events: Array<{ type: OrderEventType; occurredAt: string }>;
+    reschedules: Array<{
+        occurredAt: string;
+        previous: {
+            pickup: { startsAt: string; endsAt: string };
+            delivery: { startsAt: string; endsAt: string };
+        };
+        updated: {
+            pickup: { startsAt: string; endsAt: string };
+            delivery: { startsAt: string; endsAt: string };
+        };
+    }>;
 }
 
 export interface PartnerOrderSummary {

@@ -9,12 +9,22 @@ import { BRAND, ICON_SIZE } from '../../config/brandConfig';
 import { ORDERS_COPY } from '../../config/cartConfig';
 import { ROUTES } from '../../config/navigationConfig';
 import { useOrder } from '../../hooks/useOrder';
+import { formatEventTime, formatSlotRange, formatTimestampDate } from '../../utils/datesUtils';
 import { buildTimeline, formatOrderAddress } from '../../utils/ordersUtils';
+import SlotPicker from '../checkout/SlotPicker';
 import StatusBadge from './StatusBadge';
 import styles from './bookings.module.scss';
 
 const OrderDetailPage: React.FC = () => {
     const state = useOrder();
+    const availableScheduleStarts = (state.scheduleDays ?? []).flatMap((day) =>
+        day.slots.filter((slot) => slot.available).map((slot) => slot.startsAt)
+    );
+    const hasReschedulingPair = availableScheduleStarts.some((pickupStartsAt) =>
+        availableScheduleStarts.some(
+            (deliveryStartsAt) => Date.parse(deliveryStartsAt) > Date.parse(pickupStartsAt)
+        )
+    );
 
     if (state.error?.code === 'NOT_FOUND') {
         return (
@@ -76,6 +86,40 @@ const OrderDetailPage: React.FC = () => {
                                     </li>
                                 ))}
                             </ol>
+                        </section>
+
+                        <section className={`card ${styles.orderCard}`}>
+                            <h2 className={styles.orderHeading}>{ORDERS_COPY.scheduleTitle}</h2>
+                            <dl className={styles.orderSchedule}>
+                                <div>
+                                    <dt>{ORDERS_COPY.pickup}</dt>
+                                    <dd>
+                                        {formatTimestampDate(order.pickup.startsAt)} ·{' '}
+                                        {formatSlotRange(
+                                            order.pickup.startsAt,
+                                            order.pickup.endsAt
+                                        )}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt>{ORDERS_COPY.delivery}</dt>
+                                    <dd>
+                                        {formatTimestampDate(order.delivery.startsAt)} ·{' '}
+                                        {formatSlotRange(
+                                            order.delivery.startsAt,
+                                            order.delivery.endsAt
+                                        )}
+                                    </dd>
+                                </div>
+                            </dl>
+                            {order.reschedules.length > 0 && (
+                                <p className={styles.scheduleChanged}>
+                                    {ORDERS_COPY.scheduleChanged}:{' '}
+                                    {formatEventTime(
+                                        order.reschedules[order.reschedules.length - 1]!.occurredAt
+                                    )}
+                                </p>
+                            )}
                         </section>
 
                         <section className={`card ${styles.orderCard}`}>
@@ -169,6 +213,92 @@ const OrderDetailPage: React.FC = () => {
                                     >
                                         {state.cancellationError}
                                     </p>
+                                )}
+                            </section>
+                        )}
+
+                        {order.canReschedule && (
+                            <section className={`card ${styles.orderRescheduling}`}>
+                                <h2 className={styles.orderHeading}>
+                                    {ORDERS_COPY.reschedulingTitle}
+                                </h2>
+                                <p>{ORDERS_COPY.reschedulingPolicy}</p>
+                                {!state.isChangingSchedule ? (
+                                    <button
+                                        className="button"
+                                        type="button"
+                                        onClick={state.requestRescheduling}
+                                    >
+                                        {ORDERS_COPY.changeSchedule}
+                                    </button>
+                                ) : (
+                                    <div className={styles.reschedulingForm}>
+                                        {state.isLoadingSchedule && (
+                                            <p role="status">{ORDERS_COPY.loadingSchedule}</p>
+                                        )}
+                                        {state.scheduleDays && !hasReschedulingPair && (
+                                            <p>{ORDERS_COPY.noReschedulingSlots}</p>
+                                        )}
+                                        {state.scheduleDays && hasReschedulingPair && (
+                                            <>
+                                                <SlotPicker
+                                                    index={1}
+                                                    title={ORDERS_COPY.choosePickup}
+                                                    days={state.scheduleDays}
+                                                    value={state.pickup}
+                                                    onChange={state.selectPickup}
+                                                />
+                                                <SlotPicker
+                                                    index={2}
+                                                    title={ORDERS_COPY.chooseDelivery}
+                                                    days={state.scheduleDays}
+                                                    value={state.delivery}
+                                                    min={state.pickup}
+                                                    onChange={state.selectDelivery}
+                                                />
+                                            </>
+                                        )}
+                                        {state.scheduleError && (
+                                            <p
+                                                className={styles.cancellationError}
+                                                role="alert"
+                                            >
+                                                {state.scheduleError}
+                                            </p>
+                                        )}
+                                        <div className={styles.reschedulingActions}>
+                                            <button
+                                                className="button"
+                                                type="button"
+                                                onClick={state.cancelRescheduling}
+                                                disabled={state.isSubmittingSchedule}
+                                            >
+                                                {ORDERS_COPY.keepSchedule}
+                                            </button>
+                                            {state.scheduleDays === null &&
+                                                !state.isLoadingSchedule && (
+                                                    <button
+                                                        className="button"
+                                                        type="button"
+                                                        onClick={() => void state.retrySchedule()}
+                                                    >
+                                                        {ORDERS_COPY.retrySchedule}
+                                                    </button>
+                                                )}
+                                            {state.scheduleDays && hasReschedulingPair && (
+                                                <button
+                                                    className="button"
+                                                    type="button"
+                                                    onClick={() => void state.submitRescheduling()}
+                                                    disabled={state.isSubmittingSchedule}
+                                                >
+                                                    {state.isSubmittingSchedule
+                                                        ? ORDERS_COPY.savingSchedule
+                                                        : ORDERS_COPY.saveSchedule}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                             </section>
                         )}

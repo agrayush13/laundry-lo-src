@@ -20,3 +20,17 @@ export interface CustomerOrderCancellationResult {
 
 export const cancelCustomerOrder = (id: string) =>
     apiPost<CustomerOrderCancellationResult>(`/orders/${encodeURIComponent(id)}/cancellation`);
+
+export interface CustomerOrderReschedulingResult {
+    orderId: string;
+    rescheduledAt: string;
+}
+
+export const rescheduleCustomerOrder = (
+    id: string,
+    input: { pickupSlotId: string; deliverySlotId: string }
+) =>
+    apiPost<CustomerOrderReschedulingResult>(
+        `/orders/${encodeURIComponent(id)}/rescheduling`,
+        input
+    );
