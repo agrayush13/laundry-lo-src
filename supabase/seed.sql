@@ -8,12 +8,12 @@
 -- This is a destructive demo reset, not an incremental staging seed. Name the
 -- entire affected graph so adding a new foreign key makes this fail visibly
 -- rather than letting CASCADE erase a table nobody knew was in scope.
-truncate table public.order_events, public.order_addresses, public.order_items,
+truncate table public.order_reschedules, public.order_events, public.order_addresses, public.order_items,
                public.reviews, public.orders, public.memberships,
                public.cart_items, public.carts,
                public.slots, public.catalog_items, public.catalog_categories,
                public.partner_tags, public.partner_hours, public.partner_service_areas,
-               public.partner_holiday_closures,
+               public.partner_holiday_closures, public.partner_capacity_overrides,
                public.partners,
                public.pincode_centroids restart identity;
 
